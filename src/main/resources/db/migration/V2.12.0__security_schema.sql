@@ -24,49 +24,55 @@ SET CHARACTER SET utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `users` (
     `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
-    
+
     -- Credentials
     `username` VARCHAR(50) UNIQUE NOT NULL,
     `email` VARCHAR(100) UNIQUE NOT NULL,
     `password` VARCHAR(255) NOT NULL COMMENT 'BCrypt hash (cost 12)',
-    
+
     -- Account status
     `enabled` BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'Czy konto jest aktywne',
     `locked` BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'Czy konto jest zablokowane',
     `account_expired` BOOLEAN NOT NULL DEFAULT FALSE,
     `credentials_expired` BOOLEAN NOT NULL DEFAULT FALSE,
-    
+
     -- Security fields
     `failed_login_attempts` INT NOT NULL DEFAULT 0,
     `locked_until` DATETIME NULL COMMENT 'Czas do którego konto jest zablokowane',
-    
+
     -- Personal info
     `first_name` VARCHAR(100) NULL,
     `last_name` VARCHAR(100) NULL,
     `phone` VARCHAR(20) NULL,
-    
+
     -- Timestamps
     `created_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_date` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
     `last_login` DATETIME NULL,
-    
+
+    -- Password management (created here in security schema to match User entity)
+    `must_change_password` BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'Czy użytkownik musi zmienić hasło',
+    `password_changed_at` DATETIME NULL COMMENT 'Czas ostatniej zmiany hasła',
+    `password_expires_at` DATETIME NULL COMMENT 'Data wygaśnięcia hasła',
+    `password_expiry_days` INT DEFAULT 90 COMMENT 'Dni do wygaśnięcia hasła',
+
     -- Auditing
     `created_by` BIGINT NULL COMMENT 'User ID który utworzył konto',
-    
+
     -- ENTERPRISE FIX #1: Permissions cache (JSON)
     `permissions_cache_json` JSON NULL COMMENT 'Cache uprawnień - eliminuje LazyInitializationException',
-    
+
     -- Indexes
     INDEX `idx_username` (`username`),
     INDEX `idx_email` (`email`),
     INDEX `idx_enabled` (`enabled`),
     INDEX `idx_locked` (`locked`),
     INDEX `idx_created_date` (`created_date`),
-    
+
     -- Constraints
     CONSTRAINT `chk_username_length` CHECK (CHAR_LENGTH(`username`) >= 3),
     CONSTRAINT `chk_email_format` CHECK (`email` LIKE '%@%')
-    
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Użytkownicy systemu - implementuje UserDetails dla Spring Security';
 
@@ -79,10 +85,10 @@ CREATE TABLE IF NOT EXISTS `roles` (
     `name` VARCHAR(50) UNIQUE NOT NULL COMMENT 'ROLE_SUPER_ADMIN, ROLE_COMPANY_ADMIN, ROLE_USER',
     `description` VARCHAR(255) NULL,
     `created_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT `chk_role_prefix` CHECK (`name` LIKE 'ROLE_%')
-    
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Role systemowe - RBAC';
 
@@ -95,16 +101,16 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
     `role_id` BIGINT NOT NULL,
     `granted_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `granted_by` BIGINT NULL COMMENT 'User ID który nadał rolę',
-    
+
     PRIMARY KEY (`user_id`, `role_id`),
-    
+
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`granted_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
-    
+
     INDEX `idx_user` (`user_id`),
     INDEX `idx_role` (`role_id`)
-    
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Przypisanie ról do użytkowników';
 
@@ -114,49 +120,49 @@ COMMENT='Przypisanie ról do użytkowników';
 
 CREATE TABLE IF NOT EXISTS `user_permissions` (
     `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
-    
+
     -- User reference
     `user_id` BIGINT NOT NULL,
-    
+
     -- Scope
     `company_id` BIGINT NOT NULL COMMENT 'Firma do której dotyczy uprawnienie',
-    
+
     -- Permission type
     `permission_type` ENUM('FULL_COMPANY', 'FULL_DEPARTMENT', 'SPECIFIC_LABORATORY') NOT NULL,
-    
+
     -- Optional: zależne od permission_type
     `department_id` BIGINT NULL COMMENT 'NULL jeśli FULL_COMPANY',
     `laboratory_id` BIGINT NULL COMMENT 'NULL jeśli FULL_COMPANY lub FULL_DEPARTMENT',
-    
+
     -- Metadata
     `granted_by` BIGINT NULL COMMENT 'User ID który nadał uprawnienie',
     `granted_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `expires_date` DATETIME NULL COMMENT 'Opcjonalnie: data wygaśnięcia uprawnienia',
-    
+
     -- Foreign Keys
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`department_id`) REFERENCES `departments`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`laboratory_id`) REFERENCES `laboratories`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`granted_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
-    
+
     -- Unique constraint - nie może być duplikatów
     UNIQUE KEY `unique_permission` (`user_id`, `company_id`, `department_id`, `laboratory_id`),
-    
+
     -- Business rules validation
     CONSTRAINT `chk_full_company` CHECK (
-        `permission_type` != 'FULL_COMPANY' OR 
+        `permission_type` != 'FULL_COMPANY' OR
         (`department_id` IS NULL AND `laboratory_id` IS NULL)
     ),
     CONSTRAINT `chk_full_department` CHECK (
-        `permission_type` != 'FULL_DEPARTMENT' OR 
+        `permission_type` != 'FULL_DEPARTMENT' OR
         (`department_id` IS NOT NULL AND `laboratory_id` IS NULL)
     ),
     CONSTRAINT `chk_specific_lab` CHECK (
-        `permission_type` != 'SPECIFIC_LABORATORY' OR 
+        `permission_type` != 'SPECIFIC_LABORATORY' OR
         (`department_id` IS NOT NULL AND `laboratory_id` IS NOT NULL)
     ),
-    
+
     -- Indexes dla wydajności (ENTERPRISE FIX #2)
     INDEX `idx_user` (`user_id`),
     INDEX `idx_company` (`company_id`),
@@ -164,7 +170,7 @@ CREATE TABLE IF NOT EXISTS `user_permissions` (
     INDEX `idx_laboratory` (`laboratory_id`),
     INDEX `idx_permission_type` (`permission_type`),
     INDEX `idx_user_company` (`user_id`, `company_id`)
-    
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Granularne uprawnienia użytkowników - Multi-Tenancy (Company→Department→Laboratory)';
 
@@ -174,43 +180,43 @@ COMMENT='Granularne uprawnienia użytkowników - Multi-Tenancy (Company→Depart
 
 CREATE TABLE IF NOT EXISTS `audit_log` (
     `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
-    
+
     -- Who
     `user_id` BIGINT NULL COMMENT 'User który wykonał operację (NULL = system)',
     `username` VARCHAR(50) NULL COMMENT 'Username w momencie operacji (denormalizacja)',
-    
+
     -- What
     `entity_type` VARCHAR(100) NOT NULL COMMENT 'CoolingDevice, Validation, etc.',
     `entity_id` BIGINT NOT NULL COMMENT 'ID zmienionego rekordu',
     `action` VARCHAR(50) NOT NULL COMMENT 'CREATE, UPDATE, DELETE, LOGIN, LOGOUT',
-    
+
     -- Changes (LEGACY TEXT - deprecated)
     `old_value` TEXT NULL COMMENT 'DEPRECATED - używaj old_value_json',
     `new_value` TEXT NULL COMMENT 'DEPRECATED - używaj new_value_json',
-    
+
     -- ENTERPRISE FIX #4: JSON columns dla zaawansowanych queries
     `old_value_json` JSON NULL COMMENT 'Poprzednie wartości (JSON)',
     `new_value_json` JSON NULL COMMENT 'Nowe wartości (JSON)',
-    
+
     -- When & Where
     `timestamp` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `ip_address` VARCHAR(45) NULL COMMENT 'IPv4 lub IPv6',
     `user_agent` VARCHAR(500) NULL COMMENT 'Browser/client info',
-    
+
     -- Context
     `session_id` VARCHAR(100) NULL,
     `request_url` VARCHAR(500) NULL,
-    
+
     -- Foreign Keys (SET NULL - audit log musi przetrwać usunięcie usera)
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
-    
+
     -- Indexes (ENTERPRISE FIX #4 - dla JSON queries)
     INDEX `idx_entity` (`entity_type`, `entity_id`),
     INDEX `idx_user` (`user_id`),
     INDEX `idx_timestamp` (`timestamp` DESC),
     INDEX `idx_action` (`action`),
     INDEX `idx_entity_timestamp` (`entity_type`, `entity_id`, `timestamp` DESC)
-    
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Audit trail - wszystkie operacje w systemie (GMP compliance)';
 
@@ -220,31 +226,31 @@ COMMENT='Audit trail - wszystkie operacje w systemie (GMP compliance)';
 
 CREATE TABLE IF NOT EXISTS `login_history` (
     `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
-    
+
     `user_id` BIGINT NULL,
     `username` VARCHAR(50) NOT NULL COMMENT 'Username użyty do logowania',
-    
+
     -- Login details
     `login_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `ip_address` VARCHAR(45) NULL,
     `user_agent` VARCHAR(500) NULL,
-    
+
     -- Result
     `success` BOOLEAN NOT NULL,
     `failure_reason` VARCHAR(255) NULL COMMENT 'Bad credentials, Account locked, etc.',
-    
+
     -- Session
     `session_id` VARCHAR(100) NULL,
-    
+
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
-    
+
     -- Indexes
     INDEX `idx_user_time` (`user_id`, `login_time` DESC),
     INDEX `idx_username` (`username`),
     INDEX `idx_success` (`success`),
     INDEX `idx_timestamp` (`login_time` DESC),
     INDEX `idx_ip_time` (`ip_address`, `login_time` DESC)
-    
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Historia logowań - brute force detection';
 
@@ -259,13 +265,13 @@ CREATE TABLE IF NOT EXISTS `password_reset_tokens` (
     `expires_date` DATETIME NOT NULL,
     `used` BOOLEAN NOT NULL DEFAULT FALSE,
     `created_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
+
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-    
+
     INDEX `idx_token` (`token`),
     INDEX `idx_expires` (`expires_date`),
     INDEX `idx_user_used` (`user_id`, `used`)
-    
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Tokeny resetowania hasła (future feature)';
 
@@ -302,9 +308,40 @@ INSERT IGNORE INTO `users` (
 );
 
 -- ============================================================================
--- 10. INITIAL DATA - SUPER ADMIN ROLE ASSIGNMENT
+-- 10. INITIAL DATA - SUPER ADMIN ROLE ASSIGNMENT (IDEMPOTENT)
 -- ============================================================================
 
+-- Add granted_date column if missing (idempotent migration)
+SET @dbname = DATABASE();
+SET @tablename = 'user_roles';
+SET @columnname = 'granted_date';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = @dbname
+   AND TABLE_NAME = @tablename
+   AND COLUMN_NAME = @columnname) = 0,
+  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP'),
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add granted_by column if missing
+SET @columnname2 = 'granted_by';
+SET @preparedStatement2 = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = @dbname
+   AND TABLE_NAME = @tablename
+   AND COLUMN_NAME = @columnname2) = 0,
+  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname2, ' BIGINT NULL COMMENT "User ID który nadał rolę"'),
+  'SELECT 1'
+));
+PREPARE stmt2 FROM @preparedStatement2;
+EXECUTE stmt2;
+DEALLOCATE PREPARE stmt2;
+
+-- Now insert the admin role assignment
 INSERT IGNORE INTO `user_roles` (`user_id`, `role_id`, `granted_date`)
 SELECT u.`id`, r.`id`, NOW()
 FROM `users` u
@@ -397,7 +434,7 @@ LEFT JOIN `users` granter ON up.`granted_by` = granter.`id`;
 -- ============================================================================
 
 -- Verify tables created
-SELECT 
+SELECT
     TABLE_NAME,
     ENGINE,
     TABLE_ROWS,

@@ -19,7 +19,7 @@ CREATE TABLE company_certificates (
 CREATE INDEX idx_cert_company_active ON company_certificates(company_id, active);
 
 -- Envers (Kategoria A) — bez kolumn keystore_data i keystore_password (@NotAudited)
-CREATE TABLE company_certificates_AUD (
+CREATE TABLE IF NOT EXISTS company_certificates_AUD (
     id                BIGINT    NOT NULL,
     REV               INT       NOT NULL,
     REVTYPE           TINYINT,
@@ -35,5 +35,5 @@ CREATE TABLE company_certificates_AUD (
     uploaded_by       BIGINT,
     uploaded_at       DATETIME,
     PRIMARY KEY (id, REV),
-    CONSTRAINT fk_cert_aud_rev FOREIGN KEY (REV) REFERENCES REVINFO(REV)
+    CONSTRAINT fk_cert_aud_rev FOREIGN KEY (REV) REFERENCES REVINFO(id)
 ) ENGINE=InnoDB;

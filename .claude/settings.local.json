@@ -7,7 +7,8 @@
       "Bash(\"/c/Program Files/Maven/apache-maven-3.6.2-bin/apache-maven-3.6.2/bin/mvn\" compile:*)",
       "Bash(\"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe\":*)",
       "WebSearch",
-      "WebFetch(domain:pl.hostadvice.com)"
+      "WebFetch(domain:pl.hostadvice.com)",
+      "Bash(\"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe\" -u root -padmin validation_system <<'EOF'\n-- Update admin role from ROLE_ADMIN to ROLE_SUPER_ADMIN\nUPDATE user_roles SET role_id = 1 WHERE user_id = \\(SELECT id FROM users WHERE username = 'admin'\\) AND role_id = 7;\n\n-- Verify\nSELECT u.id, u.username, r.name FROM users u \nLEFT JOIN user_roles ur ON u.id = ur.user_id \nLEFT JOIN roles r ON ur.role_id = r.id \nWHERE u.username='admin';\nEOF)"
     ]
   }
 }

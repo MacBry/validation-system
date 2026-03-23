@@ -1,5 +1,6 @@
 package com.mac.bry.validationsystem.security.config;
 
+import com.mac.bry.validationsystem.security.filter.ContentSecurityPolicyNonceFilter;
 import com.mac.bry.validationsystem.security.filter.ForcedPasswordChangeFilter;
 import com.mac.bry.validationsystem.security.handler.CsrfViolationHandler;
 import com.mac.bry.validationsystem.security.handler.CustomAuthenticationFailureHandler;
@@ -38,6 +39,9 @@ class SecurityConfigUnitTest {
     @Mock
     private org.springframework.security.core.session.SessionRegistry sessionRegistry;
 
+    @Mock
+    private ContentSecurityPolicyNonceFilter nonceFilter;
+
     private SecurityKeyService securityKeyService;
     private SecurityConfig securityConfig;
 
@@ -51,7 +55,8 @@ class SecurityConfigUnitTest {
                 forcedPasswordChangeFilter,
                 csrfViolationHandler,
                 securityKeyService,
-                sessionRegistry);
+                sessionRegistry,
+                nonceFilter);
     }
 
     @Test

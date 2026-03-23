@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit ? 'Edycja firmy' : 'Nowa firma'}">Firma</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('companies')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('companies', 'Firmy', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Form header -->
+            <div class="vcc-form-header">
+                <h1 class="vcc-form-header__title"
+                    th:text="${isEdit} ? 'Edycja firmy' : 'Nowa firma'">
+                    Firma
+                </h1>
+                <p class="vcc-form-header__subtitle">Pola wymagane są oznaczone <span class="vcc-required">*</span></p>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+
+            <!-- Form card -->
+            <div class="vcc-form-card vcc-animate-fade-in">
+                <form th:action="${isEdit ? '/companies/' + companyId : '/companies'}"
+                      method="post"
+                      th:object="${company}">
+
+                    <!-- CSRF Token for GMP compliance -->
+                    <th:block th:replace="~{fragments/csrf-token :: csrf-input}"></th:block>
+
+                    <!-- Section 1: Informacje o firmie -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Informacje o firmie</legend>
+
+                        <div class="vcc-form-group">
+                            <label for="name" class="vcc-form-label">
+                                Nazwa firmy <span class="vcc-required">*</span>
+                            </label>
+                            <input type="text"
+                                   class="vcc-form-input"
+                                   id="name"
+                                   th:field="*{name}"
+                                   placeholder="np. RCKiK w Poznaniu"
+                                   required
+                                   autofocus>
+                            <span class="vcc-form-hint">Pełna nazwa firmy lub organizacji</span>
+                        </div>
+
+                        <div class="vcc-form-group">
+                            <label for="address" class="vcc-form-label">Adres</label>
+                            <input type="text"
+                                   class="vcc-form-input"
+                                   id="address"
+                                   th:field="*{address}"
+                                   placeholder="np. ul. Marcelińska 44, 60-354 Poznań">
+                            <span class="vcc-form-hint">Adres siedziby firmy (opcjonalnie)</span>
+                        </div>
+                    </fieldset>
+
+                    <!-- Actions -->
+                    <div class="vcc-form-actions">
+                        <a th:href="@{/companies}" class="vcc-form-btn-cancel">
+                            <i class="fas fa-times"></i> Anuluj
+                        </a>
+                        <button type="submit" class="vcc-form-btn-submit">
+                            <i class="fas fa-check"></i>
+                            <span th:text="${isEdit} ? 'Zapisz zmiany' : 'Dodaj firmę'">Zapisz</span>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+</body>
+
+</html>

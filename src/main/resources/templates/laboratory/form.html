@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${laboratory.id} ? 'Edycja pracowni' : 'Nowa pracownia'">Pracownia</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('laboratories')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('laboratories', 'Pracownie', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Form header -->
+            <div class="vcc-form-header">
+                <h1 class="vcc-form-header__title"
+                    th:text="${laboratory.id} ? 'Edycja pracowni' : 'Nowa pracownia'">
+                    Pracownia
+                </h1>
+                <p class="vcc-form-header__subtitle">Pola wymagane są oznaczone <span class="vcc-required">*</span></p>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Form card -->
+            <div class="vcc-form-card vcc-animate-fade-in">
+                <form th:action="${laboratory.id} ? @{/laboratories/{id}(id=${laboratory.id})} : @{/laboratories}"
+                      th:object="${laboratory}"
+                      method="post">
+
+                    <!-- Section 1: Przypisanie organizacyjne -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Przypisanie organizacyjne</legend>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="company" class="vcc-form-label">
+                                    Firma <span class="vcc-required">*</span>
+                                </label>
+                                <select class="vcc-form-select"
+                                        id="company"
+                                        name="companyId"
+                                        required>
+                                    <option value="">-- Wybierz firmę --</option>
+                                    <option th:each="comp : ${companies}"
+                                            th:value="${comp.id}"
+                                            th:text="${comp.name}"
+                                            th:selected="${laboratory.department != null && laboratory.department.company != null && laboratory.department.company.id == comp.id}">
+                                    </option>
+                                </select>
+                                <span class="vcc-form-hint">Wybierz firmę, aby zobaczyć dostępne działy</span>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="department" class="vcc-form-label">
+                                    Dział <span class="vcc-required">*</span>
+                                </label>
+                                <select class="vcc-form-select"
+                                        id="department"
+                                        th:field="*{department.id}"
+                                        th:classappend="${#fields.hasErrors('department')} ? 'is-error'"
+                                        required>
+                                    <option value="">-- Wybierz dział --</option>
+                                    <option th:each="dept : ${departments}"
+                                            th:value="${dept.id()}"
+                                            th:text="${dept.abbreviation() + ' - ' + dept.name()}"
+                                            th:attr="data-company-id=${dept.companyId()}">
+                                    </option>
+                                </select>
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('department')}" th:errors="*{department}"></div>
+                                <span class="vcc-form-hint">Pracownia musi być przypisana do działu</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 2: Dane pracowni -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Dane pracowni</legend>
+
+                        <div class="vcc-form-group">
+                            <label for="fullName" class="vcc-form-label">
+                                Pełna nazwa <span class="vcc-required">*</span>
+                            </label>
+                            <input type="text"
+                                   class="vcc-form-input"
+                                   id="fullName"
+                                   th:field="*{fullName}"
+                                   th:classappend="${#fields.hasErrors('fullName')} ? 'is-error'"
+                                   placeholder="np. Laboratorium Zgodności Tkankowej HLA"
+                                   required>
+                            <div class="vcc-form-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+                        </div>
+
+                        <div class="vcc-form-group">
+                            <label for="abbreviation" class="vcc-form-label">
+                                Skrót <span class="vcc-required">*</span>
+                            </label>
+                            <input type="text"
+                                   class="vcc-form-input vcc-form-input--mono"
+                                   id="abbreviation"
+                                   th:field="*{abbreviation}"
+                                   th:classappend="${#fields.hasErrors('abbreviation')} ? 'is-error'"
+                                   placeholder="np. LZTHLA"
+                                   required>
+                            <div class="vcc-form-error" th:if="${#fields.hasErrors('abbreviation')}" th:errors="*{abbreviation}"></div>
+                            <span class="vcc-form-hint">Skrót tworzony z pierwszych liter pełnej nazwy</span>
+                        </div>
+                    </fieldset>
+
+                    <!-- Actions -->
+                    <div class="vcc-form-actions">
+                        <a th:href="@{/laboratories}" class="vcc-form-btn-cancel">
+                            <i class="fas fa-times"></i> Anuluj
+                        </a>
+                        <button type="submit" class="vcc-form-btn-submit">
+                            <i class="fas fa-check"></i>
+                            <span th:text="${laboratory.id} ? 'Zapisz zmiany' : 'Utwórz pracownię'">Zapisz</span>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    // Filtrowanie działów po wyborze firmy
+    document.addEventListener('DOMContentLoaded', function() {
+        var companySelect = document.getElementById('company');
+        var departmentSelect = document.getElementById('department');
+        var allOptions = Array.from(departmentSelect.options);
+
+        if (companySelect && departmentSelect) {
+            companySelect.addEventListener('change', function() {
+                var selectedCompanyId = this.value;
+
+                // Usuń wszystkie opcje oprócz pierwszej (placeholder)
+                while (departmentSelect.options.length > 1) {
+                    departmentSelect.remove(1);
+                }
+
+                // Dodaj opcje dla wybranej firmy
+                allOptions.forEach(function(option) {
+                    if (option.value === '') return;
+                    var companyId = option.getAttribute('data-company-id');
+                    if (companyId === selectedCompanyId) {
+                        departmentSelect.add(option.cloneNode(true));
+                    }
+                });
+
+                departmentSelect.value = '';
+            });
+        }
+    });
+    </script>
+
+</body>
+
+</html>

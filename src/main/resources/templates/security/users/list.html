@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Użytkownicy - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('users')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('users', 'Użytkownicy', true, 'userSearchInput')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Page header -->
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Użytkownicy systemu</h1>
+                <div class="vcc-page-header__actions">
+                    <a th:href="@{/admin/password-expiry}" class="vcc-btn--secondary"
+                       sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')">
+                        <i class="fas fa-key"></i>
+                        Wygasanie haseł
+                    </a>
+                    <a th:href="@{/users/new}" class="vcc-btn--action">
+                        <i class="fas fa-plus"></i>
+                        Dodaj użytkownika
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${success}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${success}"></span>
+            </div>
+            <div th:if="${error}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${error}"></span>
+            </div>
+
+            <!-- Role filter pills -->
+            <div class="vcc-filter-bar">
+                <span class="vcc-filter-btn vcc-filter-btn--active" id="filterAll" onclick="filterUsers('all', this)">
+                    <i class="fas fa-list"></i> Wszyscy
+                </span>
+                <span class="vcc-filter-btn" id="filterActive" onclick="filterUsers('active', this)">
+                    <i class="fas fa-check-circle"></i> Aktywni
+                </span>
+                <span class="vcc-filter-btn" id="filterLocked" onclick="filterUsers('locked', this)">
+                    <i class="fas fa-lock"></i> Zablokowani
+                </span>
+                <span class="vcc-filter-btn" id="filterInactive" onclick="filterUsers('inactive', this)">
+                    <i class="fas fa-minus-circle"></i> Nieaktywni
+                </span>
+            </div>
+
+            <!-- Data card -->
+            <div class="vcc-data-card vcc-animate-fade-in">
+
+                <!-- Empty state -->
+                <div th:if="${#lists.isEmpty(users)}" class="vcc-empty-state">
+                    <i class="fas fa-users vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title">Brak użytkowników w systemie</p>
+                    <p class="vcc-empty-state__desc">Dodaj pierwszego użytkownika systemu</p>
+                </div>
+
+                <!-- Table -->
+                <div th:unless="${#lists.isEmpty(users)}" class="vcc-table-wrap">
+                    <table class="vcc-table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Użytkownik</th>
+                                <th>Imię i Nazwisko</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Ostatnie logowanie</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="user : ${users}"
+                                th:attr="data-status=${user.locked ? 'locked' : (user.enabled ? 'active' : 'inactive')}">
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--vcc-primary),var(--vcc-secondary));display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                            <i class="fas fa-user" style="color:#fff;font-size:0.75rem;"></i>
+                                        </div>
+                                        <div>
+                                            <span class="vcc-table__primary" th:text="${user.username}">--</span>
+                                            <div class="vcc-table__muted" style="font-size:0.72rem;"
+                                                 th:text="'ID: ' + ${user.id}">ID: --</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__secondary"
+                                          th:text="${(user.firstName != null ? user.firstName : '') + ' ' + (user.lastName != null ? user.lastName : '')}">
+                                        --
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__mono" th:text="${user.email}">--</span>
+                                </td>
+                                <td>
+                                    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                                        <span th:each="role : ${user.roles}"
+                                              class="vcc-table__label"
+                                              th:text="${#strings.replace(role.name, 'ROLE_', '')}">
+                                            ROLE
+                                        </span>
+                                        <span th:if="${#lists.isEmpty(user.roles)}"
+                                              class="vcc-table__muted"
+                                              style="font-size:0.8rem;font-style:italic;">
+                                            Brak ról
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span th:if="${user.locked}" class="vcc-status vcc-status--invalid">
+                                        <i class="fas fa-lock"></i> Zablokowany
+                                    </span>
+                                    <span th:if="${!user.locked and user.enabled}" class="vcc-status vcc-status--valid">
+                                        <i class="fas fa-check-circle"></i> Aktywny
+                                    </span>
+                                    <span th:if="${!user.locked and !user.enabled}" class="vcc-status vcc-status--none">
+                                        <i class="fas fa-minus-circle"></i> Nieaktywny
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__muted"
+                                          th:if="${user.lastLogin != null}"
+                                          th:text="${#temporals.format(user.lastLogin, 'dd.MM.yyyy HH:mm')}">
+                                        --
+                                    </span>
+                                    <span class="vcc-table__muted" th:if="${user.lastLogin == null}"
+                                          style="font-style:italic;">
+                                        Brak logowania
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="vcc-table__actions">
+                                        <!-- Profil/Szczegoly -->
+                                        <a th:href="@{/users/{id}(id=${user.id})}"
+                                           class="vcc-btn--table vcc-btn--table-primary">
+                                            <i class="fas fa-eye"></i> Profil
+                                        </a>
+                                        <!-- Uprawnienia -->
+                                        <a th:href="@{/permissions/grant(userId=${user.id})}"
+                                           class="vcc-btn--table vcc-btn--table-purple">
+                                            <i class="fas fa-shield-alt"></i> Uprawnienia
+                                        </a>
+                                        <!-- Edytuj -->
+                                        <a th:href="@{/users/{id}/edit(id=${user.id})}"
+                                           class="vcc-btn--table vcc-btn--table-outline">
+                                            <i class="fas fa-edit"></i> Edytuj
+                                        </a>
+                                        <!-- Blokada / Odblokowanie -->
+                                        <form th:if="${user.locked}"
+                                              th:action="@{/users/{id}/unlock(id=${user.id})}"
+                                              method="post" style="display:inline">
+                                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                            <button type="submit" class="vcc-btn--table vcc-btn--table-success"
+                                                    title="Odblokuj konto">
+                                                <i class="fas fa-unlock"></i> Odblokuj
+                                            </button>
+                                        </form>
+                                        <!-- Aktywacja / Dezaktywacja -->
+                                        <form th:action="@{/users/{id}/toggle-enabled(id=${user.id})}"
+                                              method="post" style="display:inline">
+                                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                            <button type="submit" class="vcc-btn--table"
+                                                    th:classappend="${user.enabled ? 'vcc-btn--table-danger' : 'vcc-btn--table-outline'}"
+                                                    th:text="${user.enabled ? 'Wyłącz' : 'Włącz'}">
+                                                Włącz
+                                            </button>
+                                        </form>
+                                        <!-- Reset hasla (modal) -->
+                                        <button type="button"
+                                                class="vcc-btn--table vcc-btn--table-outline"
+                                                th:data-userid="${user.id}"
+                                                th:data-username="${user.username}"
+                                                onclick="openResetModal(this)"
+                                                title="Zresetuj hasło">
+                                            <i class="fas fa-key"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer count -->
+                <div th:unless="${#lists.isEmpty(users)}" class="vcc-data-card__footer">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge" th:text="${#lists.size(users)}">0</span> użytkowników
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Modal: Reset hasla -->
+    <div class="vcc-modal-overlay" id="resetPasswordModal"
+         onclick="if(event.target===this)this.classList.remove('is-open')">
+        <div class="vcc-modal">
+            <h3 class="vcc-modal__title">
+                <i class="fas fa-key" style="color:var(--vcc-primary);margin-right:8px;"></i>
+                Reset hasła
+            </h3>
+            <p class="vcc-modal__subtitle" id="resetModalSubtitle">Ustaw nowe hasło dla użytkownika</p>
+            <form id="resetPasswordForm" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <div class="vcc-modal__form-group">
+                    <label class="vcc-modal__label">Nowe hasło <span class="vcc-required">*</span></label>
+                    <input type="password" name="newPassword" class="vcc-modal__input"
+                           placeholder="Min. 8 znaków" required minlength="8"
+                           id="resetPasswordInput">
+                </div>
+                <div class="vcc-modal__actions">
+                    <button type="button" class="vcc-modal__btn-cancel"
+                            onclick="document.getElementById('resetPasswordModal').classList.remove('is-open')">
+                        Anuluj
+                    </button>
+                    <button type="submit" class="vcc-modal__btn-submit">
+                        <i class="fas fa-key"></i> Zmień hasło
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    // Client-side search
+    (function() {
+        var input = document.getElementById('userSearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            var rows = document.querySelectorAll('#usersTable tbody tr');
+            rows.forEach(function(row) {
+                var text = row.textContent.toLowerCase();
+                row.style.display = text.indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+
+    // Status filter
+    var _currentFilter = 'all';
+    function filterUsers(status, btn) {
+        _currentFilter = status;
+        document.querySelectorAll('.vcc-filter-btn').forEach(function(b) {
+            b.classList.remove('vcc-filter-btn--active');
+        });
+        btn.classList.add('vcc-filter-btn--active');
+        var rows = document.querySelectorAll('#usersTable tbody tr');
+        rows.forEach(function(row) {
+            if (status === 'all') {
+                row.style.display = '';
+            } else {
+                row.style.display = row.getAttribute('data-status') === status ? '' : 'none';
+            }
+        });
+    }
+
+    // Reset password modal
+    function openResetModal(btn) {
+        var userId = btn.getAttribute('data-userid');
+        var username = btn.getAttribute('data-username');
+        document.getElementById('resetModalSubtitle').textContent = 'Ustaw nowe hasło dla: ' + username;
+        document.getElementById('resetPasswordForm').action = '/users/' + userId + '/reset-password';
+        document.getElementById('resetPasswordInput').value = '';
+        document.getElementById('resetPasswordModal').classList.add('is-open');
+    }
+    </script>
+
+</body>
+
+</html>

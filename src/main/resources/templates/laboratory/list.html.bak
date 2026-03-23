@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pracownie</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--g1:#667eea;--g2:#764ba2;--white:#fff;--surface:#f7f8fc;--border:#e8eaf0;--tm:#1a1d2e;--ts:#6b7080;--sh:0 20px 60px rgba(0,0,0,.18);--r:14px;--rs:8px}
+body{font-family:'DM Sans',sans-serif;background:linear-gradient(135deg,var(--g1),var(--g2));min-height:100vh;padding:24px 16px 40px;color:var(--tm)}
+.page{max-width:900px;margin:0 auto}
+.topnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.brand{color:#fff;font-size:1.2rem;font-weight:600}
+.brand span{opacity:.6;font-weight:400}
+.nav-links{display:flex;gap:8px;flex-wrap:wrap}
+.nav-link{color:rgba(255,255,255,.75);text-decoration:none;font-size:.85rem;font-weight:500;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.25);transition:all .2s}
+.nav-link:hover,.nav-link.active{background:rgba(255,255,255,.15);color:#fff}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.toolbar-title{color:#fff;font-size:1.5rem;font-weight:600}
+.btn-add{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--g1);border:none;border-radius:var(--rs);padding:10px 20px;font-size:.9rem;font-weight:600;text-decoration:none;transition:opacity .2s,transform .15s}
+.btn-add:hover{opacity:.9;transform:translateY(-1px)}
+.btn-add svg{width:18px;height:18px}
+.card{background:var(--white);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.empty-state{padding:60px 20px;text-align:center;color:var(--ts)}
+.empty-state svg{width:48px;height:48px;margin-bottom:16px;opacity:.4}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:2px solid var(--border)}
+thead th{padding:14px 18px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ts);text-align:left}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface)}
+td{padding:14px 18px;font-size:.88rem;color:var(--tm);vertical-align:middle}
+.id-num{font-family:'DM Mono',monospace;font-size:.82rem;color:var(--ts)}
+.full-name{font-weight:500}
+.abbr-badge{display:inline-block;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border-radius:20px;padding:2px 12px;font-size:.78rem;font-weight:600}
+.actions{display:flex;gap:6px;justify-content:flex-end}
+.btn-edit{display:inline-flex;align-items:center;padding:6px 12px;background:transparent;color:var(--g1);border:1.5px solid var(--g1);text-decoration:none;border-radius:var(--rs);font-size:.78rem;font-weight:600;transition:all .2s}
+.btn-edit:hover{background:var(--g1);color:#fff}
+.btn-del{display:inline-flex;align-items:center;padding:6px 12px;background:transparent;color:#e53e3e;border:1.5px solid #e53e3e;border-radius:var(--rs);font-size:.78rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-del:hover{background:#e53e3e;color:#fff}
+.footer-bar{display:flex;align-items:center;padding:16px 20px;border-top:1px solid var(--border);color:var(--ts);font-size:.82rem;gap:8px}
+.footer-bar .count{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border-radius:20px;padding:2px 12px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="topnav">
+    <span class="brand">Validation System <span>/ Pracownie</span></span>
+    <div class="nav-links">
+      <a href="/measurements" class="nav-link">Pomiary</a>
+      <a href="/devices" class="nav-link">Urządzenia</a>
+      <a href="/recorders" class="nav-link">Rejestratory</a>
+      <a href="/laboratories" class="nav-link active">Pracownie</a>
+      <a href="/validations" class="nav-link">Walidacje</a>
+      <a href="/material-types" class="nav-link">Materiały</a>
+    </div>
+  </nav>
+  <div class="toolbar">
+    <span class="toolbar-title">Pracownie</span>
+    <a th:href="@{/laboratories/new}" class="btn-add">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Dodaj pracownię
+    </a>
+  </div>
+  <div class="card">
+    <div th:if="${#lists.isEmpty(laboratories)}" class="empty-state">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+      <p>Brak pracowni w systemie</p>
+    </div>
+    <table th:unless="${#lists.isEmpty(laboratories)}">
+      <thead>
+        <tr><th>ID</th><th>Pełna nazwa</th><th>Skrót</th><th style="text-align:right">Akcje</th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="lab : ${laboratories}">
+          <td><span class="id-num" th:text="${lab.id}">–</span></td>
+          <td><span class="full-name" th:text="${lab.fullName}">–</span></td>
+          <td><span class="abbr-badge" th:text="${lab.abbreviation}">–</span></td>
+          <td>
+            <div class="actions">
+              <a th:href="@{/laboratories/{id}/edit(id=${lab.id})}" class="btn-edit">Edytuj</a>
+              <form th:action="@{/laboratories/{id}/delete(id=${lab.id})}" method="post" style="display:inline" onsubmit="return confirm('Usunąć tę pracownię?')">
+                <button type="submit" class="btn-del">Usuń</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div th:unless="${#lists.isEmpty(laboratories)}" class="footer-bar">
+      Łącznie: <span class="count" th:text="${#lists.size(laboratories)}">0</span> pracowni
+    </div>
+  </div>
+</div>
+</body>
+</html>

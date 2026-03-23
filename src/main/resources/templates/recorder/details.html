@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Rejestrator - ' + ${recorder.serialNumber}">Szczegoly rejestratora</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('recorders')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('recorders', 'Szczegoly rejestratora', false, null)}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Breadcrumb -->
+            <nav class="vcc-breadcrumb" aria-label="Breadcrumb">
+                <a th:href="@{/}">Dashboard</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <a th:href="@{/recorders}">Rejestratory</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <span class="vcc-breadcrumb__current" th:text="${recorder.serialNumber}">Serial</span>
+            </nav>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Detail header -->
+            <div class="vcc-detail-header vcc-animate-fade-in">
+                <div class="vcc-detail-header__info">
+                    <div class="vcc-detail-header__icon">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <div class="vcc-detail-header__text">
+                        <h1 class="vcc-detail-header__title" th:text="${recorder.serialNumber}">Nr seryjny</h1>
+                        <div class="vcc-detail-header__subtitle" th:text="${recorder.model}">Model</div>
+                        <div class="vcc-detail-meta">
+                            <span class="vcc-detail-meta__item">
+                                <i class="fas fa-building"></i>
+                                <span th:text="${recorder.department != null and recorder.department.company != null ? recorder.department.company.name : '---'}">Firma</span>
+                            </span>
+                            <span class="vcc-detail-meta__item" th:if="${recorder.department != null}">
+                                <i class="fas fa-sitemap"></i>
+                                <span th:text="${recorder.department.name}">Dzial</span>
+                            </span>
+                            <span class="vcc-detail-meta__item">
+                                <i class="fas fa-circle"></i>
+                                <span class="vcc-status"
+                                      th:classappend="${recorder.status.name() == 'ACTIVE' ? 'vcc-status--valid' : (recorder.status.name() == 'UNDER_CALIBRATION' ? 'vcc-status--warning' : 'vcc-status--invalid')}"
+                                      th:text="${recorder.status.displayName}">Status</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vcc-button-group">
+                    <a th:href="@{/recorders/{id}/edit(id=${recorder.id})}" class="vcc-btn--detail-primary">
+                        <i class="fas fa-pen"></i>
+                        Edytuj
+                    </a>
+                    <a th:href="@{/recorders}" class="vcc-btn--detail-outline">
+                        <i class="fas fa-arrow-left"></i>
+                        Powrot
+                    </a>
+                </div>
+            </div>
+
+            <!-- Section 1: Recorder Info -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-info-circle"></i>
+                        Informacje o rejestratorze
+                    </h2>
+                </div>
+
+                <div class="vcc-detail-grid">
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Numer seryjny</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono" th:text="${recorder.serialNumber}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Model</span>
+                        <span class="vcc-detail-value" th:text="${recorder.model}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Status</span>
+                        <span class="vcc-detail-value">
+                            <span class="vcc-status"
+                                  th:classappend="${recorder.status.name() == 'ACTIVE' ? 'vcc-status--valid' : (recorder.status.name() == 'UNDER_CALIBRATION' ? 'vcc-status--warning' : 'vcc-status--invalid')}"
+                                  th:text="${recorder.status.displayName}">Status</span>
+                        </span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Firma</span>
+                        <span class="vcc-detail-value"
+                              th:text="${recorder.department != null and recorder.department.company != null ? recorder.department.company.name : '---'}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Dzial</span>
+                        <span class="vcc-detail-value">
+                            <span th:text="${recorder.department != null ? recorder.department.name : '---'}">---</span>
+                            <span th:if="${recorder.department != null}" class="vcc-detail-badge"
+                                  th:text="${recorder.department.abbreviation}">SKR</span>
+                        </span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Pracownia</span>
+                        <span class="vcc-detail-value">
+                            <span th:if="${recorder.laboratory != null}" th:text="${recorder.laboratory.fullName}">---</span>
+                            <span th:if="${recorder.laboratory != null}" class="vcc-detail-badge"
+                                  th:text="${recorder.laboratory.abbreviation}">SKR</span>
+                            <span th:if="${recorder.laboratory == null}" style="color:var(--text-muted)">---</span>
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Calibration History -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-certificate"></i>
+                        Historia wzorcowan
+                    </h2>
+                    <div class="vcc-detail-section__actions">
+                        <button class="vcc-btn--detail-primary"
+                                onclick="document.getElementById('addCalModal').classList.add('is-open')"
+                                style="border:none;cursor:pointer;font-family:inherit;">
+                            <i class="fas fa-plus"></i>
+                            Dodaj wzorcowanie
+                        </button>
+                    </div>
+                </div>
+
+                <div th:if="${#lists.isEmpty(recorder.calibrations)}" class="vcc-detail-empty">
+                    Brak wzorcowan -- rejestrator jest NIEAKTYWNY
+                </div>
+
+                <table th:unless="${#lists.isEmpty(recorder.calibrations)}" class="vcc-detail-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Nr swiadectwa</th>
+                            <th>Punkty (T | E | U)</th>
+                            <th>Termin</th>
+                            <th>Status</th>
+                            <th>Plik</th>
+                            <th style="text-align:right">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="cal : ${recorder.calibrations}">
+                            <td><span class="vcc-mono" th:text="${#temporals.format(cal.calibrationDate, 'dd-MM-yyyy')}">---</span></td>
+                            <td><span style="font-weight:600;" th:text="${cal.certificateNumber}">---</span></td>
+                            <td>
+                                <div style="display:flex;flex-direction:column;gap:2px;font-size:.75rem;">
+                                    <span th:each="p : ${cal.points}"
+                                          style="display:grid;grid-template-columns:70px 80px 80px;gap:8px;align-items:center;
+                                                 background:var(--surface);padding:4px 10px;border-radius:6px;border:1px solid var(--border);
+                                                 font-family:'DM Mono',monospace;white-space:nowrap;">
+                                        <span style="font-weight:600;" th:text="${p.temperatureValue + '°C'}">0°C</span>
+                                        <span style="font-size:.68rem;color:var(--text-muted);">E:<b th:text="${p.systematicError}">0</b></span>
+                                        <span style="font-size:.68rem;color:var(--text-muted);">U:<b th:text="${p.uncertainty}">0</b></span>
+                                    </span>
+                                    <span th:if="${#lists.isEmpty(cal.points)}"
+                                          style="color:var(--text-muted);font-style:italic;">Brak punktow</span>
+                                </div>
+                            </td>
+                            <td><span class="vcc-mono" th:text="${#temporals.format(cal.validUntil, 'dd-MM-yyyy')}">---</span></td>
+                            <td>
+                                <span th:if="${cal.valid}" class="vcc-status vcc-status--valid">Wazne</span>
+                                <span th:unless="${cal.valid}" class="vcc-status vcc-status--invalid">Wygasle</span>
+                            </td>
+                            <td>
+                                <a th:if="${cal.certificateFilePath != null}" th:href="@{/certificates/{id}(id=${cal.id})}"
+                                   target="_blank" class="vcc-btn--table vcc-btn--table-outline" style="font-size:.75rem;">
+                                    <i class="fas fa-file-pdf"></i> PDF
+                                </a>
+                                <span th:unless="${cal.certificateFilePath != null}" style="color:var(--text-muted);font-size:.78rem;">---</span>
+                            </td>
+                            <td style="text-align:right">
+                                <div style="display:flex;gap:5px;justify-content:flex-end;">
+                                    <button type="button" class="vcc-btn--table vcc-btn--table-primary"
+                                            th:data-calid="${cal.id}"
+                                            onclick="openEditModal(this.getAttribute('data-calid'))">Edytuj</button>
+                                    <form th:action="@{/recorders/{rId}/calibrations/{cId}/delete(rId=${recorder.id},cId=${cal.id})}"
+                                          method="post" style="display:inline" onsubmit="return confirm('Usunac to wzorcowanie?')">
+                                        <button type="submit" class="vcc-btn--table vcc-btn--table-danger">Usun</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Section 3: Audit History (Envers) -->
+            <section class="vcc-detail-section vcc-animate-fade-in" id="enversSection">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-history"></i>
+                        Historia zmian (Envers)
+                    </h2>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:var(--sp-3);">
+                    Szczegolowy rejestr zmian -- GMP Annex 11 par.10
+                </p>
+
+                <div id="enversRevList" style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="color:var(--text-muted);font-size:.85rem;">Ladowanie historii...</div>
+                </div>
+
+                <div id="enversDiffArea" class="vcc-envers-diff" style="display:none;">
+                    <div class="vcc-envers-diff__title" id="enversDiffTitle"></div>
+                    <table class="vcc-detail-table">
+                        <thead>
+                            <tr>
+                                <th>Pole</th>
+                                <th style="color:var(--color-danger);">Przed</th>
+                                <th style="color:var(--color-success);">Po</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enversDiffBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Modal: Add Calibration -->
+    <div class="vcc-modal-overlay" id="addCalModal"
+         onclick="if(event.target===this)this.classList.remove('is-open')">
+        <div class="vcc-modal">
+            <div class="vcc-modal__title">Dodaj wzorcowanie</div>
+            <form th:action="@{/recorders/{id}/calibrations(id=${recorder.id})}" method="post" enctype="multipart/form-data">
+                <div class="vcc-modal__form-group">
+                    <label class="vcc-modal__label">Data wzorcowania <span class="vcc-required">*</span></label>
+                    <input type="date" name="calibrationDate" required class="vcc-modal__input">
+                    <span style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">Data waznosci zostanie ustawiona automatycznie (rok od daty wzorcowania)</span>
+                </div>
+                <div class="vcc-modal__form-group">
+                    <label class="vcc-modal__label">Numer swiadectwa <span class="vcc-required">*</span></label>
+                    <input type="text" name="certificateNumber" required placeholder="np. CERT-2026-001" class="vcc-modal__input">
+                </div>
+                <div class="vcc-modal__form-group">
+                    <label class="vcc-modal__label">Plik swiadectwa (PDF)</label>
+                    <input type="file" name="certificateFile" accept=".pdf" class="vcc-modal__input">
+                    <span style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">Opcjonalnie: skan swiadectwa wzorcowania</span>
+                </div>
+                <div class="vcc-modal__form-group" style="margin-top:10px">
+                    <label class="vcc-modal__label">Punkty wzorcowania</label>
+                    <table class="vcc-detail-table" style="font-size:.82rem;">
+                        <thead>
+                            <tr>
+                                <th>Temp [deg.C]</th>
+                                <th>Blad</th>
+                                <th>Niepewnosc</th>
+                                <th style="width:30px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="addPointsBody"></tbody>
+                    </table>
+                    <button type="button" class="vcc-btn--detail-outline"
+                            style="width:100%;justify-content:center;border:none;cursor:pointer;font-family:inherit;margin-top:6px;"
+                            onclick="addPointRow('addPointsBody')">
+                        <i class="fas fa-plus"></i> Dodaj punkt wzorcowania
+                    </button>
+                </div>
+                <div class="vcc-modal__actions">
+                    <button type="button" class="vcc-modal__btn-cancel"
+                            onclick="document.getElementById('addCalModal').classList.remove('is-open')">Anuluj</button>
+                    <button type="submit" class="vcc-modal__btn-submit">Dodaj wzorcowanie</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modals: Edit Calibration (one per calibration) -->
+    <div th:each="cal : ${recorder.calibrations}">
+        <div class="vcc-modal-overlay" th:id="'editCalModal' + ${cal.id}"
+             onclick="if(event.target===this)this.classList.remove('is-open')">
+            <div class="vcc-modal">
+                <div class="vcc-modal__title">Edytuj wzorcowanie</div>
+                <form th:action="@{/recorders/{rId}/calibrations/{cId}/update(rId=${recorder.id},cId=${cal.id})}" method="post"
+                      enctype="multipart/form-data">
+                    <div class="vcc-modal__form-group">
+                        <label class="vcc-modal__label">Data wzorcowania <span class="vcc-required">*</span></label>
+                        <input type="date" name="calibrationDate" th:value="${#temporals.format(cal.calibrationDate, 'yyyy-MM-dd')}"
+                               required class="vcc-modal__input">
+                        <span style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">Data waznosci zostanie przeliczona automatycznie</span>
+                    </div>
+                    <div class="vcc-modal__form-group">
+                        <label class="vcc-modal__label">Numer swiadectwa <span class="vcc-required">*</span></label>
+                        <input type="text" name="certificateNumber" th:value="${cal.certificateNumber}" required class="vcc-modal__input">
+                    </div>
+                    <div class="vcc-modal__form-group">
+                        <label class="vcc-modal__label">Nowy plik swiadectwa (PDF)</label>
+                        <input type="file" name="certificateFile" accept=".pdf" class="vcc-modal__input">
+                        <span th:if="${cal.certificateFilePath != null}" style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">
+                            Certyfikat juz przeslany --
+                            <a th:href="@{/certificates/{id}(id=${cal.id})}" target="_blank" class="vcc-link-internal">podglad</a>.
+                            Nowy plik zastapi obecny.
+                        </span>
+                        <span th:unless="${cal.certificateFilePath != null}" style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">Brak przeslanego certyfikatu</span>
+                    </div>
+                    <div class="vcc-modal__form-group" style="margin-top:10px">
+                        <label class="vcc-modal__label">Punkty wzorcowania</label>
+                        <table class="vcc-detail-table" style="font-size:.82rem;">
+                            <thead>
+                                <tr>
+                                    <th>Temp [deg.C]</th>
+                                    <th>Blad</th>
+                                    <th>Niepewnosc</th>
+                                    <th style="width:30px"></th>
+                                </tr>
+                            </thead>
+                            <tbody th:id="'editPointsBody' + ${cal.id}">
+                                <tr th:each="p : ${cal.points}">
+                                    <td><input type="number" step="0.0001" name="temperatures" th:value="${p.temperatureValue}" required
+                                               class="vcc-modal__input" style="width:100%"></td>
+                                    <td><input type="number" step="0.0001" name="errors" th:value="${p.systematicError}" required
+                                               class="vcc-modal__input" style="width:100%"></td>
+                                    <td><input type="number" step="0.0001" name="uncertainties" th:value="${p.uncertainty}" required
+                                               class="vcc-modal__input" style="width:100%"></td>
+                                    <td style="text-align:center"><span style="color:var(--color-danger);cursor:pointer;font-size:1.2rem;font-weight:bold;"
+                                            onclick="this.closest('tr').remove()">&times;</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button type="button" class="vcc-btn--detail-outline"
+                                style="width:100%;justify-content:center;border:none;cursor:pointer;font-family:inherit;margin-top:6px;"
+                                th:data-target="|editPointsBody${cal.id}|"
+                                onclick="addPointRow(this.getAttribute('data-target'))">
+                            <i class="fas fa-plus"></i> Dodaj punkt wzorcowania
+                        </button>
+                    </div>
+                    <div class="vcc-modal__actions">
+                        <button type="button" class="vcc-modal__btn-cancel"
+                                th:onclick="'document.getElementById(\'editCalModal' + ${cal.id} + '\').classList.remove(\'is-open\')'">Anuluj</button>
+                        <button type="submit" class="vcc-modal__btn-submit">Zapisz zmiany</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+        function openEditModal(id) {
+            document.getElementById('editCalModal' + id).classList.add('is-open');
+        }
+
+        function addPointRow(containerId) {
+            var tbody = document.getElementById(containerId);
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td><input type="number" step="0.0001" name="temperatures" required placeholder="0.0" class="vcc-modal__input" style="width:100%"></td>' +
+                '<td><input type="number" step="0.0001" name="errors" required placeholder="0.0" class="vcc-modal__input" style="width:100%"></td>' +
+                '<td><input type="number" step="0.0001" name="uncertainties" required placeholder="0.0" class="vcc-modal__input" style="width:100%"></td>' +
+                '<td style="text-align:center"><span style="color:var(--color-danger);cursor:pointer;font-size:1.2rem;font-weight:bold;" onclick="this.closest(\'tr\').remove()">&times;</span></td>';
+            tbody.appendChild(tr);
+        }
+    </script>
+
+    <!-- Envers script -->
+    <script th:inline="javascript">
+    (function () {
+        var recorderId = /*[[${recorder.id}]]*/ 0;
+
+        function badgeClass(type) {
+            var map = { ADD: 'vcc-envers-badge--add', MOD: 'vcc-envers-badge--mod', DEL: 'vcc-envers-badge--del' };
+            return map[type] || 'vcc-envers-badge--mod';
+        }
+        function badgeLabel(type) {
+            var map = { ADD: 'DODANIE', MOD: 'ZMIANA', DEL: 'USUNIECIE' };
+            return map[type] || type;
+        }
+
+        function loadRevisions() {
+            fetch('/recorders/' + recorderId + '/history')
+                .then(function(r) { return r.json(); })
+                .then(function(revs) {
+                    var el = document.getElementById('enversRevList');
+                    if (!revs || revs.length === 0) {
+                        el.innerHTML = '<div class="vcc-detail-empty">Brak rewizji w historii Envers.</div>';
+                        return;
+                    }
+                    el.innerHTML = revs.map(function(r) {
+                        return '<button class="vcc-envers-revision" onclick="loadDiff(' + r.revisionNumber + ',\'' + (r.timestamp||'') + '\',\'' + (r.username||'') + '\',\'' + (r.revisionType||'') + '\')">'
+                            + '<span style="font-size:.75rem;color:var(--text-muted);min-width:145px;">' + (r.timestamp || '') + '</span>'
+                            + '<span class="vcc-envers-badge ' + badgeClass(r.revisionType) + '">' + badgeLabel(r.revisionType) + '</span>'
+                            + '<span style="font-weight:500;">' + (r.username || '') + '</span>'
+                            + (r.fullName ? '<span style="font-size:.8rem;color:var(--text-muted);">(' + r.fullName + ')</span>' : '')
+                            + (r.ipAddress ? '<span style="margin-left:auto;font-size:.75rem;color:var(--text-muted);">' + r.ipAddress + '</span>' : '')
+                            + '</button>';
+                    }).join('');
+                })
+                .catch(function() {
+                    document.getElementById('enversRevList').innerHTML =
+                        '<div class="vcc-detail-empty" style="color:var(--color-danger);">Blad ladowania historii.</div>';
+                });
+        }
+
+        var _openRevNum = null;
+
+        window.loadDiff = function (revNum, ts, user, type) {
+            var area = document.getElementById('enversDiffArea');
+            var title = document.getElementById('enversDiffTitle');
+            var body = document.getElementById('enversDiffBody');
+
+            if (_openRevNum === revNum) {
+                area.style.display = 'none';
+                _openRevNum = null;
+                return;
+            }
+            _openRevNum = revNum;
+
+            area.style.display = 'block';
+            title.textContent = 'Rewizja #' + revNum + ' \u2014 ' + ts + ' \u2014 ' + user;
+            body.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted);">Ladowanie...</td></tr>';
+
+            fetch('/recorders/' + recorderId + '/history/' + revNum)
+                .then(function(r) { return r.json(); })
+                .then(function(diffs) {
+                    var rows = diffs
+                        .filter(function(d) { return d.changed; })
+                        .map(function(d) {
+                            return '<tr>'
+                                + '<td style="font-weight:500;">' + d.displayName + '</td>'
+                                + '<td style="color:var(--color-danger);text-decoration:line-through;">' + (d.oldValue != null ? d.oldValue : '\u2014') + '</td>'
+                                + '<td style="color:var(--color-success);">' + (d.newValue != null ? d.newValue : '\u2014') + '</td>'
+                                + '</tr>';
+                        }).join('');
+                    body.innerHTML = rows || '<tr><td colspan="3" style="color:var(--text-muted);">Brak zmian pol (pierwsza rewizja).</td></tr>';
+                })
+                .catch(function() {
+                    body.innerHTML = '<tr><td colspan="3" style="color:var(--color-danger);">Blad.</td></tr>';
+                });
+        };
+
+        loadRevisions();
+    })();
+    </script>
+
+</body>
+</html>

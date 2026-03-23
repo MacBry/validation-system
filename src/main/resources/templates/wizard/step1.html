@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Krok 1 - Wybór procedury - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:replace="~{fragments/csrf-token :: csrf-meta}"></th:replace>
+    <th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:replace>
+    <style>
+        /* ---- Wizard step layout ---- */
+        .wizard-container {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        /* Step header */
+        .wizard-step-header {
+            margin-bottom: var(--sp-6, 1.5rem);
+        }
+        .wizard-step-header__title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+            margin: 0 0 6px 0;
+        }
+        .wizard-step-header__desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary, #6b7280);
+            margin: 0;
+        }
+
+        /* Procedure type cards */
+        .procedure-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--sp-4, 1rem);
+            margin-bottom: var(--sp-6, 1.5rem);
+        }
+
+        .procedure-option { display: contents; }
+
+        .procedure-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .procedure-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: var(--sp-4, 1rem);
+            padding: var(--sp-6, 1.5rem) var(--sp-4, 1rem);
+            background: var(--surface-card, #fff);
+            border: 2px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s) var(--ease-out, ease),
+                        box-shadow var(--duration-fast, 0.15s) var(--ease-out, ease),
+                        background var(--duration-fast, 0.15s) var(--ease-out, ease);
+        }
+
+        .procedure-card:hover {
+            border-color: var(--vcc-primary, #667eea);
+            box-shadow: 0 4px 16px rgba(102,126,234,0.12);
+        }
+
+        .procedure-option input[type="radio"]:checked + .procedure-card {
+            border-color: var(--vcc-primary, #667eea);
+            background: rgba(102,126,234,0.05);
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+        }
+
+        .procedure-card__icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            background: rgba(102,126,234,0.10);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--vcc-primary, #667eea);
+            font-size: 1.3rem;
+            transition: background var(--duration-fast, 0.15s) var(--ease-out, ease);
+        }
+
+        .procedure-option input[type="radio"]:checked + .procedure-card .procedure-card__icon {
+            background: var(--vcc-primary, #667eea);
+            color: #fff;
+        }
+
+        .procedure-card__name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+        }
+
+        .procedure-card__desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary, #6b7280);
+            line-height: 1.5;
+        }
+
+        .procedure-card__check {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--border-default, #e5e7ef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 0.6rem;
+            transition: all var(--duration-fast, 0.15s) var(--ease-out, ease);
+        }
+
+        .procedure-option input[type="radio"]:checked + .procedure-card .procedure-card__check {
+            background: var(--vcc-primary, #667eea);
+            border-color: var(--vcc-primary, #667eea);
+        }
+
+        /* Navigation buttons */
+        .wizard-actions {
+            display: flex;
+            gap: var(--sp-4, 1rem);
+            justify-content: flex-end;
+            align-items: center;
+            padding-top: var(--sp-4, 1rem);
+            border-top: 1px solid var(--border-default, #e5e7ef);
+            flex-wrap: wrap;
+        }
+
+        .wizard-btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 20px;
+            background: var(--surface-card, #fff);
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary, #6b7280);
+            text-decoration: none;
+            cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+        }
+
+        .wizard-btn-back:hover {
+            border-color: var(--vcc-primary, #667eea);
+            color: var(--vcc-primary, #667eea);
+        }
+
+        .wizard-btn-next {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 22px;
+            background: var(--vcc-primary, #667eea);
+            border: none;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s);
+        }
+
+        .wizard-btn-next:hover:not(:disabled) {
+            opacity: 0.88;
+            box-shadow: 0 4px 14px rgba(102,126,234,0.30);
+        }
+
+        .wizard-btn-next:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard kwalifikacji', false, null)}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Breadcrumb -->
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">Krok 1 — Wybór procedury</span>
+            </nav>
+
+            <!-- Wizard container -->
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <!-- Progress indicator -->
+                <th:replace="~{wizard/fragments/wizard-nav :: wizard-nav(1, draft.stepLockFrom)}"></th:replace>
+
+                <!-- Step card -->
+                <div class="vcc-form-card">
+
+                    <!-- Step header -->
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Wybór procedury kwalifikacji</h2>
+                        <p class="wizard-step-header__desc">Wybierz typ procedury, która zostanie przeprowadzona dla tego urządzenia.</p>
+                    </div>
+
+                    <!-- Procedure cards -->
+                    <form id="step1Form" onsubmit="return false;">
+                        <div class="procedure-grid">
+
+                            <!-- OQ -->
+                            <label class="procedure-option">
+                                <input type="radio" name="procedureType" value="OQ" required
+                                       onchange="updateSelection()"
+                                       th:checked="${draft.procedureType?.name() == 'OQ'}">
+                                <div class="procedure-card">
+                                    <div class="procedure-card__icon">
+                                        <i class="fas fa-cog"></i>
+                                    </div>
+                                    <div class="procedure-card__name">OQ</div>
+                                    <div class="procedure-card__desc">Kwalifikacja Operacyjna — testy zasilania, alarmu i domykania drzwi.</div>
+                                    <div class="procedure-card__check">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- PQ -->
+                            <label class="procedure-option">
+                                <input type="radio" name="procedureType" value="PQ" required
+                                       onchange="updateSelection()"
+                                       th:checked="${draft.procedureType?.name() == 'PQ'}">
+                                <div class="procedure-card">
+                                    <div class="procedure-card__icon">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </div>
+                                    <div class="procedure-card__name">PQ</div>
+                                    <div class="procedure-card__desc">Kwalifikacja Wydajności — lista kontrolna i testy obciążeniowe.</div>
+                                    <div class="procedure-card__check">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- Mapping -->
+                            <label class="procedure-option">
+                                <input type="radio" name="procedureType" value="MAPPING" required
+                                       onchange="updateSelection()"
+                                       th:checked="${draft.procedureType?.name() == 'MAPPING'}">
+                                <div class="procedure-card">
+                                    <div class="procedure-card__icon">
+                                        <i class="fas fa-map"></i>
+                                    </div>
+                                    <div class="procedure-card__name">Mapowanie</div>
+                                    <div class="procedure-card__desc">Badanie rozkładu temperatur w komorze bez testów OQ/PQ.</div>
+                                    <div class="procedure-card__check">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                </div>
+                            </label>
+
+                        </div>
+
+                        <!-- Navigation -->
+                        <div class="wizard-actions">
+                            <a th:href="@{/wizard/}" class="wizard-btn-back">
+                                <i class="fas fa-times"></i> Anuluj
+                            </a>
+                            <button type="button" class="wizard-btn-next" id="nextBtn"
+                                    th:disabled="${draft.procedureType == null}"
+                                    onclick="submitForm()">
+                                Dalej <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <th:replace="~{fragments/csrf-token :: csrf-debug}"></th:replace>
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+
+    <script th:inline="javascript">
+        function updateSelection() {
+            const selected = document.querySelector('input[name="procedureType"]:checked');
+            document.getElementById('nextBtn').disabled = !selected;
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function submitForm() {
+            const selected = document.querySelector('input[name="procedureType"]:checked');
+            if (!selected) {
+                alert('Proszę wybrać typ procedury.');
+                return;
+            }
+
+            const procedureType = selected.value;
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+            if (!csrfToken || csrfToken === '') {
+                csrfToken = getCookie('XSRF-TOKEN');
+                csrfHeader = 'X-XSRF-TOKEN';
+            }
+
+            const btn = document.getElementById('nextBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
+
+            const params = new URLSearchParams();
+            params.append('procedureType', procedureType);
+            if (csrfToken) params.append('_csrf', csrfToken);
+
+            const headers = {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            };
+            if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+            fetch('/wizard/' + draftId + '/api/step1', {
+                method: 'POST',
+                headers: headers,
+                body: params
+            }).then(async r => {
+                if (!r.ok) {
+                    const text = await r.text();
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.message || json.type || 'Błąd serwera');
+                    } catch(e) {
+                        throw new Error('Błąd HTTP ' + r.status + ': ' + text.substring(0, 100));
+                    }
+                }
+                return r.json();
+            }).then(() => {
+                window.location.href = '/wizard/' + draftId + '/step/2';
+            }).catch(err => {
+                console.error('Submission failed:', err);
+                alert('Błąd: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = 'Dalej <i class="fas fa-arrow-right"></i>';
+            });
+        }
+
+        window.addEventListener('load', () => { updateSelection(); });
+    </script>
+</body>
+</html>

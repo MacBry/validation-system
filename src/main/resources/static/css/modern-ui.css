@@ -1,0 +1,134 @@
+/* Modern UI Standard Styles */
+:root {
+    --g1: #667eea;
+    --g2: #764ba2;
+    --white: #fff;
+    --surface: #f7f8fc;
+    --border: #e8eaf0;
+    --tm: #1a1d2e;
+    --ts: #6b7080;
+    --sh: 0 20px 60px rgba(0, 0, 0, .18);
+    --shm: 0 8px 32px rgba(102, 126, 234, .15);
+    --r: 14px;
+    --rs: 8px;
+    --text-muted: #6b7080;
+}
+
+.topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.topnav-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.topnav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.home-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, .15);
+    border: 1.5px solid rgba(255, 255, 255, .3);
+    border-radius: 10px;
+    transition: all .2s;
+    text-decoration: none;
+}
+
+.home-btn:hover {
+    background: rgba(255, 255, 255, .25);
+    border-color: rgba(255, 255, 255, .5);
+    transform: translateY(-2px);
+}
+
+.home-btn svg {
+    width: 22px;
+    height: 22px;
+    stroke: #fff;
+}
+
+.brand {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.brand span {
+    opacity: .6;
+    font-weight: 400;
+}
+
+.user-info {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.user-info strong {
+    color: #fff;
+    font-weight: 600;
+}
+
+.btn-logout-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.btn-logout-mini:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.company-context {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 20px;
+    padding: 3px 11px 3px 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    max-width: 240px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.company-context span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.company-context.super-admin {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: rgba(251, 191, 36, 0.4);
+    color: #fde68a;
+}

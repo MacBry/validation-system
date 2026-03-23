@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serie pomiarowe - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <style>
+        /* Control sensor panel — specific to measurement list */
+        .csp-levels { display: flex; gap: 4px; margin-bottom: 7px }
+        .lvl-radio { display: none }
+        .lvl-tab {
+            display: inline-block; padding: 4px 13px; border-radius: 6px;
+            font-size: .72rem; font-weight: 600; cursor: pointer;
+            background: var(--surface-inset); color: var(--text-secondary);
+            border: 1.5px solid var(--border-default); transition: all .15s;
+            user-select: none; letter-spacing: .03em;
+        }
+        .lvl-radio:checked + .lvl-tab {
+            background: var(--vcc-primary); color: #fff; border-color: var(--vcc-primary);
+        }
+        .csp-grid { display: none }
+        .csp-hint { font-size: .72rem; color: var(--text-muted); font-style: italic; padding: 1px 0 3px }
+        .csp-table { width: auto; border-collapse: separate; border-spacing: 3px; table-layout: fixed }
+        .csp-table thead tr { border-bottom: none }
+        .csp-table tbody tr { border-bottom: none }
+        .csp-table tbody tr:hover { background: transparent }
+        .csp-table th.csp-th-col {
+            font-size: .6rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: .04em; color: var(--text-muted); text-align: center;
+            padding: 0 3px 3px; width: 46px; background: transparent;
+        }
+        .csp-table th.csp-th-col:first-child { width: 34px }
+        .csp-table td.csp-th-row {
+            font-size: .6rem; font-weight: 600; color: var(--text-muted);
+            text-align: right; padding: 0 5px 0 0; white-space: nowrap;
+            border: none; vertical-align: middle;
+        }
+        .csp-table td.csp-cell-wrap { padding: 0; border: none; vertical-align: middle; width: 46px }
+        .csp-radio { display: none }
+        .csp-cell {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 36px; border: 1.5px solid var(--border-default);
+            border-radius: 6px; cursor: pointer; font-size: .76rem; font-weight: 700;
+            color: var(--text-secondary); background: var(--surface-inset);
+            transition: all .15s; user-select: none;
+        }
+        .csp-radio:checked + .csp-cell {
+            background: var(--vcc-primary); color: #fff;
+            border-color: var(--vcc-primary); box-shadow: 0 2px 8px rgba(102,126,234,.3);
+        }
+        .csp-cell:hover { border-color: var(--vcc-primary); color: var(--vcc-primary) }
+        .csp-radio:checked + .csp-cell:hover { color: #fff }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('measurements')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('measurements', 'Serie pomiarowe', true, 'measurementSearchInput')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Serie pomiarowe TESTO</h1>
+                <div class="vcc-page-header__actions">
+                    <!-- Filter toggle -->
+                    <div style="display:flex; gap: 4px;">
+                        <a th:href="@{/measurements(showUsed=false)}"
+                           th:class="${filterType == 'unused' ? 'vcc-filter-btn vcc-filter-btn--active' : 'vcc-filter-btn'}">
+                            <i class="fas fa-check-circle"></i> Wolne
+                        </a>
+                        <a th:href="@{/measurements(showUsed=true)}"
+                           th:class="${filterType == 'used' ? 'vcc-filter-btn vcc-filter-btn--active' : 'vcc-filter-btn'}">
+                            <i class="fas fa-lock"></i> Użyte
+                        </a>
+                    </div>
+                    <a th:href="@{/measurements/upload}" class="vcc-btn--action">
+                        <i class="fas fa-upload"></i>
+                        Prześlij pliki TESTO
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${success}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
+            </div>
+            <div th:if="${error}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+            </div>
+            <div th:if="${warnings != null && !#lists.isEmpty(warnings)}" class="vcc-flash vcc-flash--warning">
+                <div>
+                    <strong>Ostrzeżenia:</strong>
+                    <ul style="margin:4px 0 0 16px; padding:0;">
+                        <li th:each="warning : ${warnings}" th:text="${warning}" style="margin:2px 0"></li>
+                    </ul>
+                </div>
+            </div>
+            <div th:if="${errors != null && !#lists.isEmpty(errors)}" class="vcc-flash vcc-flash--error">
+                <div>
+                    <strong>Błędy:</strong>
+                    <ul style="margin:4px 0 0 16px; padding:0;">
+                        <li th:each="err : ${errors}" th:text="${err}" style="margin:2px 0"></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Validation creation panel -->
+            <form id="validationForm" action="/validations/create" method="post">
+                <div class="vcc-form-panel">
+                    <!-- Control sensor position -->
+                    <div style="margin-bottom: var(--sp-4);">
+                        <label class="vcc-form-label">Czujnik kontrolujący urządzenie:</label>
+                        <div class="vcc-csp-panel">
+                            <div class="csp-levels">
+                                <input type="radio" id="lvl-top" name="_lvl" value="top" class="lvl-radio">
+                                <label for="lvl-top" class="lvl-tab">&#9650; GÓRA</label>
+                                <input type="radio" id="lvl-mid" name="_lvl" value="mid" class="lvl-radio">
+                                <label for="lvl-mid" class="lvl-tab">&#9632; ŚRODEK</label>
+                                <input type="radio" id="lvl-bot" name="_lvl" value="bot" class="lvl-radio">
+                                <label for="lvl-bot" class="lvl-tab">&#9660; DÓŁ</label>
+                            </div>
+                            <div id="csp-hint" class="csp-hint">Wybierz poziom aby zobaczyć pozycje</div>
+
+                            <!-- Grid TOP -->
+                            <div id="grid-top" class="csp-grid">
+                                <table class="csp-table"><thead><tr>
+                                    <th class="csp-th-col"></th><th class="csp-th-col">Lewy</th><th class="csp-th-col">Środek</th><th class="csp-th-col">Prawy</th>
+                                </tr></thead><tbody>
+                                    <tr><td class="csp-th-row">Tył</td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-TRL" name="controlSensorPosition" value="TOP_REAR_LEFT" class="csp-radio"><label for="csp-TRL" class="csp-cell">G1</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-TRC" name="controlSensorPosition" value="TOP_REAR_CENTER" class="csp-radio"><label for="csp-TRC" class="csp-cell">G2</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-TRR" name="controlSensorPosition" value="TOP_REAR_RIGHT" class="csp-radio"><label for="csp-TRR" class="csp-cell">G3</label></td></tr>
+                                    <tr><td class="csp-th-row">Śr.</td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-TCL" name="controlSensorPosition" value="TOP_CENTER_LEFT" class="csp-radio"><label for="csp-TCL" class="csp-cell">G4</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-TCC" name="controlSensorPosition" value="TOP_CENTER_CENTER" class="csp-radio"><label for="csp-TCC" class="csp-cell">G5</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-TCR" name="controlSensorPosition" value="TOP_CENTER_RIGHT" class="csp-radio"><label for="csp-TCR" class="csp-cell">G6</label></td></tr>
+                                    <tr><td class="csp-th-row">Przód</td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-TFL" name="controlSensorPosition" value="TOP_FRONT_LEFT" class="csp-radio"><label for="csp-TFL" class="csp-cell">G7</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-TFC" name="controlSensorPosition" value="TOP_FRONT_CENTER" class="csp-radio"><label for="csp-TFC" class="csp-cell">G8</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-TFR" name="controlSensorPosition" value="TOP_FRONT_RIGHT" class="csp-radio"><label for="csp-TFR" class="csp-cell">G9</label></td></tr>
+                                </tbody></table>
+                            </div>
+
+                            <!-- Grid MIDDLE -->
+                            <div id="grid-mid" class="csp-grid">
+                                <table class="csp-table"><thead><tr>
+                                    <th class="csp-th-col"></th><th class="csp-th-col">Lewy</th><th class="csp-th-col">Środek</th><th class="csp-th-col">Prawy</th>
+                                </tr></thead><tbody>
+                                    <tr><td class="csp-th-row">Tył</td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-MRL" name="controlSensorPosition" value="MIDDLE_REAR_LEFT" class="csp-radio"><label for="csp-MRL" class="csp-cell">S1</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-MRC" name="controlSensorPosition" value="MIDDLE_REAR_CENTER" class="csp-radio"><label for="csp-MRC" class="csp-cell">S2</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-MRR" name="controlSensorPosition" value="MIDDLE_REAR_RIGHT" class="csp-radio"><label for="csp-MRR" class="csp-cell">S3</label></td></tr>
+                                    <tr><td class="csp-th-row">Śr.</td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-MCL" name="controlSensorPosition" value="MIDDLE_CENTER_LEFT" class="csp-radio"><label for="csp-MCL" class="csp-cell">S4</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-MCC" name="controlSensorPosition" value="MIDDLE_CENTER_CENTER" class="csp-radio"><label for="csp-MCC" class="csp-cell">S5</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-MCR" name="controlSensorPosition" value="MIDDLE_CENTER_RIGHT" class="csp-radio"><label for="csp-MCR" class="csp-cell">S6</label></td></tr>
+                                    <tr><td class="csp-th-row">Przód</td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-MFL" name="controlSensorPosition" value="MIDDLE_FRONT_LEFT" class="csp-radio"><label for="csp-MFL" class="csp-cell">S7</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-MFC" name="controlSensorPosition" value="MIDDLE_FRONT_CENTER" class="csp-radio"><label for="csp-MFC" class="csp-cell">S8</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-MFR" name="controlSensorPosition" value="MIDDLE_FRONT_RIGHT" class="csp-radio"><label for="csp-MFR" class="csp-cell">S9</label></td></tr>
+                                </tbody></table>
+                            </div>
+
+                            <!-- Grid BOTTOM -->
+                            <div id="grid-bot" class="csp-grid">
+                                <table class="csp-table"><thead><tr>
+                                    <th class="csp-th-col"></th><th class="csp-th-col">Lewy</th><th class="csp-th-col">Środek</th><th class="csp-th-col">Prawy</th>
+                                </tr></thead><tbody>
+                                    <tr><td class="csp-th-row">Tył</td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-BRL" name="controlSensorPosition" value="BOTTOM_REAR_LEFT" class="csp-radio"><label for="csp-BRL" class="csp-cell">D1</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-BRC" name="controlSensorPosition" value="BOTTOM_REAR_CENTER" class="csp-radio"><label for="csp-BRC" class="csp-cell">D2</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-BRR" name="controlSensorPosition" value="BOTTOM_REAR_RIGHT" class="csp-radio"><label for="csp-BRR" class="csp-cell">D3</label></td></tr>
+                                    <tr><td class="csp-th-row">Śr.</td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-BCL" name="controlSensorPosition" value="BOTTOM_CENTER_LEFT" class="csp-radio"><label for="csp-BCL" class="csp-cell">D4</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-BCC" name="controlSensorPosition" value="BOTTOM_CENTER_CENTER" class="csp-radio"><label for="csp-BCC" class="csp-cell">D5</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-BCR" name="controlSensorPosition" value="BOTTOM_CENTER_RIGHT" class="csp-radio"><label for="csp-BCR" class="csp-cell">D6</label></td></tr>
+                                    <tr><td class="csp-th-row">Przód</td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-BFL" name="controlSensorPosition" value="BOTTOM_FRONT_LEFT" class="csp-radio"><label for="csp-BFL" class="csp-cell">D7</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-BFC" name="controlSensorPosition" value="BOTTOM_FRONT_CENTER" class="csp-radio"><label for="csp-BFC" class="csp-cell">D8</label></td>
+                                        <td class="csp-cell-wrap"><input type="radio" id="csp-BFR" name="controlSensorPosition" value="BOTTOM_FRONT_RIGHT" class="csp-radio"><label for="csp-BFR" class="csp-cell">D9</label></td></tr>
+                                </tbody></table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Device load state -->
+                    <div style="margin-bottom: var(--sp-4);">
+                        <label class="vcc-form-label">Stan urządzenia podczas walidacji:</label>
+                        <select name="deviceLoadState" required class="vcc-form-input" style="max-width: 360px;">
+                            <option value="">-- Wybierz stan urządzenia --</option>
+                            <option value="FULL">Pełne - symuluje rzeczywiste warunki pracy</option>
+                            <option value="EMPTY">Puste - warunki bez obciążenia termicznego</option>
+                            <option value="PARTIALLY_LOADED">Częściowo załadowane - warunki pośrednie</option>
+                        </select>
+                        <span class="vcc-form-hint">Wybierz stan załadowania zgodny z procedurą walidacyjną GMP/GDP</span>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap: var(--sp-4);">
+                        <button type="submit" class="vcc-btn--action">
+                            <i class="fas fa-check-circle"></i>
+                            Wykonaj walidację z zaznaczonych
+                        </button>
+                        <span class="vcc-table__muted">Zaznacz serie, które mają być użyte w walidacji</span>
+                    </div>
+                </div>
+
+                <!-- Data card -->
+                <div class="vcc-data-card vcc-animate-fade-in">
+
+                    <div th:if="${#lists.isEmpty(measurementSeries)}" class="vcc-empty-state">
+                        <i class="fas fa-chart-line vcc-empty-state__icon"></i>
+                        <p class="vcc-empty-state__title">Brak serii pomiarowych</p>
+                        <p class="vcc-empty-state__desc">Kliknij "Prześlij pliki TESTO" aby dodać pierwsze pomiary (.vi2 lub .html)</p>
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(measurementSeries)}" class="vcc-table-wrap">
+                        <table class="vcc-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px">
+                                        <input type="checkbox" id="selectAll" style="width:18px;height:18px;cursor:pointer;accent-color:var(--vcc-primary)">
+                                    </th>
+                                    <th>Plik / Rejestrator</th>
+                                    <th style="width:180px">Pozycja</th>
+                                    <th>Okres pomiarów</th>
+                                    <th>Zakres temp.</th>
+                                    <th>MKT</th>
+                                    <th>Przesłano</th>
+                                    <th>Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="series : ${measurementSeries}">
+                                    <td style="text-align:center">
+                                        <input type="checkbox" name="seriesIds" th:value="${series.id}" class="series-checkbox"
+                                               style="width:18px;height:18px;cursor:pointer;accent-color:var(--vcc-primary)">
+                                    </td>
+                                    <td>
+                                        <a th:href="@{/measurements/{id}(id=${series.id})}"
+                                           th:text="${series.originalFilename}"
+                                           style="font-family:'DM Mono',monospace; font-size:.82rem; color:var(--vcc-primary); font-weight:500;">plik.vi2</a>
+                                        <div th:if="${series.recorderSerialNumber != null}" class="vcc-table__muted"
+                                             style="font-family:'DM Mono',monospace;"
+                                             th:text="'#' + ${series.recorderSerialNumber}"></div>
+                                    </td>
+                                    <td>
+                                        <span th:if="${series.isReferenceRecorder}" class="vcc-badge vcc-badge--warning"
+                                              style="font-size:.72rem;">REF</span>
+                                        <span th:unless="${series.isReferenceRecorder}">
+                                            <span th:if="${series.recorderPosition != null}" class="vcc-badge vcc-badge--neutral"
+                                                  th:text="${series.recorderPosition.displayName}">--</span>
+                                            <span th:unless="${series.recorderPosition != null}"
+                                                  style="color:var(--color-danger);font-size:.78rem">Brak</span>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="vcc-table__muted" style="line-height:1.7">
+                                            <div><strong style="color:var(--text-primary)">Od:</strong> <span th:text="${series.formattedFirstMeasurementTime}">--</span></div>
+                                            <div><strong style="color:var(--text-primary)">Do:</strong> <span th:text="${series.formattedLastMeasurementTime}">--</span></div>
+                                            <div th:text="'(' + ${series.duration} + ')'"></div>
+                                        </div>
+                                    </td>
+                                    <td><span class="vcc-table__primary" th:text="${series.temperatureRange}">--</span></td>
+                                    <td>
+                                        <span style="font-weight:600;color:var(--vcc-primary)"
+                                              th:text="${series.mktTemperature != null ? #numbers.formatDecimal(series.mktTemperature, 1, 1) + '°C' : '–'}">--</span>
+                                    </td>
+                                    <td><span class="vcc-table__muted" th:text="${series.formattedUploadDate}">--</span></td>
+                                    <td>
+                                        <div class="vcc-table__actions">
+                                            <a th:href="@{/measurements/{id}(id=${series.id})}" class="vcc-btn--table vcc-btn--table-primary">
+                                                <i class="fas fa-eye"></i> Szczegóły
+                                            </a>
+                                            <form th:action="@{/measurements/{id}/delete(id=${series.id})}" method="post"
+                                                  style="display:inline"
+                                                  onsubmit="return confirm('Usunąć tę serię pomiarową?')">
+                                                <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
+                                                    <i class="fas fa-trash-alt"></i> Usuń
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(measurementSeries)}" class="vcc-data-card__footer">
+                        <div class="vcc-data-card__count">
+                            Łącznie: <span class="vcc-data-card__count-badge" th:text="${#lists.size(measurementSeries)}">0</span> serii pomiarowych
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    // Select all checkboxes
+    document.getElementById('selectAll')?.addEventListener('change', function(e) {
+        document.querySelectorAll('.series-checkbox').forEach(function(cb) { cb.checked = e.target.checked; });
+    });
+    document.querySelectorAll('.series-checkbox').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            var all = document.querySelectorAll('.series-checkbox');
+            var checked = document.querySelectorAll('.series-checkbox:checked');
+            document.getElementById('selectAll').checked = (all.length === checked.length && all.length > 0);
+        });
+    });
+
+    // Control sensor grid toggle
+    document.querySelectorAll('.lvl-radio').forEach(function(r) {
+        r.addEventListener('change', function() {
+            document.querySelectorAll('.csp-grid').forEach(function(g) { g.style.display = 'none'; });
+            document.getElementById('csp-hint').style.display = 'none';
+            document.getElementById('grid-' + this.value).style.display = 'block';
+            document.querySelectorAll('.csp-radio').forEach(function(cr) { cr.checked = false; });
+        });
+    });
+
+    // Table search
+    (function() {
+        var input = document.getElementById('measurementSearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            document.querySelectorAll('.vcc-table tbody tr').forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+    </script>
+
+</body>
+
+</html>

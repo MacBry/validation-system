@@ -1,0 +1,205 @@
+# =============================================================================
+# VALIDATION SYSTEM v2.12.0-ENTERPRISE - GitHub Actions Backup Workflow
+# =============================================================================
+# PURPOSE: CI/CD integrated backup for staging/production environments
+# TRIGGER: Scheduled (daily) + manual dispatch for on-demand backups
+#
+# Copy this file to: .github/workflows/backup.yml
+# =============================================================================
+
+name: Database Backup & DR Test
+
+on:
+  schedule:
+    # Daily backup at 02:00 UTC (04:00 Europe/Warsaw)
+    - cron: '0 2 * * *'
+    # Weekly DR test on Sundays at 05:00 UTC
+    - cron: '0 5 * * 0'
+  workflow_dispatch:
+    inputs:
+      backup_type:
+        description: 'Backup type'
+        required: true
+        default: 'daily'
+        type: choice
+        options:
+          - daily
+          - weekly
+          - monthly
+          - dr-test
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  MYSQL_DATABASE: validation_system
+  BACKUP_RETENTION_DAYS: 30
+
+jobs:
+  # ===========================================================================
+  # Job 1: Database Backup
+  # ===========================================================================
+  backup:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.backup_type != 'dr-test' || github.event.schedule == '0 2 * * *'
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout backup scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: backup-infrastructure
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mysql-client gnupg2
+
+      - name: Import GPG key for encryption
+        if: secrets.BACKUP_GPG_KEY != ''
+        run: |
+          echo "${{ secrets.BACKUP_GPG_KEY }}" | gpg --batch --import
+
+      - name: Run MySQL backup
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_REGION: ${{ secrets.AWS_REGION }}
+          BACKUP_GPG_RECIPIENT: ${{ secrets.BACKUP_GPG_RECIPIENT }}
+          BACKUP_OPERATOR: github-actions
+          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          chmod +x backup-infrastructure/scripts/*.sh
+          export BACKUP_BASE_DIR="${GITHUB_WORKSPACE}/backups"
+          export BACKUP_LOG_DIR="${GITHUB_WORKSPACE}/logs"
+          mkdir -p "$BACKUP_BASE_DIR"/{daily,weekly,monthly,binlog,tmp}
+          mkdir -p "$BACKUP_LOG_DIR"
+
+          BACKUP_TYPE="${{ github.event.inputs.backup_type || 'daily' }}"
+          bash backup-infrastructure/scripts/mysql-full-backup.sh "$BACKUP_TYPE"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ github.event.inputs.backup_type || 'daily' }}-${{ github.run_number }}
+          path: backups/
+          retention-days: ${{ env.BACKUP_RETENTION_DAYS }}
+
+      - name: Upload backup logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 90
+
+      - name: Notify on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": ":x: VCC Backup FAILED - ${{ github.event.inputs.backup_type || 'daily' }} - Run #${{ github.run_number }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ===========================================================================
+  # Job 2: Disaster Recovery Test (weekly or on-demand)
+  # ===========================================================================
+  dr-test:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.backup_type == 'dr-test' || github.event.schedule == '0 5 * * 0'
+    environment: staging
+    timeout-minutes: 120
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: validation_system
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: backup-infrastructure
+
+      - name: Wait for MySQL
+        run: |
+          until mysqladmin ping -h 127.0.0.1 -u root --password=test_password --silent; do
+            sleep 2
+          done
+
+      - name: Download latest production backup from S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          LATEST=$(aws s3 ls "${{ secrets.BACKUP_S3_BUCKET }}/daily/" --recursive | sort | tail -1 | awk '{print $4}')
+          if [ -n "$LATEST" ]; then
+            mkdir -p /tmp/restore
+            aws s3 cp "s3://${{ secrets.BACKUP_S3_BUCKET }}/$LATEST" /tmp/restore/
+            echo "Downloaded: $LATEST"
+          else
+            echo "No backup found in S3, using local dump"
+          fi
+
+      - name: Run DR test
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: "3306"
+          DB_USERNAME: root
+          MYSQL_PWD: test_password
+          BACKUP_OPERATOR: github-actions-dr-test
+        run: |
+          chmod +x backup-infrastructure/tests/*.sh backup-infrastructure/scripts/*.sh
+          export BACKUP_BASE_DIR="/tmp/backups"
+          export BACKUP_LOG_DIR="/tmp/backup-logs"
+          mkdir -p "$BACKUP_BASE_DIR"/{daily,weekly,monthly,binlog,tmp}
+          mkdir -p "$BACKUP_LOG_DIR"
+          bash backup-infrastructure/tests/test-backup-restore.sh
+
+      - name: Upload DR test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-test-report-${{ github.run_number }}
+          path: /tmp/backup-logs/dr_test_report_*.txt
+          retention-days: 365  # Keep DR test reports for 1 year (GMP)
+
+      - name: Notify on DR test failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": ":rotating_light: VCC DR Test FAILED - Run #${{ github.run_number }} - Immediate investigation required"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

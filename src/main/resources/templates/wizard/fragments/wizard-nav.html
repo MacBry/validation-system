@@ -1,0 +1,209 @@
+<!-- Wizard Navigation Progress Bar Fragment — VCC Design System -->
+<div th:fragment="wizard-nav(currentStep, stepLockFrom)" class="wizard-progress-wrap">
+
+    <style>
+        .wizard-progress-wrap {
+            margin: 0 0 var(--sp-6, 1.5rem) 0;
+        }
+
+        .wizard-progress {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            position: relative;
+            padding: 0 0 var(--sp-4, 1rem) 0;
+        }
+
+        /* horizontal connector line behind the circles */
+        .wizard-progress::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: calc(100% / 18);
+            right: calc(100% / 18);
+            height: 2px;
+            background: var(--border-default, #e5e7ef);
+            z-index: 0;
+        }
+
+        .wizard-step {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .wizard-step__circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            font-family: 'DM Mono', monospace;
+            transition: background var(--duration-fast, 0.15s) var(--ease-out, ease-out),
+                        box-shadow var(--duration-fast, 0.15s) var(--ease-out, ease-out);
+            position: relative;
+        }
+
+        .wizard-step__circle--completed {
+            background: var(--vcc-primary, #667eea);
+            color: #fff;
+        }
+
+        .wizard-step__circle--current {
+            background: var(--vcc-primary, #667eea);
+            color: #fff;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.18);
+        }
+
+        .wizard-step__circle--pending {
+            background: var(--surface-card, #fff);
+            color: var(--text-muted, #9298ae);
+            border: 2px solid var(--border-default, #e5e7ef);
+        }
+
+        .wizard-step__circle--locked {
+            background: var(--surface-card, #fff);
+            color: var(--text-muted, #9298ae);
+            border: 2px solid var(--border-default, #e5e7ef);
+        }
+
+        .wizard-step__circle--locked::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239298ae'%3E%3Cpath d='M8 1a3.5 3.5 0 0 0-3.5 3.5V6H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1.5V4.5A3.5 3.5 0 0 0 8 1zm2.5 5H5.5V4.5a2.5 2.5 0 0 1 5 0V6z'/%3E%3C/svg%3E") center/16px no-repeat;
+            opacity: 0.6;
+        }
+
+        .wizard-step__circle--locked span { opacity: 0; }
+
+        /* connector segment that turns colored when step is completed */
+        .wizard-step__line {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: var(--border-default, #e5e7ef);
+            z-index: 0;
+        }
+
+        .wizard-step__line--filled {
+            background: var(--vcc-primary, #667eea);
+        }
+
+        .wizard-step__label {
+            margin-top: 8px;
+            font-size: 0.68rem;
+            font-weight: 500;
+            color: var(--text-muted, #9298ae);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 64px;
+        }
+
+        .wizard-step__label--active {
+            color: var(--vcc-primary, #667eea);
+            font-weight: 600;
+        }
+
+        /* lock notice */
+        .wizard-lock-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 14px;
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.8rem;
+            color: #92400e;
+            margin-top: var(--sp-4, 1rem);
+        }
+
+        .wizard-lock-notice i { flex-shrink: 0; margin-top: 2px; }
+
+        /* counter pill */
+        .wizard-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary, #6b7280);
+            margin-bottom: var(--sp-4, 1rem);
+        }
+
+        .wizard-counter__badge {
+            background: var(--vcc-primary, #667eea);
+            color: #fff;
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: 0.72rem;
+        }
+
+        @media (max-width: 640px) {
+            .wizard-step__label { display: none; }
+            .wizard-step__circle { width: 32px; height: 32px; font-size: 0.75rem; }
+            .wizard-progress::before { top: 16px; }
+            .wizard-step__line { top: 16px; }
+        }
+    </style>
+
+    <!-- Step counter -->
+    <div class="wizard-counter">
+        <span>Kreator walidacji</span>
+        <span class="wizard-counter__badge" th:text="${currentStep} + ' z 9'">1 z 9</span>
+    </div>
+
+    <!-- Progress steps -->
+    <div class="wizard-progress">
+        <div th:each="i : ${#numbers.sequence(1, 9)}" class="wizard-step">
+            <!-- connector to next step -->
+            <div class="wizard-step__line"
+                 th:classappend="${i < currentStep} ? 'wizard-step__line--filled' : ''"></div>
+
+            <!-- circle -->
+            <div class="wizard-step__circle"
+                 th:classappend="${i < currentStep} ? 'wizard-step__circle--completed'
+                               : (${i == currentStep} ? 'wizard-step__circle--current'
+                               : ((${stepLockFrom} != null and ${i} < ${stepLockFrom} and ${i} >= 2) ? 'wizard-step__circle--locked'
+                               : 'wizard-step__circle--pending'))">
+                <!-- checkmark for completed -->
+                <i th:if="${i < currentStep}" class="fas fa-check" style="font-size:0.7rem;"></i>
+                <span th:if="${i >= currentStep}" th:text="${i}">1</span>
+            </div>
+
+            <!-- label -->
+            <div class="wizard-step__label"
+                 th:classappend="${i == currentStep} ? 'wizard-step__label--active' : ''">
+                <span th:switch="${i}">
+                    <span th:case="1">Procedura</span>
+                    <span th:case="2">Urządzenie</span>
+                    <span th:case="3">Kryteria</span>
+                    <span th:case="4">Warunki</span>
+                    <span th:case="5">Testy</span>
+                    <span th:case="6">Serie</span>
+                    <span th:case="7">Przegląd</span>
+                    <span th:case="8">Statystyki</span>
+                    <span th:case="9">Finalizacja</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lock notice -->
+    <div th:if="${stepLockFrom != null}" class="wizard-lock-notice">
+        <i class="fas fa-lock"></i>
+        <span><strong>Kroki 2–3 zablokowane:</strong> Po zdefiniowaniu kryteriow akceptacji urządzenie i kryteria nie mogą być zmienione. Utwórz nowy szkic, aby to zmienić.</span>
+    </div>
+</div>

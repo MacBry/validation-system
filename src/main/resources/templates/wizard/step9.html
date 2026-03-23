@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Krok 9 - Finalizacja - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:replace="~{fragments/csrf-token :: csrf-meta}"></th:replace>
+    <style>
+        .wizard-container { max-width: 780px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+
+        /* Finalize submit button — stands out */
+        .wizard-btn-finalize {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 26px;
+            background: var(--vcc-primary, #667eea);
+            border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.9rem; font-weight: 700; color: #fff; cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-finalize:hover { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+
+        /* Document preview box */
+        .preview-box {
+            background: var(--surface-page, #f7f8fc);
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-6, 1.5rem);
+            min-height: 200px;
+            margin-bottom: var(--sp-6, 1.5rem);
+        }
+        .preview-box__title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-muted, #9298ae);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: var(--sp-4, 1rem);
+        }
+        .preview-detail-grid {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 8px 16px;
+            font-size: 0.83rem;
+        }
+        .preview-detail-grid__key {
+            color: var(--text-muted, #9298ae);
+            font-weight: 600;
+        }
+        .preview-detail-grid__val {
+            color: var(--text-primary, #1a1f3a);
+            font-family: 'DM Mono', monospace;
+        }
+
+        /* Warning notice */
+        .warning-notice {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px;
+            background: #fffbeb; border: 1px solid #fcd34d;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem; color: #92400e;
+            margin-top: var(--sp-4, 1rem);
+        }
+        .warning-notice i { flex-shrink: 0; margin-top: 2px; }
+        .warning-notice ul { margin: 6px 0 0 0; padding-left: 18px; }
+        .warning-notice ul li { margin-bottom: 3px; }
+
+        /* Password eye toggle */
+        .password-field-wrap {
+            position: relative;
+        }
+        .password-field-wrap .vcc-form-input {
+            padding-right: 42px;
+        }
+        .btn-eye {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted, #9298ae);
+            font-size: 0.9rem;
+            padding: 4px;
+            transition: color var(--duration-fast, 0.15s);
+        }
+        .btn-eye:hover { color: var(--text-primary, #1a1f3a); }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard kwalifikacji', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">Krok 9 — Finalizacja</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:replace="~{wizard/fragments/wizard-nav :: wizard-nav(9, draft.stepLockFrom)}"></th:replace>
+
+                <!-- Flash messages -->
+                <div th:if="${success}" class="vcc-flash vcc-flash--success">
+                    <i class="fas fa-check-circle"></i>
+                    <span th:text="${success}"></span>
+                </div>
+                <div th:if="${error}" class="vcc-flash vcc-flash--error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span th:text="${error}"></span>
+                </div>
+                <div th:if="${message != null and #strings.startsWith(message, 'success')}"
+                     class="vcc-flash vcc-flash--success">
+                    <i class="fas fa-check-circle"></i>
+                    <span th:text="${message}"></span>
+                </div>
+                <div th:if="${message != null and #strings.startsWith(message, 'error')}"
+                     class="vcc-flash vcc-flash--error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span th:text="${message}"></span>
+                </div>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Finalizacja i podpis elektroniczny</h2>
+                        <p class="wizard-step-header__desc">Podpisz dokument walidacji, aby zakończyć i zarchiwizować wynik kwalifikacji.</p>
+                    </div>
+
+                    <!-- Document preview -->
+                    <div class="preview-box">
+                        <p class="preview-box__title"><i class="fas fa-file-pdf" style="color:#dc2626;"></i> Podgląd dokumentu</p>
+                        <div class="preview-detail-grid">
+                            <span class="preview-detail-grid__key">ID walidacji:</span>
+                            <span class="preview-detail-grid__val" th:text="${draft.id}">1</span>
+
+                            <span class="preview-detail-grid__key">Procedura:</span>
+                            <span class="preview-detail-grid__val"
+                                  th:text="${draft.procedureType.getDisplayName()}">OQ</span>
+
+                            <span class="preview-detail-grid__key">Urządzenie:</span>
+                            <span class="preview-detail-grid__val"
+                                  th:text="${draft.coolingDevice?.name ?: '—'}">Lodówka REF</span>
+
+                            <span class="preview-detail-grid__key">Status szkicu:</span>
+                            <span class="preview-detail-grid__val"
+                                  th:text="${draft.status.getDisplayName()}">W toku</span>
+                        </div>
+                    </div>
+
+                    <!-- Signing form -->
+                    <form th:action="@{/wizard/{id}/finalize(id=${draft.id})}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+                        <div class="vcc-form-section">
+                            <legend class="vcc-form-section__legend" style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:var(--sp-4);">
+                                Dane do podpisu elektronicznego
+                            </legend>
+
+                            <div class="vcc-form-row">
+                                <!-- Password -->
+                                <div>
+                                    <label for="password" class="vcc-form-label">
+                                        Hasło do certyfikatu
+                                        <span class="vcc-required">*</span>
+                                    </label>
+                                    <div class="password-field-wrap">
+                                        <input type="password"
+                                               class="vcc-form-input"
+                                               id="password"
+                                               name="password"
+                                               required
+                                               placeholder="Wprowadź hasło">
+                                        <button type="button" class="btn-eye" id="eyeBtn"
+                                                onclick="togglePassword()"
+                                                aria-label="Pokaż/ukryj hasło">
+                                            <i class="fas fa-eye" id="eyeIcon"></i>
+                                        </button>
+                                    </div>
+                                    <span class="vcc-form-hint">Hasło do klucza prywatnego certyfikatu PKCS12 firmy.</span>
+                                </div>
+
+                                <!-- Intent -->
+                                <div>
+                                    <label for="intent" class="vcc-form-label">Oświadczenie woli</label>
+                                    <input type="text"
+                                           class="vcc-form-input"
+                                           id="intent"
+                                           name="intent"
+                                           value="Zatwierdzenie walidacji">
+                                    <span class="vcc-form-hint">Treść oświadczenia dołączona do podpisu.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Warning -->
+                        <div class="warning-notice">
+                            <i class="fas fa-lock"></i>
+                            <div>
+                                <strong>Ważne — operacja nieodwracalna:</strong>
+                                <ul>
+                                    <li>Po podpisaniu nie będzie możliwe wprowadzenie zmian w danych walidacji.</li>
+                                    <li>Podpis elektroniczny jest wiążący i poświadcza zatwierdzenie procesu kwalifikacji.</li>
+                                    <li>Wygenerowany dokument zostanie zapisany w systemie z adnotacją GMP.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="wizard-actions" style="margin-top: var(--sp-6, 1.5rem);">
+                            <a th:href="@{/wizard/{id}/step/8(id=${draft.id})}" class="wizard-btn-back">
+                                <i class="fas fa-arrow-left"></i> Poprzedni krok
+                            </a>
+                            <a th:href="@{/wizard/}" class="wizard-btn-back">
+                                <i class="fas fa-times"></i> Anuluj
+                            </a>
+                            <button type="submit" class="wizard-btn-finalize">
+                                <i class="fas fa-pen-nib"></i> Finalizuj i podpisz
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script>
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+    </script>
+</body>
+</html>

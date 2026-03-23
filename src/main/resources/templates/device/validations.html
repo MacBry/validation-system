@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Walidacje — ' + ${device.name}">Walidacje urządzenia</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('devices')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('devices', 'Walidacje urządzenia', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Breadcrumb -->
+            <nav class="vcc-breadcrumb" aria-label="Breadcrumb">
+                <a th:href="@{/}">Dashboard</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <a th:href="@{/devices}">Urządzenia</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <a th:href="@{/devices/{id}(id=${device.id})}" th:text="${device.name}">Urządzenie</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <span class="vcc-breadcrumb__current">Walidacje</span>
+            </nav>
+
+            <!-- Detail header -->
+            <div class="vcc-detail-header vcc-animate-fade-in">
+                <div class="vcc-detail-header__info">
+                    <div class="vcc-detail-header__icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="vcc-detail-header__text">
+                        <h1 class="vcc-detail-header__title" th:text="${device.name}">Nazwa urządzenia</h1>
+                        <div class="vcc-detail-header__subtitle"
+                             th:text="'Nr inw.: ' + ${device.inventoryNumber}">Nr inw.: ---</div>
+                        <div class="vcc-detail-meta">
+                            <span class="vcc-detail-meta__item" th:if="${device.laboratory != null}">
+                                <i class="fas fa-flask"></i>
+                                <span th:text="${device.laboratory.fullName}">Pracownia</span>
+                            </span>
+                            <span class="vcc-detail-meta__item">
+                                <i class="fas fa-cube"></i>
+                                <span th:text="${device.chamberType.displayName}">Typ komory</span>
+                            </span>
+                            <span class="vcc-detail-meta__item" th:if="${device.materialType != null}">
+                                <i class="fas fa-boxes-stacked"></i>
+                                <span th:text="${device.materialType.name}">Materiał</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="vcc-button-group">
+                    <a th:href="@{/devices/{id}(id=${device.id})}" class="vcc-btn--detail-outline">
+                        <i class="fas fa-arrow-left"></i>
+                        Szczegóły urządzenia
+                    </a>
+                    <a th:href="@{/devices}" class="vcc-btn--detail-outline">
+                        <i class="fas fa-list"></i>
+                        Lista urządzeń
+                    </a>
+                </div>
+            </div>
+
+            <!-- Section 1: Informacje o urządzeniu -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-info-circle"></i>
+                        Informacje o urządzeniu
+                    </h2>
+                </div>
+                <div class="vcc-detail-grid">
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Nr inwentarzowy</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono"
+                              th:text="${device.inventoryNumber}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Pracownia</span>
+                        <span class="vcc-detail-value"
+                              th:text="${device.laboratory != null ? device.laboratory.fullName : '–'}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Typ komory</span>
+                        <span class="vcc-detail-value" th:text="${device.chamberType.displayName}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Przechowywany materiał</span>
+                        <span class="vcc-detail-value"
+                              th:text="${device.materialType != null ? device.materialType.name : '–'}">–</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Filtr statusów + Historia walidacji -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-history"></i>
+                        Historia walidacji
+                    </h2>
+                    <div class="vcc-detail-section__actions">
+                        <!-- Status filter -->
+                        <form method="get" th:action="@{/devices/{id}/validations(id=${device.id})}"
+                              style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <label for="statusFilter"
+                                   style="font-size: .8rem; font-weight: 600; color: var(--text-secondary);">
+                                Status:
+                            </label>
+                            <select id="statusFilter" name="status"
+                                    class="vcc-form-select"
+                                    style="min-width: 170px; padding: 6px 12px; font-size: .85rem;"
+                                    onchange="this.form.submit()">
+                                <option value="">Wszystkie statusy</option>
+                                <option th:each="s : ${allStatuses}"
+                                        th:value="${s}"
+                                        th:text="${s.displayName}"
+                                        th:selected="${selectedStatus != null && s == selectedStatus}">Status</option>
+                            </select>
+                            <button type="submit" style="display:none">Filtruj</button>
+                            <a th:if="${selectedStatus != null}"
+                               th:href="@{/devices/{id}/validations(id=${device.id})}"
+                               class="vcc-btn--table vcc-btn--table-outline"
+                               style="font-size: .78rem; padding: 5px 10px;">
+                                <i class="fas fa-times"></i> Wyczyść
+                            </a>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Table: validations list -->
+                <div class="vcc-data-card" style="box-shadow: none; border: 1px solid var(--border-default); border-radius: var(--radius-md);">
+                    <!-- Empty state -->
+                    <div th:if="${#lists.isEmpty(validations)}" class="vcc-empty-state">
+                        <div class="vcc-empty-state__icon">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <p class="vcc-empty-state__title">Brak walidacji</p>
+                        <p class="vcc-empty-state__desc">
+                            <span th:if="${selectedStatus != null}">
+                                Brak walidacji o wybranym statusie. Wybierz inny filtr lub wyczyść.
+                            </span>
+                            <span th:if="${selectedStatus == null}">
+                                To urządzenie nie ma jeszcze żadnych walidacji.
+                            </span>
+                        </p>
+                    </div>
+
+                    <!-- Table -->
+                    <div th:unless="${#lists.isEmpty(validations)}" class="vcc-table-wrap">
+                        <table class="vcc-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Data utworzenia</th>
+                                    <th>Status</th>
+                                    <th>Liczba serii</th>
+                                    <th style="text-align: right;">Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="validation : ${validations}">
+                                    <td>
+                                        <span class="vcc-table__mono"
+                                              th:text="${'#' + validation.id}">–</span>
+                                    </td>
+                                    <td>
+                                        <span class="vcc-table__secondary"
+                                              th:text="${#temporals.format(validation.createdDate, 'dd.MM.yyyy HH:mm')}">–</span>
+                                    </td>
+                                    <td>
+                                        <!-- Status badges using vcc-status classes -->
+                                        <span th:switch="${validation.status.name()}">
+                                            <span th:case="'DRAFT'" class="vcc-status vcc-status--draft"
+                                                  th:text="${validation.status.displayName}">Szkic</span>
+                                            <span th:case="'APPROVED'" class="vcc-status vcc-status--valid"
+                                                  th:text="${validation.status.displayName}">Zatwierdzona</span>
+                                            <span th:case="'COMPLETED'" class="vcc-status vcc-status--completed"
+                                                  th:text="${validation.status.displayName}">Zakończona</span>
+                                            <span th:case="'REJECTED'" class="vcc-status vcc-status--invalid"
+                                                  th:text="${validation.status.displayName}">Odrzucona</span>
+                                            <span th:case="*" class="vcc-status vcc-status--none"
+                                                  th:text="${validation.status.displayName}">–</span>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="vcc-table__secondary"
+                                              th:text="${#lists.size(validation.measurementSeries)}">0</span>
+                                    </td>
+                                    <td>
+                                        <div class="vcc-table__actions">
+                                            <a th:href="@{/validations/{id}(id=${validation.id}, from='/devices/' + ${device.id} + '/validations' + ${selectedStatus != null ? '?status=' + selectedStatus : ''})}"
+                                               class="vcc-btn--table vcc-btn--table-purple">
+                                                <i class="fas fa-eye"></i>
+                                                Szczegóły
+                                            </a>
+                                            <button th:data-url="@{/validations/{id}/package(id=${validation.id})}"
+                                                    th:data-filename="'Walidacja_' + ${validation.id} + '_' + ${#temporals.format(validation.createdDate, 'yyyy-MM-dd')} + '.zip'"
+                                                    onclick="downloadFile(this.dataset.url, this.dataset.filename)"
+                                                    class="vcc-btn--table vcc-btn--table-primary"
+                                                    style="border: none; cursor: pointer; font-family: inherit;">
+                                                <i class="fas fa-file-archive"></i>
+                                                Pobierz
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Footer with count -->
+                    <div th:unless="${#lists.isEmpty(validations)}" class="vcc-data-card__footer">
+                        <span>Łącznie:</span>
+                        <span class="vcc-data-card__count-badge"
+                              th:text="${#lists.size(validations)}">0</span>
+                        <span>walidacji</span>
+                        <span th:if="${selectedStatus != null}"
+                              style="margin-left: 4px; color: var(--text-muted);">
+                            (filtr aktywny: <span th:text="${selectedStatus.displayName}"></span>)
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Statystyki -->
+            <section th:if="${!#lists.isEmpty(validations)}"
+                     class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-chart-pie"></i>
+                        Statystyki walidacji
+                    </h2>
+                </div>
+                <div class="vcc-detail-grid">
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Łączna liczba walidacji</span>
+                        <span class="vcc-detail-value">
+                            <span class="vcc-detail-badge" th:text="${#lists.size(validations)}">0</span>
+                        </span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Łączna liczba serii pomiarowych</span>
+                        <span class="vcc-detail-value">
+                            <span class="vcc-detail-badge"
+                                  th:text="${#aggregates.sum(validations.![#lists.size(measurementSeries)])}">0</span>
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+    <script>
+        function downloadFile(url, filename) {
+            fetch(url, { credentials: 'same-origin' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error(r.status);
+                    return r.blob();
+                })
+                .then(function(blob) {
+                    var u = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = u;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(u);
+                    document.body.removeChild(a);
+                })
+                .catch(function(e) {
+                    alert('Błąd pobierania: ' + e);
+                });
+        }
+    </script>
+</body>
+
+</html>

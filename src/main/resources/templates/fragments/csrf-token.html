@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+
+<!--
+CSRF Token Fragment - GMP Compliance
+Zgodny z FDA 21 CFR Part 11 §11.10(d) - kontrola dostępu z zabezpieczeniami przed manipulacją
+-->
+
+<head th:fragment="csrf-meta">
+    <!-- CSRF Token jako meta tag dla AJAX requests -->
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+    <meta name="_csrf_parameter" th:content="${_csrf.parameterName}" />
+</head>
+
+<!-- Fragment dla form HTML - automatycznie dodaje hidden input z CSRF token -->
+<div th:fragment="csrf-input">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+</div>
+
+<!-- Fragment dla AJAX setup - automatycznie konfiguruje CSRF headers -->
+<script th:fragment="csrf-ajax-setup">
+    // Automatyczna konfiguracja CSRF dla wszystkich AJAX requests
+    (function() {
+        'use strict';
+
+        // Pobierz CSRF token z meta tags lub cookie (fallback dla deferred tokens)
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        let csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+        const csrfParameter = document.querySelector('meta[name="_csrf_parameter"]')?.getAttribute('content') || '_csrf';
+
+        if (!csrfToken || csrfToken === '') {
+            csrfToken = getCookie('XSRF-TOKEN');
+            csrfHeader = 'X-XSRF-TOKEN';
+        }
+
+        if (!csrfToken) {
+            console.warn('⚠️ CSRF: Brak tokenu w meta tags i cookies - AJAX requests mogą być odrzucane');
+            return;
+        }
+
+        console.log('🔐 CSRF: Konfiguracja AJAX z tokenem (długość: ' + csrfToken.length + ')');
+
+        // jQuery AJAX setup (jeśli jQuery jest dostępne)
+        if (typeof $ !== 'undefined') {
+            $.ajaxSetup({
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader(csrfHeader, csrfToken);
+                }
+            });
+            console.log('✅ CSRF: jQuery AJAX skonfigurowane');
+        }
+
+        // Fetch API setup - monkey patch dla automatycznego dodawania headers
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            // Dodaj CSRF header tylko dla same-origin requests i metod wymagających ochrony
+            const isStateChanging = options.method &&
+                ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase());
+
+            if (isStateChanging || (!options.method || options.method.toUpperCase() === 'POST')) {
+                options.headers = options.headers || {};
+                options.headers[csrfHeader] = csrfToken;
+
+                console.log('🔐 CSRF: Dodano header do fetch request:', options.method || 'GET');
+            }
+
+            return originalFetch(url, options);
+        };
+
+        // XMLHttpRequest setup - monkey patch dla starszych aplikacji
+        const originalOpen = XMLHttpRequest.prototype.open;
+        const originalSend = XMLHttpRequest.prototype.send;
+
+        XMLHttpRequest.prototype.open = function(method, url, ...args) {
+            this._method = method;
+            this._url = url;
+            return originalOpen.apply(this, [method, url, ...args]);
+        };
+
+        XMLHttpRequest.prototype.send = function(data) {
+            const isStateChanging = this._method &&
+                ['POST', 'PUT', 'DELETE', 'PATCH'].includes(this._method.toUpperCase());
+
+            if (isStateChanging) {
+                this.setRequestHeader(csrfHeader, csrfToken);
+                console.log('🔐 CSRF: Dodano header do XMLHttpRequest:', this._method);
+            }
+
+            return originalSend.apply(this, arguments);
+        };
+
+        // Form submission enhancement - dodaj CSRF token do form bez hidden input
+        document.addEventListener('submit', function(event) {
+            const form = event.target;
+
+            // Sprawdź czy form już ma CSRF token
+            const existingCsrfInput = form.querySelector('input[name="' + csrfParameter + '"]');
+            if (existingCsrfInput) {
+                // Zaktualizuj wartość jeśli token się zmienił
+                existingCsrfInput.value = csrfToken;
+                return;
+            }
+
+            // Dodaj CSRF token jako hidden input
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = csrfParameter;
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+
+            console.log('🔐 CSRF: Automatycznie dodano token do formularza');
+        });
+
+        // Token refresh mechanism - sprawdzaj czy token się nie zmienił
+        setInterval(function() {
+            const newToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            if (newToken && newToken !== csrfToken) {
+                console.log('🔄 CSRF: Token odświeżony, przeładuj stronę dla bezpieczeństwa');
+                // W produkcji można pokazać notyfikację o konieczności odświeżenia
+            }
+        }, 300000); // Sprawdzaj co 5 minut
+
+    })();
+</script>
+
+<!-- Fragment dla form Bootstrap - stylizowany CSRF input -->
+<div th:fragment="csrf-bootstrap" class="d-none">
+    <!-- Bootstrap ukrywa to automatycznie dzięki d-none -->
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"
+           class="csrf-token-input"
+           th:attr="data-csrf-header=${_csrf.headerName},data-csrf-parameter=${_csrf.parameterName}" />
+</div>
+
+<!-- Fragment diagnostyczny - pokazuje status CSRF (tylko dla admins) -->
+<div th:fragment="csrf-debug" th:if="${#authentication.name == 'admin'}"
+     style="position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 8px; border-radius: 4px; font-size: 10px; z-index: 9999;">
+    <div>CSRF Token: <span th:text="${#strings.substring(_csrf.token, 0, 8)}">****</span>...</div>
+    <div>Header: <span th:text="${_csrf.headerName}">X-CSRF-TOKEN</span></div>
+    <div>Parameter: <span th:text="${_csrf.parameterName}">_csrf</span></div>
+    <div>Length: <span th:text="${#strings.length(_csrf.token)}">0</span></div>
+</div>
+
+</html>

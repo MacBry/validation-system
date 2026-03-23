@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Krok 8 - Statystyki - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:replace="~{fragments/csrf-token :: csrf-meta}"></th:replace>
+    <style>
+        .wizard-container { max-width: 960px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+
+        /* Stats table overrides */
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+        .stats-table th {
+            background: var(--surface-page, #f7f8fc);
+            color: var(--text-muted, #9298ae);
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 9px 12px;
+            text-align: center;
+            border-bottom: 2px solid var(--border-default, #e5e7ef);
+        }
+        .stats-table td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-default, #e5e7ef);
+            color: var(--text-primary, #1a1f3a);
+            font-family: 'DM Mono', monospace;
+        }
+        .stats-table td:first-child,
+        .stats-table td:nth-child(2) {
+            font-family: inherit;
+            text-align: left;
+        }
+        .stats-table tr:last-child td { border-bottom: none; }
+        .stats-table tr:hover td { background: rgba(102,126,234,0.03); }
+
+        /* Info notice */
+        .info-notice {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px;
+            background: rgba(102,126,234,0.06);
+            border: 1px solid rgba(102,126,234,0.20);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem;
+            color: var(--text-secondary, #374151);
+            margin-top: var(--sp-4, 1rem);
+        }
+        .info-notice i { flex-shrink: 0; margin-top: 2px; color: var(--vcc-primary, #667eea); }
+
+        .badge-ref {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px;
+            background: #fef9c3; color: #713f12;
+            border-radius: 99px; font-size: 0.68rem; font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard kwalifikacji', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">Krok 8 — Statystyki walidacji</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:replace="~{wizard/fragments/wizard-nav :: wizard-nav(8, draft.stepLockFrom)}"></th:replace>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Statystyki walidacji</h2>
+                        <p class="wizard-step-header__desc">Zestawienie obliczonych statystyk dla wszystkich wybranych serii pomiarowych.</p>
+                    </div>
+
+                    <!-- Stats table -->
+                    <div class="vcc-table-wrap">
+                        <table class="stats-table">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left;">Rejestrator (SN)</th>
+                                    <th style="text-align:left;">Pozycja</th>
+                                    <th>Min [°C]</th>
+                                    <th>Max [°C]</th>
+                                    <th>Avg [°C]</th>
+                                    <th>MKT [°C]</th>
+                                    <th>SD [°C]</th>
+                                    <th>CV [%]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="s : ${selectedSeries}">
+                                    <td class="vcc-table__mono" th:text="${s.recorderSerialNumber}">SN12345</td>
+                                    <td>
+                                        <span th:if="${s.isReferenceRecorder}" class="badge-ref">
+                                            <i class="fas fa-star" style="font-size:0.55rem;"></i> REF
+                                        </span>
+                                        <span th:if="${!s.isReferenceRecorder}"
+                                              th:text="${s.recorderPosition}">A1</span>
+                                    </td>
+                                    <td th:text="${#numbers.formatDecimal(s.minTemperature, 1, 2)}">1.20</td>
+                                    <td th:text="${#numbers.formatDecimal(s.maxTemperature, 1, 2)}">4.50</td>
+                                    <td th:text="${#numbers.formatDecimal(s.avgTemperature, 1, 2)}">2.80</td>
+                                    <td th:text="${#numbers.formatDecimal(s.mktTemperature, 1, 2)}">3.05</td>
+                                    <td th:text="${#numbers.formatDecimal(s.stdDeviation, 1, 2)}">0.45</td>
+                                    <td th:text="${#numbers.formatDecimal(s.cvPercentage, 1, 2)}">15.2</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Info notice -->
+                    <div class="info-notice">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Powyższe statystyki zostaną uwzględnione w wygenerowanym protokole walidacji. W następnym kroku możesz podpisać dokument i zakończyć proces.</span>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <a th:href="@{/wizard/{id}/back/7(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" class="wizard-btn-next" onclick="navigateToStep9()">
+                            Przejdź do finalizacji <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript">
+        function navigateToStep9() {
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            window.location.href = '/wizard/' + draftId + '/step/9';
+        }
+    </script>
+</body>
+</html>

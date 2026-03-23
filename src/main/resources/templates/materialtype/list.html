@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typy materiałów - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('materials')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+
+        <header th:replace="~{fragments/topbar :: topbar('materials', 'Typy materiałów', true, 'materialSearchInput')}"></header>
+
+        <main class="vcc-page">
+
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Typy materiałów</h1>
+                <div class="vcc-page-header__actions">
+                    <a th:href="@{/material-types/new}" class="vcc-btn--action"
+                       th:if="${#authorization.expression('hasAnyRole(''ROLE_SUPER_ADMIN'', ''ROLE_COMPANY_ADMIN'')')}">
+                        <i class="fas fa-plus"></i> Dodaj typ materiału
+                    </a>
+                </div>
+            </div>
+
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i> <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${errorMessage}"></span>
+            </div>
+
+            <div class="vcc-data-card vcc-animate-fade-in">
+
+                <div th:if="${#lists.isEmpty(materials)}" class="vcc-empty-state">
+                    <i class="fas fa-boxes-stacked vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title">Brak typów materiałów</p>
+                    <p class="vcc-empty-state__desc">Dodaj pierwszy typ materiału</p>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(materials)}" class="vcc-table-wrap">
+                    <table class="vcc-table">
+                        <thead>
+                            <tr>
+                                <th>Nazwa</th>
+                                <th>Zakres temp.</th>
+                                <th>Energia (&#916;H)</th>
+                                <th>Standard / Źródło</th>
+                                <th>Zastosowanie</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="material : ${materials}">
+                                <td>
+                                    <div class="vcc-table__primary" th:text="${material.name}">--</div>
+                                    <div class="vcc-table__muted" th:text="${material.description}"></div>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__mono" style="color:#8b5cf6;" th:text="${material.temperatureRange}">--</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__primary" th:text="${material.activationEnergy ?: '–'}">0</span>
+                                    <span class="vcc-table__muted">kJ/mol</span>
+                                </td>
+                                <td><span class="vcc-table__secondary" th:text="${material.standardSource ?: '–'}">--</span></td>
+                                <td><span class="vcc-table__muted" th:text="${material.application ?: '–'}">--</span></td>
+                                <td>
+                                    <div class="vcc-table__actions">
+                                        <a th:href="@{/material-types/{id}(id=${material.id})}" class="vcc-btn--table vcc-btn--table-outline">
+                                            <i class="fas fa-eye"></i> Podgląd
+                                        </a>
+                                        <a th:href="@{/material-types/{id}/edit(id=${material.id})}" class="vcc-btn--table vcc-btn--table-outline"
+                                           th:if="${#authorization.expression('hasAnyRole(''ROLE_SUPER_ADMIN'', ''ROLE_COMPANY_ADMIN'')')}">
+                                            <i class="fas fa-edit"></i> Edytuj
+                                        </a>
+                                        <form th:action="@{/material-types/{id}/delete(id=${material.id})}" method="post" style="display:inline"
+                                              th:if="${#authorization.expression('hasAnyRole(''ROLE_SUPER_ADMIN'', ''ROLE_COMPANY_ADMIN'')')}"
+                                              onsubmit="return confirm('Usunąć ten typ materiału?')">
+                                            <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
+                                                <i class="fas fa-trash-alt"></i> Usuń
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(materials)}" class="vcc-data-card__footer">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge" th:text="${#lists.size(materials)}">0</span> typów materiałów
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+    <script>
+    (function() {
+        var input = document.getElementById('materialSearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            document.querySelectorAll('.vcc-table tbody tr').forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+    </script>
+</body>
+
+</html>

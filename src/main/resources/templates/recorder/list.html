@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rejestratory TESTO - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('recorders')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('recorders', 'Rejestratory TESTO', true, 'recorderSearchInput')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Rejestratory TESTO</h1>
+                <div class="vcc-page-header__actions">
+                    <form th:action="@{/recorders/update-statuses}" method="post" style="display:inline">
+                        <button type="submit" class="vcc-btn--secondary">
+                            <i class="fas fa-sync-alt"></i>
+                            Aktualizuj statusy
+                        </button>
+                    </form>
+                    <a th:href="@{/recorders/new}" class="vcc-btn--action">
+                        <i class="fas fa-plus"></i>
+                        Dodaj rejestrator
+                    </a>
+                </div>
+            </div>
+
+            <!-- Data card -->
+            <div class="vcc-data-card vcc-animate-fade-in">
+
+                <div th:if="${#lists.isEmpty(recorders)}" class="vcc-empty-state">
+                    <i class="fas fa-thermometer-half vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title">Brak rejestratorów w systemie</p>
+                    <p class="vcc-empty-state__desc">Dodaj pierwszy rejestrator temperatury</p>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(recorders)}" class="vcc-table-wrap">
+                    <table class="vcc-table">
+                        <thead>
+                            <tr>
+                                <th>Numer seryjny</th>
+                                <th>Model</th>
+                                <th>Status</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="recorder : ${recorders}">
+                                <td><span class="vcc-table__mono" th:text="${recorder.serialNumber}">--</span></td>
+                                <td><span class="vcc-table__primary" th:text="${recorder.model}">--</span></td>
+                                <td>
+                                    <span th:if="${recorder.status.name() == 'ACTIVE'}" class="vcc-badge vcc-badge--success"
+                                          th:text="${recorder.status.displayName}">Aktywny</span>
+                                    <span th:if="${recorder.status.name() == 'INACTIVE'}" class="vcc-badge vcc-badge--danger"
+                                          th:text="${recorder.status.displayName}">Nieaktywny</span>
+                                    <span th:if="${recorder.status.name() == 'UNDER_CALIBRATION'}" class="vcc-badge vcc-badge--warning"
+                                          th:text="${recorder.status.displayName}">Wzorcowanie</span>
+                                </td>
+                                <td>
+                                    <div class="vcc-table__actions">
+                                        <a th:href="@{/recorders/{id}(id=${recorder.id})}" class="vcc-btn--table vcc-btn--table-primary">
+                                            <i class="fas fa-eye"></i> Szczegóły
+                                        </a>
+                                        <a th:href="@{/recorders/{id}/edit(id=${recorder.id})}" class="vcc-btn--table vcc-btn--table-outline">
+                                            <i class="fas fa-edit"></i> Edytuj
+                                        </a>
+                                        <form th:action="@{/recorders/{id}/delete(id=${recorder.id})}" method="post"
+                                              style="display:inline"
+                                              onsubmit="return confirm('Usunąć ten rejestrator?')">
+                                            <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
+                                                <i class="fas fa-trash-alt"></i> Usuń
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${totalPages > 1}" class="vcc-data-card__footer"
+                     th:with="start=${T(java.lang.Math).max(0, T(java.lang.Math).min(currentPage - 2, totalPages - 5))},
+                              end=${T(java.lang.Math).min(totalPages - 1, T(java.lang.Math).max(currentPage + 2, 4))}">
+                    <div class="vcc-data-card__count">
+                        Strona <strong th:text="${currentPage + 1}">1</strong> z <strong th:text="${totalPages}">1</strong>
+                    </div>
+                    <ul class="vcc-pagination">
+                        <li th:classappend="${currentPage == 0} ? 'disabled'">
+                            <a th:href="@{/recorders(page=0)}" title="Pierwsza strona"><i class="fas fa-angle-double-left"></i></a>
+                        </li>
+                        <li th:classappend="${currentPage == 0} ? 'disabled'">
+                            <a th:href="@{/recorders(page=${currentPage - 1})}"><i class="fas fa-angle-left"></i></a>
+                        </li>
+                        <li th:each="i : ${#numbers.sequence(start, end)}" th:classappend="${currentPage == i} ? 'active'">
+                            <a th:href="@{/recorders(page=${i})}" th:text="${i + 1}">1</a>
+                        </li>
+                        <li th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                            <a th:href="@{/recorders(page=${currentPage + 1})}"><i class="fas fa-angle-right"></i></a>
+                        </li>
+                        <li th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                            <a th:href="@{/recorders(page=${totalPages - 1})}" title="Ostatnia strona"><i class="fas fa-angle-double-right"></i></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(recorders)}" class="vcc-data-card__footer">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge" th:text="${recorderPage.totalElements}">0</span> rejestratorów
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    (function() {
+        var input = document.getElementById('recorderSearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            var rows = document.querySelectorAll('.vcc-table tbody tr');
+            rows.forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<body>
+<th:block th:fragment="section(deviations, validation)">
+
+        <!-- ============================================================ -->
+        <!-- TABELA G — Analiza odchyleń (Deviation Analysis)             -->
+        <!-- ============================================================ -->
+        <div
+            style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(102,126,234,.08);padding:28px 32px;margin-bottom:20px;">
+            <!-- Nagłówek -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:0;cursor:pointer;user-select:none;"
+                onclick="toggleSection('sectionGContent', 'iconG')">
+                <div
+                    style="width:36px;height:36px;background:linear-gradient(135deg,#d08888,#c07070);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24" style="width:18px;height:18px">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                </div>
+                <div>
+                    <div
+                        style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#8b95a8">
+                        Protokół walidacyjny — Tabela G</div>
+                    <div style="font-size:1.05rem;font-weight:700;color:#1a1d2e">Analiza odchyleń (Deviation Analysis)
+                    </div>
+                </div>
+                <!-- Badge z liczbą naruszeń -->
+                <div th:if="${deviations != null and !deviations.isEmpty()}"
+                    style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+                    <span
+                        th:with="critCount=${deviations.?[severity.name() == 'CRITICAL'].size()}"
+                        th:if="${critCount != 0}"
+                        style="background:#d08888;color:#fff;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;"
+                        th:text="${critCount + ' CRITICAL'}">0</span>
+                    <span
+                        th:with="majCount=${deviations.?[severity.name() == 'MAJOR'].size()}"
+                        th:if="${majCount != 0}"
+                        style="background:#e0b870;color:#fff;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;"
+                        th:text="${majCount + ' MAJOR'}">0</span>
+                    <span
+                        th:with="minCount=${deviations.?[severity.name() == 'MINOR'].size()}"
+                        th:if="${minCount != 0}"
+                        style="background:#8b8fd0;color:#fff;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;"
+                        th:text="${minCount + ' MINOR'}">0</span>
+                </div>
+                <div th:if="${deviations == null or deviations.isEmpty()}" style="margin-left:auto;">
+                    <span
+                        style="background:#5aa888;color:#fff;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;">
+                        Brak odchyleń</span>
+                </div>
+                <!-- Chevron Toggle -->
+                <div style="margin-left:14px;">
+                    <svg id="iconG"
+                        style="width:22px;height:22px;color:#a4adc5;transition:transform 0.3s;transform:rotate(-180deg);"
+                        fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+
+            <div id="sectionGContent" style="display:none; padding-top:22px;">
+
+                <!-- Brak odchyleń -->
+                <div th:if="${deviations == null or deviations.isEmpty()}"
+                    style="text-align:center;padding:40px 20px;color:#5aa888;font-size:.95rem;">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                        style="width:24px;height:24px;margin:0 auto 12px;display:block;opacity:.6;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Brak odchyleń temperaturowych — wszystkie pomiary w zakresie
+                </div>
+
+                <!-- Lista naruszeń -->
+                <div th:if="${deviations != null and !deviations.isEmpty()}">
+                    <div th:each="dev, iter : ${deviations}" style="margin-bottom:16px;">
+                        <!-- Karta naruszenia -->
+                        <div th:style="'border-left:4px solid ' +
+                            (${dev.severity.name() == 'CRITICAL'} ? '#c06060' :
+                             (${dev.severity.name() == 'MAJOR'} ? '#c08850' : '#8b8fd0')) +
+                            '; background:#fafbfe; border-radius:0 10px 10px 0; padding:16px 20px;'">
+
+                            <!-- Nagłówek naruszenia -->
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                                <span th:style="'font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 10px;border-radius:4px;color:#fff;background:' +
+                                    (${dev.severity.name() == 'CRITICAL'} ? '#c06060' :
+                                     (${dev.severity.name() == 'MAJOR'} ? '#c08850' : '#8b8fd0'))"
+                                    th:text="${dev.severity.displayName}">CRITICAL</span>
+                                <span style="font-size:.78rem;font-weight:600;color:#1a1d2e;"
+                                    th:text="${'#' + (iter.index + 1) + ' — ' + dev.seriesPositionName}">Pozycja</span>
+                                <span
+                                    th:style="'font-size:.72rem;padding:2px 8px;border-radius:4px;background:' +
+                                    (${dev.violationType.name() == 'ABOVE_UPPER'} ? '#fef5f5;color:#c06060' : '#f2f8fc;color:#4a6cf7')"
+                                    th:text="${dev.violationType.displayName}">Typ</span>
+                            </div>
+
+                            <!-- Szczegóły grid -->
+                            <div
+                                style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;font-size:.82rem;">
+                                <div>
+                                    <div
+                                        style="color:#8b95a8;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
+                                        Początek</div>
+                                    <div style="font-weight:600;font-family:'JetBrains Mono',monospace;"
+                                        th:text="${#temporals.format(dev.startTime, 'dd.MM HH:mm')}">-</div>
+                                </div>
+                                <div>
+                                    <div
+                                        style="color:#8b95a8;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
+                                        Koniec</div>
+                                    <div style="font-weight:600;font-family:'JetBrains Mono',monospace;"
+                                        th:text="${#temporals.format(dev.endTime, 'dd.MM HH:mm')}">-</div>
+                                </div>
+                                <div>
+                                    <div
+                                        style="color:#8b95a8;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
+                                        Czas trwania</div>
+                                    <div style="font-weight:600;" th:text="${dev.formattedDuration}">-</div>
+                                </div>
+                                <div>
+                                    <div
+                                        style="color:#8b95a8;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
+                                        Temp. szczytowa</div>
+                                    <div style="font-weight:700;color:#c06060;" th:text="${dev.formattedPeakTemp}">-
+                                    </div>
+                                </div>
+                                <div>
+                                    <div
+                                        style="color:#8b95a8;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
+                                        Granica</div>
+                                    <div style="font-weight:600;" th:text="${dev.formattedViolatedLimit}">-</div>
+                                </div>
+                                <div>
+                                    <div
+                                        style="color:#8b95a8;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
+                                        ΔT</div>
+                                    <div style="font-weight:700;color:#7c68b0;" th:text="${dev.formattedDeltaTemp}">-
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Analiza CAPA (zapisana lub formularz) -->
+                            <div style="margin-top:14px;border-top:1px solid #e8eaf0;padding-top:14px;">
+                                <!-- Jeśli analiza już zapisana -->
+                                <div th:if="${dev.analysis != null}" th:id="${'analysis-saved-' + dev.id}">
+                                    <div
+                                        style="font-size:.75rem;font-weight:600;color:#5aa888;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                                            style="width:14px;height:14px;">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Analiza zapisana
+                                        <span style="color:#8b95a8;font-weight:400;"
+                                            th:text="${'przez ' + dev.analysis.analyzedBy + ' • ' + #temporals.format(dev.analysis.analyzedAt, 'dd.MM.yyyy HH:mm')}"></span>
+                                    </div>
+                                    <div
+                                        style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:.82rem;">
+                                        <div>
+                                            <div
+                                                style="color:#8b95a8;font-size:.68rem;font-weight:600;margin-bottom:4px;">
+                                                Przyczyna</div>
+                                            <div th:text="${dev.analysis.rootCause}" style="white-space:pre-line;">-
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div
+                                                style="color:#8b95a8;font-size:.68rem;font-weight:600;margin-bottom:4px;">
+                                                Wpływ na produkt</div>
+                                            <div th:text="${dev.analysis.productImpact}" style="white-space:pre-line;">-
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div
+                                                style="color:#8b95a8;font-size:.68rem;font-weight:600;margin-bottom:4px;">
+                                                CAPA</div>
+                                            <div th:text="${dev.analysis.correctiveAction}"
+                                                style="white-space:pre-line;">-</div>
+                                        </div>
+                                    </div>
+                                    <button type="button" th:data-dev-id="${dev.id}" onclick="toggleDeviationForm(this.dataset.devId)"
+                                        style="margin-top:8px;font-size:.75rem;color:#667eea;background:none;border:none;cursor:pointer;text-decoration:underline;">
+                                        Edytuj analizę
+                                    </button>
+                                </div>
+
+                                <!-- Formularz CAPA -->
+                                <div th:id="${'analysis-form-' + dev.id}"
+                                    th:style="${dev.analysis != null} ? 'display:none;' : ''">
+                                    <div style="font-size:.78rem;font-weight:600;color:#1a1d2e;margin-bottom:10px;">
+                                        Dokumentacja CAPA (GMP/GDP)</div>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                                        <div>
+                                            <label
+                                                style="font-size:.72rem;font-weight:600;color:#8b95a8;display:block;margin-bottom:4px;">
+                                                Analiza przyczyn</label>
+                                            <textarea th:id="${'rootCause-' + dev.id}"
+                                                th:text="${dev.analysis != null ? dev.analysis.rootCause : ''}"
+                                                placeholder="Opisz przyczynę naruszenia..."
+                                                style="width:100%;min-height:80px;border:1px solid #e8eaf0;border-radius:8px;padding:8px 10px;font-size:.82rem;resize:vertical;font-family:inherit;"></textarea>
+                                        </div>
+                                        <div>
+                                            <label
+                                                style="font-size:.72rem;font-weight:600;color:#8b95a8;display:block;margin-bottom:4px;">
+                                                Ocena wpływu na produkt</label>
+                                            <textarea th:id="${'productImpact-' + dev.id}"
+                                                th:text="${dev.analysis != null ? dev.analysis.productImpact : ''}"
+                                                placeholder="Opisz wpływ na przechowywany materiał..."
+                                                style="width:100%;min-height:80px;border:1px solid #e8eaf0;border-radius:8px;padding:8px 10px;font-size:.82rem;resize:vertical;font-family:inherit;"></textarea>
+                                        </div>
+                                        <div>
+                                            <label
+                                                style="font-size:.72rem;font-weight:600;color:#8b95a8;display:block;margin-bottom:4px;">
+                                                Działania korygujące (CAPA)</label>
+                                            <textarea th:id="${'correctiveAction-' + dev.id}"
+                                                th:text="${dev.analysis != null ? dev.analysis.correctiveAction : ''}"
+                                                placeholder="Opisz podjęte działania..."
+                                                style="width:100%;min-height:80px;border:1px solid #e8eaf0;border-radius:8px;padding:8px 10px;font-size:.82rem;resize:vertical;font-family:inherit;"></textarea>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+                                        <button type="button"
+                                            th:data-vid="${validation.id}" th:data-did="${dev.id}" onclick="saveDeviationAnalysis(this.dataset.vid, this.dataset.did)"
+                                            style="padding:8px 20px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">
+                                            Zapisz analizę
+                                        </button>
+                                        <span th:id="${'analysis-status-' + dev.id}"
+                                            style="font-size:.75rem;color:#8b95a8;"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela G — JavaScript AJAX -->
+        <script th:inline="javascript">
+            function toggleDeviationForm(devId) {
+                var form = document.getElementById('analysis-form-' + devId);
+                var saved = document.getElementById('analysis-saved-' + devId);
+                if (form.style.display === 'none') {
+                    form.style.display = '';
+                    if (saved) saved.style.display = 'none';
+                } else {
+                    form.style.display = 'none';
+                    if (saved) saved.style.display = '';
+                }
+            }
+
+            function saveDeviationAnalysis(validationId, devId) {
+                var rootCause = document.getElementById('rootCause-' + devId).value;
+                var productImpact = document.getElementById('productImpact-' + devId).value;
+                var correctiveAction = document.getElementById('correctiveAction-' + devId).value;
+                var statusEl = document.getElementById('analysis-status-' + devId);
+
+                statusEl.textContent = 'Zapisywanie...';
+                statusEl.style.color = '#6b7080';
+
+                var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                var csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+                var params = new URLSearchParams();
+                params.append('rootCause', rootCause);
+                params.append('productImpact', productImpact);
+                params.append('correctiveAction', correctiveAction);
+
+                fetch('/validations/' + validationId + '/deviations/' + devId + '/analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: params.toString()
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        statusEl.textContent = '✓ Zapisano (' + data.analyzedBy + ')';
+                        statusEl.style.color = '#5aa888';
+                    })
+                    .catch(function (err) {
+                        statusEl.textContent = '✖ Błąd zapisu: ' + err.message;
+                        statusEl.style.color = '#c06060';
+                    });
+            }
+        </script>
+
+</th:block>
+</body>
+</html>

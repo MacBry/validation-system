@@ -86,7 +86,7 @@
 
     <!-- Scripts Fragment -->
     <div th:fragment="scripts">
-        <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+        <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
     </div>
 
 </body>

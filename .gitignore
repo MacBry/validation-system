@@ -63,6 +63,20 @@ test_*.txt
 *.webp
 *.vi2
 uploads/
+# Root-specific loose files (Maintenance/Research)
+/*.sql
+/*.py
+/*.pdf
+/*.java
+/*.sh
+/*.bin
+/*.exe.stackdump
+/*.class
+scripts/
+sql/archive/
+test-data/
+docs/research/
+
 zap.yaml
 !src/main/resources/static/images/*.jpg
 !src/main/resources/static/images/*.png

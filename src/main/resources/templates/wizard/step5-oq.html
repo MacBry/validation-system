@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Krok 5 - Testy OQ - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:replace="~{fragments/csrf-token :: csrf-meta}"></th:replace>
+    <th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:replace>
+    <style>
+        .wizard-container { max-width: 820px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+
+        /* OQ test blocks */
+        .oq-test-block {
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem) var(--sp-6, 1.5rem);
+            margin-bottom: var(--sp-4, 1rem);
+            background: var(--surface-card, #fff);
+        }
+        .oq-test-block__title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+            margin-bottom: var(--sp-4, 1rem);
+        }
+        .oq-test-block__title-num {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: rgba(102,126,234,0.12);
+            color: var(--vcc-primary, #667eea);
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .oq-test-block__fields {
+            display: grid;
+            grid-template-columns: 160px 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .oq-test-block__fields select,
+        .oq-test-block__fields input[type="text"] {
+            height: 38px;
+            padding: 0 12px;
+            background: var(--surface-page, #f7f8fc);
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.85rem;
+            color: var(--text-primary, #1a1f3a);
+            font-family: inherit;
+            outline: none;
+            transition: border-color var(--duration-fast, 0.15s);
+            width: 100%;
+        }
+
+        .oq-test-block__fields select:focus,
+        .oq-test-block__fields input[type="text"]:focus {
+            border-color: var(--vcc-primary, #667eea);
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.12);
+        }
+
+        /* autosave indicator */
+        .autosave-notice {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.77rem;
+            color: var(--text-muted, #9298ae);
+            margin-bottom: var(--sp-4, 1rem);
+        }
+        .autosave-notice i { font-size: 0.7rem; }
+
+        @media (max-width: 580px) {
+            .oq-test-block__fields { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard kwalifikacji', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">Krok 5 — Testy OQ</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:replace="~{wizard/fragments/wizard-nav :: wizard-nav(5, draft.stepLockFrom)}"></th:replace>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Testy Operacyjne (OQ)</h2>
+                        <p class="wizard-step-header__desc">Przeprowadź i zarejestruj wyniki testów funkcjonalnych urządzenia. Wyniki są zapisywane automatycznie po każdej zmianie.</p>
+                    </div>
+
+                    <div class="autosave-notice">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        Dane są zapisywane automatycznie po każdej zmianie.
+                    </div>
+
+                    <!-- Test 1: Power failure -->
+                    <div class="oq-test-block">
+                        <div class="oq-test-block__title">
+                            <span class="oq-test-block__title-num">1</span>
+                            Test zaniku zasilania
+                        </div>
+                        <div class="oq-test-block__fields">
+                            <select id="powerFailure" onchange="submitStep5Oq()">
+                                <option value="">— Status —</option>
+                                <option value="true"  th:selected="${oqResult.powerFailureTestPassed == true}">POZYTYWNY</option>
+                                <option value="false" th:selected="${oqResult.powerFailureTestPassed == false}">NEGATYWNY</option>
+                            </select>
+                            <input type="text" id="powerNotes" placeholder="Uwagi do testu..."
+                                   th:value="${oqResult.powerFailureNotes}" onblur="submitStep5Oq()">
+                        </div>
+                    </div>
+
+                    <!-- Test 2: Alarm -->
+                    <div class="oq-test-block">
+                        <div class="oq-test-block__title">
+                            <span class="oq-test-block__title-num">2</span>
+                            Test alarmu (otwarte drzwi / temperatura)
+                        </div>
+                        <div class="oq-test-block__fields">
+                            <select id="alarmTest" onchange="submitStep5Oq()">
+                                <option value="">— Status —</option>
+                                <option value="true"  th:selected="${oqResult.alarmTestPassed == true}">POZYTYWNY</option>
+                                <option value="false" th:selected="${oqResult.alarmTestPassed == false}">NEGATYWNY</option>
+                            </select>
+                            <input type="text" id="alarmNotes" placeholder="Uwagi do testu..."
+                                   th:value="${oqResult.alarmTestNotes}" onblur="submitStep5Oq()">
+                        </div>
+                    </div>
+
+                    <!-- Test 3: Door seal -->
+                    <div class="oq-test-block">
+                        <div class="oq-test-block__title">
+                            <span class="oq-test-block__title-num">3</span>
+                            Test uszczelki / domykania drzwi
+                        </div>
+                        <div class="oq-test-block__fields">
+                            <select id="doorTest" onchange="submitStep5Oq()">
+                                <option value="">— Status —</option>
+                                <option value="true"  th:selected="${oqResult.doorTestPassed == true}">POZYTYWNY</option>
+                                <option value="false" th:selected="${oqResult.doorTestPassed == false}">NEGATYWNY</option>
+                            </select>
+                            <input type="text" id="doorNotes" placeholder="Uwagi do testu..."
+                                   th:value="${oqResult.doorTestNotes}" onblur="submitStep5Oq()">
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <a th:href="@{/wizard/{id}/back/4(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <a th:href="@{/wizard/{id}/step/6(id=${draft.id})}" class="wizard-btn-next">
+                            Dalej <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript">
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function submitStep5Oq() {
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const powerFailure = document.getElementById('powerFailure').value;
+            const powerNotes = document.getElementById('powerNotes').value;
+            const alarmTest = document.getElementById('alarmTest').value;
+            const alarmNotes = document.getElementById('alarmNotes').value;
+            const doorTest = document.getElementById('doorTest').value;
+            const doorNotes = document.getElementById('doorNotes').value;
+
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            if (!csrfToken || csrfToken === '') { csrfToken = getCookie('XSRF-TOKEN'); csrfHeader = 'X-XSRF-TOKEN'; }
+
+            const params = new URLSearchParams();
+            if (powerFailure) params.append('powerFailure', powerFailure);
+            params.append('powerNotes', powerNotes);
+            if (alarmTest) params.append('alarmTest', alarmTest);
+            params.append('alarmNotes', alarmNotes);
+            if (doorTest) params.append('doorTest', doorTest);
+            params.append('doorNotes', doorNotes);
+            if (csrfToken) params.append('_csrf', csrfToken);
+
+            const headers = { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' };
+            if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+            fetch('/wizard/' + draftId + '/api/step5/oq', {
+                method: 'POST', headers: headers, body: params
+            }).then(async r => {
+                if (!r.ok) {
+                    const text = await r.text();
+                    try { const json = JSON.parse(text); throw new Error(json.message || 'Błąd serwera'); }
+                    catch(e) { throw new Error('Błąd HTTP ' + r.status); }
+                }
+                return r.json();
+            }).then(() => {
+                console.log('OQ tests auto-saved');
+            }).catch(e => {
+                console.error('Autosave error:', e);
+            });
+        }
+    </script>
+</body>
+</html>

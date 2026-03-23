@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Błąd Systemu</title>
+    <style>
+        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f3f4f6; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; width: 100%; border-top: 5px solid #ef4444; }
+        h1 { color: #1f2937; margin-top: 0; }
+        p { color: #4b5563; line-height: 1.5; }
+        .details { background: #fee2e2; padding: 1rem; border-radius: 4px; margin-top: 1rem; font-family: monospace; font-size: 0.9rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Wystąpił błąd systemowy (500)</h1>
+        <p>Przepraszamy, wystąpił nieoczekiwany problem podczas przetwarzania Twojego żądania.</p>
+        
+        <div class="details">
+            <strong>Status:</strong> <span th:text="${status != null ? status : '500'}">500</span><br>
+            <strong>Błąd:</strong> <span th:text="${error != null ? error : 'Internal Server Error'}">Internal Server Error</span><br>
+            <div th:if="${message != null}">
+                <strong>Wiadomość:</strong> <span th:text="${message}">No message available</span>
+            </div>
+        </div>
+        
+        <div style="margin-top: 2rem;">
+            <a href="/" style="color: #3b82f6; text-decoration: none; font-weight: 500;">&larr; Powrót do strony głównej</a>
+        </div>
+    </div>
+</body>
+</html>

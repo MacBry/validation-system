@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${deviceDto.id} ? 'Edycja urządzenia' : 'Nowe urządzenie'">Urządzenie</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('devices')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('devices', 'Urządzenia', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Form header -->
+            <div class="vcc-form-header">
+                <h1 class="vcc-form-header__title"
+                    th:text="${deviceDto.id} ? 'Edycja urządzenia chłodniczego' : 'Nowe urządzenie chłodnicze'">
+                    Urządzenie
+                </h1>
+                <p class="vcc-form-header__subtitle">Pola wymagane są oznaczone <span class="vcc-required">*</span></p>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Form card -->
+            <div class="vcc-form-card vcc-animate-fade-in">
+                <form th:action="${deviceDto.id} ? @{/devices/{id}(id=${deviceDto.id})} : @{/devices}"
+                      th:object="${deviceDto}"
+                      method="post">
+
+                    <!-- Section 1: Podstawowe informacje -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Podstawowe informacje</legend>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="inventoryNumber" class="vcc-form-label">
+                                    Numer inwentarzowy <span class="vcc-required">*</span>
+                                </label>
+                                <input type="text"
+                                       class="vcc-form-input vcc-form-input--mono"
+                                       th:classappend="${#fields.hasErrors('inventoryNumber')} ? 'is-error'"
+                                       id="inventoryNumber"
+                                       th:field="*{inventoryNumber}"
+                                       placeholder="np. INV-2024-001">
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('inventoryNumber')}" th:errors="*{inventoryNumber}"></div>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="name" class="vcc-form-label">
+                                    Nazwa urządzenia <span class="vcc-required">*</span>
+                                </label>
+                                <input type="text"
+                                       class="vcc-form-input"
+                                       th:classappend="${#fields.hasErrors('name')} ? 'is-error'"
+                                       id="name"
+                                       th:field="*{name}"
+                                       placeholder="np. Lodówka Samsung RF28">
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                            </div>
+                        </div>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="departmentId" class="vcc-form-label">
+                                    Dział <span class="vcc-required">*</span>
+                                </label>
+                                <select class="vcc-form-select"
+                                        th:classappend="${#fields.hasErrors('departmentId')} ? 'is-error'"
+                                        th:field="*{departmentId}"
+                                        id="departmentId"
+                                        onchange="loadLaboratories()">
+                                    <option value="">-- Wybierz dział --</option>
+                                    <option th:each="dept : ${departments}"
+                                            th:value="${dept.id}"
+                                            th:text="${dept.name}"
+                                            th:data-has-laboratories="${dept.hasLaboratories}"></option>
+                                </select>
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('departmentId')}" th:errors="*{departmentId}"></div>
+                            </div>
+
+                            <div class="vcc-form-group" id="laboratoryGroup" style="display:none;">
+                                <label for="laboratoryId" class="vcc-form-label">
+                                    Pracownia <span class="vcc-form-label--hint">(opcjonalne)</span>
+                                </label>
+                                <select class="vcc-form-select"
+                                        th:field="*{laboratoryId}"
+                                        id="laboratoryId">
+                                    <option value="">-- Brak pracowni --</option>
+                                    <option th:if="${laboratories != null}"
+                                            th:each="lab : ${laboratories}"
+                                            th:value="${lab.id}"
+                                            th:text="${lab.fullName}"></option>
+                                </select>
+                                <span class="vcc-form-hint">Niektore działy nie mają pracowni</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 2: Typ i klasyfikacja -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Typ i klasyfikacja</legend>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="chamberType" class="vcc-form-label">
+                                    Typ komory <span class="vcc-required">*</span>
+                                </label>
+                                <select class="vcc-form-select"
+                                        th:classappend="${#fields.hasErrors('chamberType')} ? 'is-error'"
+                                        id="chamberType"
+                                        th:field="*{chamberType}">
+                                    <option value="">-- Wybierz typ --</option>
+                                    <option th:each="type : ${chamberTypes}"
+                                            th:value="${type}"
+                                            th:text="${type.displayName}"></option>
+                                </select>
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('chamberType')}" th:errors="*{chamberType}"></div>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="materialTypeId" class="vcc-form-label">
+                                    Typ materiału <span class="vcc-required">*</span>
+                                </label>
+                                <select class="vcc-form-select"
+                                        th:classappend="${#fields.hasErrors('materialTypeId')} ? 'is-error'"
+                                        id="materialTypeId"
+                                        th:field="*{materialTypeId}">
+                                    <option value="">-- Wybierz typ materiału --</option>
+                                    <option th:each="material : ${materialTypes}"
+                                            th:value="${material.id}"
+                                            th:text="${material.name + ' (' + material.temperatureRange + ')'}"></option>
+                                </select>
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('materialTypeId')}" th:errors="*{materialTypeId}"></div>
+                                <span class="vcc-form-hint">Wybierz typ przechowywanego materiału</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 3: Parametry urządzenia -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Parametry urządzenia</legend>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="minOperatingTemp" class="vcc-form-label">
+                                    Minimalna temperatura operacyjna [°C]
+                                </label>
+                                <input type="number"
+                                       class="vcc-form-input"
+                                       step="0.1"
+                                       id="minOperatingTemp"
+                                       th:field="*{minOperatingTemp}"
+                                       placeholder="np. -25.0">
+                                <span class="vcc-form-hint">Dolna granica zakresu temperatur dla urządzenia</span>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="maxOperatingTemp" class="vcc-form-label">
+                                    Maksymalna temperatura operacyjna [°C]
+                                </label>
+                                <input type="number"
+                                       class="vcc-form-input"
+                                       step="0.1"
+                                       id="maxOperatingTemp"
+                                       th:field="*{maxOperatingTemp}"
+                                       placeholder="np. -15.0">
+                                <span class="vcc-form-hint">Górna granica zakresu temperatur dla urządzenia</span>
+                            </div>
+                        </div>
+
+                        <div class="vcc-form-info">
+                            <strong>Klasyfikacja kubatury (PDA TR-64):</strong><br>
+                            Klasa S (do 2 m³): min. 9 punktów - lodówki apteczne, laboratoryjne<br>
+                            Klasa M (2-20 m³): min. 15 punktów - szafy chłodnicze, duże lodówki<br>
+                            Klasa L (powyżej 20 m³): min. 27 punktów - komory, magazyny, chłodnie
+                        </div>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="volume" class="vcc-form-label">
+                                    Objętość urządzenia [m³]
+                                </label>
+                                <input type="number"
+                                       class="vcc-form-input"
+                                       step="0.01"
+                                       min="0.01"
+                                       th:classappend="${#fields.hasErrors('volume')} ? 'is-error'"
+                                       id="volume"
+                                       th:field="*{volume}"
+                                       placeholder="np. 1.5"
+                                       onchange="updateVolumeCategory()">
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('volume')}" th:errors="*{volume}"></div>
+                                <span class="vcc-form-hint">Objętość wewnętrzna urządzenia w metrach sześciennych</span>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="volumeCategory" class="vcc-form-label">
+                                    Klasa kubatury <span class="vcc-form-label--hint">(auto-ustawiana)</span>
+                                </label>
+                                <select class="vcc-form-select"
+                                        th:field="*{volumeCategory}"
+                                        id="volumeCategory">
+                                    <option value="">-- Wybierz klasę --</option>
+                                    <option th:each="category : ${volumeCategories}"
+                                            th:value="${category}"
+                                            th:text="${category.displayName}"
+                                            th:data-description="${category.description}"
+                                            th:data-min-points="${category.minMeasurementPoints}"></option>
+                                </select>
+                                <span class="vcc-form-hint">Automatycznie ustawiana na podstawie objętości</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 4: Numer RPW (only for new devices) -->
+                    <fieldset th:if="${deviceDto.id == null}" class="vcc-form-section">
+                        <legend>Numer RPW <span class="vcc-form-label--hint" style="font-weight:400;font-size:0.85rem;">(opcjonalnie)</span></legend>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="newPlanYear" class="vcc-form-label">Rok</label>
+                                <input type="number"
+                                       class="vcc-form-input"
+                                       th:classappend="${#fields.hasErrors('newPlanYear')} ? 'is-error'"
+                                       id="newPlanYear"
+                                       th:field="*{newPlanYear}"
+                                       placeholder="np. 2026"
+                                       min="2000">
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('newPlanYear')}" th:errors="*{newPlanYear}"></div>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="newPlanNumber" class="vcc-form-label">Numer RPW</label>
+                                <input type="number"
+                                       class="vcc-form-input"
+                                       th:classappend="${#fields.hasErrors('newPlanNumber')} ? 'is-error'"
+                                       id="newPlanNumber"
+                                       th:field="*{newPlanNumber}"
+                                       placeholder="np. 42"
+                                       min="1">
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('newPlanNumber')}" th:errors="*{newPlanNumber}"></div>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Actions -->
+                    <div class="vcc-form-actions">
+                        <a th:href="@{/devices}" class="vcc-form-btn-cancel">
+                            <i class="fas fa-times"></i> Anuluj
+                        </a>
+                        <button type="submit" class="vcc-form-btn-submit">
+                            <i class="fas fa-check"></i>
+                            <span th:text="${deviceDto.id} ? 'Zapisz zmiany' : 'Utwórz urządzenie'">Utwórz</span>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    // Funkcja do ładowania pracowni dla wybranego działu
+    function loadLaboratories() {
+        const departmentSelect = document.getElementById('departmentId');
+        const laboratoryGroup = document.getElementById('laboratoryGroup');
+        const laboratorySelect = document.getElementById('laboratoryId');
+
+        const selectedOption = departmentSelect.options[departmentSelect.selectedIndex];
+        const departmentId = selectedOption.value;
+        const hasLaboratories = selectedOption.getAttribute('data-has-laboratories') === 'true';
+
+        if (!departmentId) {
+            laboratoryGroup.style.display = 'none';
+            laboratorySelect.innerHTML = '<option value="">-- Brak pracowni --</option>';
+            return;
+        }
+
+        if (!hasLaboratories) {
+            laboratoryGroup.style.display = 'none';
+            laboratorySelect.innerHTML = '<option value="">-- Brak pracowni --</option>';
+            laboratorySelect.value = '';
+            return;
+        }
+
+        laboratoryGroup.style.display = 'block';
+        laboratorySelect.innerHTML = '<option value="">Ładowanie...</option>';
+        laboratorySelect.parentElement.classList.add('vcc-form-loading');
+
+        fetch('/devices/api/departments/' + departmentId + '/laboratories')
+            .then(function(response) { return response.json(); })
+            .then(function(laboratories) {
+                laboratorySelect.innerHTML = '<option value="">-- Wybierz pracownię (opcjonalne) --</option>';
+                laboratories.forEach(function(lab) {
+                    var option = document.createElement('option');
+                    option.value = lab.id;
+                    option.textContent = lab.name;
+                    laboratorySelect.appendChild(option);
+                });
+                laboratorySelect.parentElement.classList.remove('vcc-form-loading');
+            })
+            .catch(function(error) {
+                console.error('Błąd podczas ładowania pracowni:', error);
+                laboratorySelect.innerHTML = '<option value="">Błąd ładowania</option>';
+                laboratorySelect.parentElement.classList.remove('vcc-form-loading');
+            });
+    }
+
+    // Automatyczne ustawienie klasy kubatury na podstawie objętości
+    function updateVolumeCategory() {
+        var volumeInput = document.querySelector('input[name="volume"]');
+        var categorySelect = document.getElementById('volumeCategory');
+        if (!volumeInput || !categorySelect) return;
+
+        var volume = parseFloat(volumeInput.value);
+        if (!volume || volume <= 0) {
+            categorySelect.value = '';
+            return;
+        }
+
+        if (volume <= 2.0) {
+            categorySelect.value = 'SMALL';
+        } else if (volume <= 20.0) {
+            categorySelect.value = 'MEDIUM';
+        } else {
+            categorySelect.value = 'LARGE';
+        }
+    }
+
+    // Wywołaj przy załadowaniu strony (dla edycji)
+    document.addEventListener('DOMContentLoaded', function() {
+        var departmentSelect = document.getElementById('departmentId');
+        if (departmentSelect && departmentSelect.value) {
+            loadLaboratories();
+        }
+        var volumeInput = document.querySelector('input[name="volume"]');
+        if (volumeInput && volumeInput.value) {
+            updateVolumeCategory();
+        }
+    });
+    </script>
+
+</body>
+
+</html>

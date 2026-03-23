@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Urządzenie — ' + ${device.name}">Szczegóły urządzenia</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('devices')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('devices', 'Szczegóły urządzenia', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Breadcrumb -->
+            <nav class="vcc-breadcrumb" aria-label="Breadcrumb">
+                <a th:href="@{/}">Dashboard</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <a th:href="@{/devices}">Urządzenia</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <span class="vcc-breadcrumb__current" th:text="${device.name}">Nazwa</span>
+            </nav>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Detail header -->
+            <div class="vcc-detail-header vcc-animate-fade-in">
+                <div class="vcc-detail-header__info">
+                    <div class="vcc-detail-header__icon">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <div class="vcc-detail-header__text">
+                        <h1 class="vcc-detail-header__title" th:text="${device.name}">Nazwa urządzenia</h1>
+                        <div class="vcc-detail-header__subtitle"
+                             th:text="'Nr inw.: ' + ${device.inventoryNumber}">Nr inw.: ---</div>
+                        <div class="vcc-detail-meta">
+                            <span class="vcc-detail-meta__item">
+                                <i class="fas fa-building"></i>
+                                <span th:text="${device.department != null and device.department.company != null ? device.department.company.name : '---'}">Firma</span>
+                            </span>
+                            <span class="vcc-detail-meta__item">
+                                <i class="fas fa-sitemap"></i>
+                                <span th:text="${device.department != null ? device.department.name : '---'}">Dział</span>
+                            </span>
+                            <span class="vcc-detail-meta__item" th:if="${device.laboratory != null}">
+                                <i class="fas fa-flask"></i>
+                                <span th:text="${device.laboratory.fullName}">Pracownia</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vcc-button-group">
+                    <button th:if="${canTransfer}" class="vcc-btn--detail-outline"
+                            onclick="document.getElementById('transferModal').classList.add('is-open')">
+                        <i class="fas fa-exchange-alt"></i>
+                        Przenieś
+                    </button>
+                    <a th:href="@{/devices/{id}/edit(id=${device.id})}" class="vcc-btn--detail-primary">
+                        <i class="fas fa-pen"></i>
+                        Edytuj
+                    </a>
+                    <a th:href="@{/devices/{id}/validations(id=${device.id})}" class="vcc-btn--detail-outline">
+                        <i class="fas fa-clipboard-check"></i>
+                        Walidacje
+                    </a>
+                </div>
+            </div>
+
+            <!-- Section 1: Device Info -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-info-circle"></i>
+                        Informacje o urządzeniu
+                    </h2>
+                </div>
+
+                <div class="vcc-detail-grid">
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Nr inwentarzowy</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono" th:text="${device.inventoryNumber}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Nazwa</span>
+                        <span class="vcc-detail-value" th:text="${device.name}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Firma</span>
+                        <span class="vcc-detail-value"
+                              th:text="${device.department != null and device.department.company != null ? device.department.company.name : '---'}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Dział</span>
+                        <span class="vcc-detail-value">
+                            <span th:text="${device.department != null ? device.department.name : '---'}">---</span>
+                            <span th:if="${device.department != null}" class="vcc-detail-badge"
+                                  th:text="${device.department.abbreviation}">SKR</span>
+                        </span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Pracownia</span>
+                        <span class="vcc-detail-value">
+                            <span th:if="${device.laboratory != null}" th:text="${device.laboratory.fullName}">---</span>
+                            <span th:if="${device.laboratory != null}" class="vcc-detail-badge"
+                                  th:text="${device.laboratory.abbreviation}">SKR</span>
+                            <span th:if="${device.laboratory == null}" style="color:var(--text-muted)">---</span>
+                        </span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Typ komory</span>
+                        <span class="vcc-detail-value" th:text="${device.chamberType.displayName}">---</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Settings (Material & Temperature) -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-sliders-h"></i>
+                        Ustawienia i parametry
+                    </h2>
+                </div>
+
+                <div class="vcc-detail-grid">
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Typ materiału</span>
+                        <span class="vcc-detail-value" th:text="${device.materialName}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Zakres temp. materiału</span>
+                        <span class="vcc-detail-value vcc-detail-value--purple"
+                              th:text="${device.materialTemperatureRange}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Min. temp. operacyjna</span>
+                        <span class="vcc-detail-value vcc-detail-value--temp-cold"
+                              th:text="${device.formattedMinOperatingTemp}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Max. temp. operacyjna</span>
+                        <span class="vcc-detail-value vcc-detail-value--temp-warm"
+                              th:text="${device.formattedMaxOperatingTemp}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Objętość urządzenia</span>
+                        <span class="vcc-detail-value vcc-detail-value--volume"
+                              th:text="${device.formattedVolume}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Klasa kubatury (PDA TR-64)</span>
+                        <span class="vcc-detail-value vcc-detail-value--purple"
+                              th:text="${device.volumeCategoryDisplayName}">---</span>
+                    </div>
+                    <div th:if="${device.minMeasurementPoints != null}" class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Min. punkty pomiarowe</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono"
+                              style="color:#f59e0b;"
+                              th:text="${device.minMeasurementPoints + ' punktów'}">---</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Validation Plan Numbers (RPW) -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-list-ol"></i>
+                        Historia numerów RPW
+                    </h2>
+                    <div class="vcc-detail-section__actions">
+                        <button class="vcc-btn--detail-primary"
+                                onclick="document.getElementById('rpwModal').classList.add('is-open')">
+                            <i class="fas fa-plus"></i>
+                            Dodaj numer RPW
+                        </button>
+                    </div>
+                </div>
+
+                <div th:if="${#lists.isEmpty(device.validationPlanNumbers)}" class="vcc-detail-empty">
+                    Brak przypisanych numerów RPW
+                </div>
+
+                <table th:unless="${#lists.isEmpty(device.validationPlanNumbers)}" class="vcc-detail-table">
+                    <thead>
+                        <tr>
+                            <th>Rok</th>
+                            <th>Numer RPW</th>
+                            <th style="text-align:right">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="vpn : ${device.validationPlanNumbers}">
+                            <td><span class="vcc-mono" th:text="${vpn.year}">---</span></td>
+                            <td><span style="font-weight:600" th:text="${vpn.planNumber}">---</span></td>
+                            <td style="text-align:right">
+                                <form th:action="@{/devices/{dId}/plan-numbers/{pId}/delete(dId=${device.id},pId=${vpn.id})}"
+                                      method="post" style="display:inline"
+                                      onsubmit="return confirm('Usunąć ten numer RPW?')">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                    <button type="submit" class="vcc-btn--detail-danger" style="padding:4px 10px;font-size:0.75rem;">
+                                        <i class="fas fa-trash-alt"></i> Usuń
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Section 4: Audit History (Envers) -->
+            <section class="vcc-detail-section vcc-animate-fade-in" id="enversSection">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-history"></i>
+                        Historia zmian (Envers)
+                    </h2>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:var(--sp-3);">
+                    Szczegółowy rejestr zmian — GMP Annex 11 §10
+                </p>
+
+                <!-- Revision list -->
+                <div id="enversRevList" style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="color:var(--text-muted);font-size:.85rem;">Ładowanie historii…</div>
+                </div>
+
+                <!-- Diff area -->
+                <div id="enversDiffArea" class="vcc-envers-diff" style="display:none;">
+                    <div class="vcc-envers-diff__title" id="enversDiffTitle"></div>
+                    <table class="vcc-detail-table">
+                        <thead>
+                            <tr>
+                                <th>Pole</th>
+                                <th style="color:var(--color-danger);">Przed</th>
+                                <th style="color:var(--color-success);">Po</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enversDiffBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Modal: Transfer device -->
+    <div class="vcc-modal-overlay" id="transferModal" th:if="${canTransfer}"
+         onclick="if(event.target===this)this.classList.remove('is-open')">
+        <div class="vcc-modal">
+            <h3 class="vcc-modal__title">Przenieś urządzenie</h3>
+            <p class="vcc-modal__subtitle">
+                Aktualnie:
+                <strong th:text="${device.department.name}">---</strong>
+                <span th:if="${device.laboratory != null}">
+                    / <strong th:text="${device.laboratory.fullName}">---</strong>
+                </span>
+            </p>
+            <form th:action="@{/devices/{id}/transfer(id=${device.id})}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <div class="vcc-modal__form-group">
+                    <label class="vcc-modal__label">Nowy dział <span class="vcc-required">*</span></label>
+                    <select name="departmentId" id="transferDeptId" class="vcc-modal__select"
+                            onchange="loadTransferLabs()" required>
+                        <option value="">-- Wybierz dział --</option>
+                        <option th:each="dept : ${departments}"
+                                th:value="${dept.id}"
+                                th:text="${dept.name}"
+                                th:attr="data-has-labs=${dept.hasLaboratories}"
+                                th:selected="${dept.id == device.department.id}">
+                        </option>
+                    </select>
+                </div>
+
+                <div class="vcc-modal__form-group" id="transferLabGroup" style="display:none">
+                    <label class="vcc-modal__label">Pracownia (opcjonalna)</label>
+                    <select name="laboratoryId" id="transferLabId" class="vcc-modal__select">
+                        <option value="">-- Brak pracowni --</option>
+                    </select>
+                </div>
+
+                <div class="vcc-modal__actions">
+                    <button type="button" class="vcc-modal__btn-cancel"
+                            onclick="document.getElementById('transferModal').classList.remove('is-open')">
+                        Anuluj
+                    </button>
+                    <button type="submit" class="vcc-modal__btn-submit">Przenieś urządzenie</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add RPW -->
+    <div class="vcc-modal-overlay" id="rpwModal"
+         onclick="if(event.target===this)this.classList.remove('is-open')">
+        <div class="vcc-modal">
+            <div class="vcc-modal__title">Dodaj numer RPW</div>
+            <form th:action="@{/devices/{id}/plan-numbers(id=${device.id})}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <div class="vcc-modal__form-group">
+                    <label class="vcc-modal__label">Rok <span class="vcc-required">*</span></label>
+                    <input type="number" name="year" required min="2000" placeholder="np. 2026"
+                           class="vcc-modal__input">
+                </div>
+                <div class="vcc-modal__form-group">
+                    <label class="vcc-modal__label">Numer RPW <span class="vcc-required">*</span></label>
+                    <input type="number" name="planNumber" required min="1" placeholder="np. 42"
+                           class="vcc-modal__input">
+                </div>
+                <div class="vcc-modal__actions">
+                    <button type="button" class="vcc-modal__btn-cancel"
+                            onclick="document.getElementById('rpwModal').classList.remove('is-open')">Anuluj</button>
+                    <button type="submit" class="vcc-modal__btn-submit">Dodaj numer RPW</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <!-- Envers + Transfer scripts -->
+    <script th:inline="javascript">
+    (function () {
+        const deviceId = /*[[${device.id}]]*/ 0;
+
+        function badgeClass(type) {
+            var map = { ADD: 'vcc-envers-badge--add', MOD: 'vcc-envers-badge--mod', DEL: 'vcc-envers-badge--del' };
+            return map[type] || 'vcc-envers-badge--mod';
+        }
+        function badgeLabel(type) {
+            var map = { ADD: 'DODANIE', MOD: 'ZMIANA', DEL: 'USUNIĘCIE' };
+            return map[type] || type;
+        }
+
+        function loadRevisions() {
+            fetch('/devices/' + deviceId + '/history')
+                .then(function(r) { return r.json(); })
+                .then(function(revs) {
+                    var el = document.getElementById('enversRevList');
+                    if (!revs || revs.length === 0) {
+                        el.innerHTML = '<div class="vcc-detail-empty">Brak rewizji w historii Envers.</div>';
+                        return;
+                    }
+                    el.innerHTML = revs.map(function(r) {
+                        return '<button class="vcc-envers-revision" onclick="loadDiff(' + r.revisionNumber + ',\'' + (r.timestamp||'') + '\',\'' + (r.username||'') + '\',\'' + (r.revisionType||'') + '\')">'
+                            + '<span style="font-size:.75rem;color:var(--text-muted);min-width:145px;">' + (r.timestamp || '') + '</span>'
+                            + '<span class="vcc-envers-badge ' + badgeClass(r.revisionType) + '">' + badgeLabel(r.revisionType) + '</span>'
+                            + '<span style="font-weight:500;">' + (r.username || '') + '</span>'
+                            + (r.fullName ? '<span style="font-size:.8rem;color:var(--text-muted);">(' + r.fullName + ')</span>' : '')
+                            + (r.ipAddress ? '<span style="margin-left:auto;font-size:.75rem;color:var(--text-muted);">' + r.ipAddress + '</span>' : '')
+                            + '</button>';
+                    }).join('');
+                })
+                .catch(function() {
+                    document.getElementById('enversRevList').innerHTML =
+                        '<div class="vcc-detail-empty" style="color:var(--color-danger);">Błąd ładowania historii.</div>';
+                });
+        }
+
+        var _openRevNum = null;
+
+        window.loadDiff = function (revNum, ts, user, type) {
+            var area = document.getElementById('enversDiffArea');
+            var title = document.getElementById('enversDiffTitle');
+            var body = document.getElementById('enversDiffBody');
+
+            if (_openRevNum === revNum) {
+                area.style.display = 'none';
+                _openRevNum = null;
+                return;
+            }
+            _openRevNum = revNum;
+
+            area.style.display = 'block';
+            title.textContent = 'Rewizja #' + revNum + ' \u2014 ' + ts + ' \u2014 ' + user;
+            body.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted);">Ładowanie…</td></tr>';
+
+            fetch('/devices/' + deviceId + '/history/' + revNum)
+                .then(function(r) { return r.json(); })
+                .then(function(diffs) {
+                    var rows = diffs
+                        .filter(function(d) { return d.changed; })
+                        .map(function(d) {
+                            return '<tr>'
+                                + '<td style="font-weight:500;">' + d.displayName + '</td>'
+                                + '<td style="color:var(--color-danger);text-decoration:line-through;">' + (d.oldValue != null ? d.oldValue : '\u2014') + '</td>'
+                                + '<td style="color:var(--color-success);">' + (d.newValue != null ? d.newValue : '\u2014') + '</td>'
+                                + '</tr>';
+                        }).join('');
+                    body.innerHTML = rows || '<tr><td colspan="3" style="color:var(--text-muted);">Brak zmian pól (pierwsza rewizja).</td></tr>';
+                })
+                .catch(function() {
+                    body.innerHTML = '<tr><td colspan="3" style="color:var(--color-danger);">Błąd.</td></tr>';
+                });
+        };
+
+        loadRevisions();
+    })();
+
+    // --- Transfer modal ---
+    function loadTransferLabs() {
+        var sel = document.getElementById('transferDeptId');
+        var opt = sel.options[sel.selectedIndex];
+        var hasLabs = opt && opt.dataset.hasLabs === 'true';
+        var labGroup = document.getElementById('transferLabGroup');
+        var labSel = document.getElementById('transferLabId');
+
+        if (!hasLabs || !sel.value) {
+            labGroup.style.display = 'none';
+            labSel.innerHTML = '<option value="">-- Brak pracowni --</option>';
+            return;
+        }
+
+        labGroup.style.display = 'block';
+        fetch('/devices/api/departments/' + sel.value + '/laboratories')
+            .then(function(r) { return r.json(); })
+            .then(function(labs) {
+                labSel.innerHTML = '<option value="">-- Brak pracowni --</option>' +
+                    labs.map(function(l) { return '<option value="' + l.id + '">' + l.name + '</option>'; }).join('');
+            });
+    }
+
+    // Preselect current lab when modal opens
+    (function () {
+        var modal = document.getElementById('transferModal');
+        if (!modal) return;
+        var currentLabId = /*[[${device.laboratory != null ? device.laboratory.id : 0}]]*/ 0;
+        var observer = new MutationObserver(function() {
+            if (modal.classList.contains('is-open')) {
+                loadTransferLabs();
+                if (currentLabId) {
+                    setTimeout(function() {
+                        var labSel = document.getElementById('transferLabId');
+                        if (labSel) labSel.value = currentLabId;
+                    }, 350);
+                }
+            }
+        });
+        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    })();
+    </script>
+
+</body>
+
+</html>

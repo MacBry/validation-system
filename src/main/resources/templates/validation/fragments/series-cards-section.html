@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<body>
+<th:block th:fragment="section(validation)">
+
+        <!-- Serie pomiarowe — karty -->
+        <section class="vcc-detail-section vcc-animate-fade-in" th:if="${!#lists.isEmpty(validation.measurementSeries)}"
+                 style="margin-bottom:20px;">
+            <div class="vcc-detail-section__header">
+                <h2 class="vcc-detail-section__title">
+                    <i class="fas fa-chart-bar" style="font-size:.95rem;"></i>
+                    Serie pomiarowe
+                    <span style="display:inline-flex;align-items:center;justify-content:center;
+                                 min-width:22px;height:22px;padding:0 6px;border-radius:11px;
+                                 font-size:.72rem;font-weight:600;background:#e0e7ff;color:#4a6cf7;margin-left:8px;"
+                          th:text="${#lists.size(validation.measurementSeries)}">0</span>
+                </h2>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div th:each="series : ${validation.measurementSeries}"
+                     style="background:#f8f9fb;border:1px solid #e8eaf0;border-radius:10px;padding:18px 20px;">
+
+                    <!-- Header -->
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                        <div style="font-weight:600;font-size:.9rem;color:#1a1d2e;" th:text="${series.originalFilename}">plik.vi2</div>
+                        <span th:if="${series.isReferenceRecorder}"
+                              style="padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:700;
+                                     background:#e0b870;color:#fff;">
+                            REF
+                        </span>
+                        <span th:unless="${series.isReferenceRecorder}"
+                              style="padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:600;
+                                     background:#e0e7ff;color:#4a6cf7;"
+                              th:text="${series.recorderPosition != null ? series.recorderPosition.displayName : '---'}">
+                            Centrum
+                        </span>
+                    </div>
+
+                    <!-- Grid: metadata -->
+                    <div class="vcc-detail-grid" style="margin-bottom:14px;">
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Data pomiaru</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono"
+                                th:text="${#temporals.format(series.firstMeasurementTime, 'dd.MM.yyyy')}">-</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Czas trwania</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono" th:text="${series.formattedDuration}">-</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Liczba pomiarow</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono" th:text="${series.measurementCount}">-</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Rejestrator</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono" th:text="${series.recorderSerialNumber}">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Temperature Stats inline -->
+                    <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:100px;background:#f2f8fc;border-radius:8px;padding:10px 14px;text-align:center;">
+                            <div style="font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#8b95a8;margin-bottom:4px;">Minimalna</div>
+                            <div style="font-size:1rem;font-weight:700;color:#4a7fb0;font-family:'DM Mono',monospace;" th:text="${series.formattedMinTemperature}">-</div>
+                        </div>
+                        <div style="flex:1;min-width:100px;background:#f8f9fb;border-radius:8px;padding:10px 14px;text-align:center;">
+                            <div style="font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#8b95a8;margin-bottom:4px;">Średnia</div>
+                            <div style="font-size:1rem;font-weight:700;color:#4b5563;font-family:'DM Mono',monospace;" th:text="${series.formattedAvgTemperature}">-</div>
+                        </div>
+                        <div style="flex:1;min-width:100px;background:#fef5f5;border-radius:8px;padding:10px 14px;text-align:center;">
+                            <div style="font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#8b95a8;margin-bottom:4px;">Maksymalna</div>
+                            <div style="font-size:1rem;font-weight:700;color:#c06060;font-family:'DM Mono',monospace;" th:text="${series.formattedMaxTemperature}">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Testo Info -->
+                    <div th:if="${series.thermoRecorder != null}"
+                         style="background:#f4f6fb;border:1px solid #e0e7ff;border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+                            <i class="fas fa-microchip" style="font-size:.75rem;color:#7d93f7;"></i>
+                            <span style="font-size:.78rem;font-weight:600;color:#4a6cf7;">Rejestrator TESTO</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;font-size:.8rem;">
+                            <div>
+                                <span style="color:#8b95a8;">Nr seryjny:</span>
+                                <span style="color:#1a1d2e;font-weight:500;margin-left:4px;" th:text="${series.thermoRecorder.serialNumber}">-</span>
+                            </div>
+                            <div>
+                                <span style="color:#8b95a8;">Model:</span>
+                                <span style="color:#1a1d2e;font-weight:500;margin-left:4px;" th:text="${series.thermoRecorder.model}">-</span>
+                            </div>
+                            <div>
+                                <span style="color:#8b95a8;">Certyfikat ważny do:</span>
+                                <span style="color:#1a1d2e;font-weight:500;margin-left:4px;"
+                                    th:text="${series.thermoRecorder.latestCalibration != null ? #temporals.format(series.thermoRecorder.latestCalibration.validUntil, 'dd.MM.yyyy') : 'Brak danych'}">-</span>
+                            </div>
+                            <div>
+                                <span style="color:#8b95a8;">Status na dzień pomiaru:</span>
+                                <span th:if="${series.thermoRecorder.latestCalibration != null && series.thermoRecorder.latestCalibration.validUntil.isAfter(series.firstMeasurementTime.toLocalDate())}"
+                                      style="font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:10px;background:#e8f4ee;color:#3d8a6e;margin-left:4px;">
+                                    Certyfikat ważny
+                                </span>
+                                <span th:if="${series.thermoRecorder.latestCalibration == null || !series.thermoRecorder.latestCalibration.validUntil.isAfter(series.firstMeasurementTime.toLocalDate())}"
+                                      style="font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:10px;background:#fef5f5;color:#c06060;margin-left:4px;">
+                                    Certyfikat wygasły
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Device Info -->
+                    <div th:if="${series.coolingDevice != null}"
+                         style="font-size:.82rem;color:#8b95a8;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-cube" style="font-size:.7rem;"></i>
+                        <span th:text="${series.coolingDevice.name}" style="color:#1a1d2e;font-weight:500;">Urządzenie</span>
+                        <span>—</span>
+                        <span th:text="'Nr inw: ' + ${series.coolingDevice.inventoryNumber}">Nr inw</span>
+                        <span th:if="${series.coolingDevice.laboratory != null}">
+                            — <span th:text="${series.coolingDevice.laboratory.fullName}">Pracownia</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+</th:block>
+</body>
+</html>

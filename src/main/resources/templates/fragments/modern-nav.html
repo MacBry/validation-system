@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<body>
+
+    <!-- ====================================================================
+         Modern SaaS Top Navigation Bar
+         Usage: <nav th:replace="~{fragments/modern-nav :: modern-nav(subtitle)}">
+         Pass subtitle=null for home page, or a string like 'Urządzenia' for sub-pages.
+         ==================================================================== -->
+
+    <nav th:fragment="modern-nav(subtitle)" class="vcc-topbar">
+        <div class="vcc-topbar__inner">
+
+            <!-- Left: Logo + optional subtitle -->
+            <div class="vcc-topbar__left">
+                <a th:href="@{/}" class="vcc-topbar__logo" title="Strona główna">
+                    <img th:src="@{/images/vcc-logo.jpg}" alt="VCC" />
+                    <span class="vcc-topbar__logo-text">
+                        <span>VCC</span> System
+                    </span>
+                </a>
+
+                <div th:if="${subtitle != null}" class="vcc-topbar__sep"></div>
+                <span th:if="${subtitle != null}"
+                      th:text="${subtitle}"
+                      class="vcc-topbar__subtitle"></span>
+            </div>
+
+            <!-- Right: Company context + user + actions -->
+            <div class="vcc-topbar__right" sec:authorize="isAuthenticated()">
+
+                <!-- Company context badge -->
+                <div th:if="${navCompanyContext != null}"
+                     class="vcc-badge-company"
+                     th:classappend="${navIsSuperAdmin != null and navIsSuperAdmin} ? 'vcc-badge-company--super' : ''"
+                     th:title="${navCompanyContext}">
+                    <i class="fas fa-building" style="font-size:0.7rem;"></i>
+                    <span th:text="${navCompanyContext}">Firma</span>
+                </div>
+
+                <!-- User info -->
+                <div class="vcc-topbar__user">
+                    <div class="vcc-topbar__user-avatar" sec:authorize="isAuthenticated()">
+                        <i class="fas fa-user" style="font-size:0.7rem;"></i>
+                    </div>
+                    <span>
+                        <strong sec:authentication="name">User</strong>
+                    </span>
+                </div>
+
+                <!-- Profile button -->
+                <a th:href="@{/profile/change-password}"
+                   class="vcc-topbar-btn"
+                   title="Profil i zmiana hasła">
+                    <i class="fas fa-user-cog" style="font-size:0.82rem;"></i>
+                    <span>Profil</span>
+                </a>
+
+                <!-- Logout button -->
+                <form th:action="@{/logout}" method="post" style="margin:0;">
+                    <button type="submit"
+                            class="vcc-topbar-btn vcc-topbar-btn--danger"
+                            title="Wyloguj się">
+                        <i class="fas fa-sign-out-alt" style="font-size:0.82rem;"></i>
+                        <span>Wyloguj</span>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </nav>
+
+    <!-- ====================================================================
+         Legacy compatibility fragment (same as above, for pages still using
+         the old gradient-background navigation).
+         ==================================================================== -->
+    <nav th:fragment="modern-nav-legacy(subtitle)" class="topnav">
+        <div class="topnav-left">
+            <a th:href="@{/}" class="home-btn" title="Strona główna">
+                <img th:src="@{/images/vcc-logo.jpg}" alt="VCC"
+                     style="width:28px;height:28px;border-radius:6px;" />
+            </a>
+            <span class="brand">VCC System <span th:if="${subtitle != null}"
+                    th:text="' / ' + ${subtitle}"></span></span>
+        </div>
+
+        <div class="topnav-right" sec:authorize="isAuthenticated()">
+            <div th:if="${navCompanyContext != null}"
+                th:classappend="${navIsSuperAdmin != null and navIsSuperAdmin} ? 'super-admin'" class="company-context"
+                th:title="${navCompanyContext}">
+                <i class="fas fa-building" style="font-size:0.7rem;"></i>
+                <span th:text="${navCompanyContext}">Firma</span>
+            </div>
+            <div class="user-info">
+                <i class="fas fa-user" style="font-size:0.8rem;"></i>
+                <span>Zalogowany: <strong sec:authentication="name">User</strong></span>
+            </div>
+
+            <a th:href="@{/profile/change-password}" class="btn-logout-mini"
+                style="margin-right:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);">
+                <i class="fas fa-user-cog" style="font-size:0.8rem;"></i>
+                Profil
+            </a>
+
+            <form th:action="@{/logout}" method="post" style="margin:0;">
+                <button type="submit" class="btn-logout-mini">
+                    <i class="fas fa-sign-out-alt" style="font-size:0.8rem;"></i>
+                    Wyloguj
+                </button>
+            </form>
+        </div>
+    </nav>
+
+</body>
+
+</html>

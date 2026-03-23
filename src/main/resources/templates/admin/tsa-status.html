@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSA Status - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+
+    <style>
+        /* ── TSA-specific status grid ───────────────────────────────────────── */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+            margin-bottom: var(--sp-4);
+        }
+
+        .status-item {
+            padding: 14px 16px;
+            border-radius: var(--radius-md);
+            border-left: 4px solid var(--border-subtle);
+            background: var(--surface-page);
+        }
+
+        .status-item.enabled {
+            background: #f0f9ff;
+            border-left-color: #0ea5e9;
+        }
+
+        .status-item.disabled {
+            background: #fef2f2;
+            border-left-color: #ef4444;
+        }
+
+        .status-item.available {
+            background: #f0fdf4;
+            border-left-color: #22c55e;
+        }
+
+        .status-item.unavailable {
+            background: #fefce8;
+            border-left-color: #eab308;
+        }
+
+        .status-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 4px;
+        }
+
+        .status-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* ── Key-value detail row ───────────────────────────────────────────── */
+        .tsa-detail-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-subtle);
+            font-size: 0.88rem;
+        }
+
+        .tsa-detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .tsa-detail-key {
+            color: var(--text-muted);
+            font-weight: 500;
+            min-width: 180px;
+            flex-shrink: 0;
+        }
+
+        .tsa-detail-val {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.84rem;
+            color: var(--text-main);
+        }
+
+        /* ── Compliance badge variants ──────────────────────────────────────── */
+        .vcc-status--compliant {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .vcc-status--degraded {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .vcc-status--non-compliant {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* ── Recommendations list ───────────────────────────────────────────── */
+        .recommendations {
+            background: var(--surface-page);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+            margin-top: var(--sp-3);
+        }
+
+        .recommendations__title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .recommendation-item {
+            position: relative;
+            padding-left: 18px;
+            margin: 7px 0;
+            font-size: 0.875rem;
+            color: var(--text-secondary, #4b5563);
+            line-height: 1.5;
+        }
+
+        .recommendation-item::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--vcc-primary);
+            font-weight: 700;
+        }
+
+        /* ── Test result area ───────────────────────────────────────────────── */
+        .test-result {
+            margin-top: var(--sp-3);
+            padding: 14px 16px;
+            border-radius: var(--radius-md);
+            display: none;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .test-result.success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+
+        .test-result.error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        /* ── Test button ────────────────────────────────────────────────────── */
+        .btn-test {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: linear-gradient(135deg, var(--vcc-primary), var(--vcc-secondary));
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 10px 20px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-test:hover {
+            opacity: 0.88;
+        }
+
+        .btn-test:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ── Auto-refresh notice ────────────────────────────────────────────── */
+        .auto-refresh-notice {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: var(--sp-4);
+            padding: var(--sp-2) var(--sp-3);
+            background: var(--surface-page);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+        }
+
+        .auto-refresh-notice i {
+            color: var(--vcc-primary);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('tsa')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('tsa', 'TSA Status', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Breadcrumb -->
+            <nav class="vcc-breadcrumb" aria-label="Breadcrumb">
+                <a th:href="@{/}">Dashboard</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <a th:href="@{/admin/tsa/status}">Konfiguracja</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <span class="vcc-breadcrumb__current">TSA Status</span>
+            </nav>
+
+            <!-- Page header -->
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">TSA (Time Stamp Authority) Status</h1>
+                <div class="vcc-page-header__actions">
+                    <span class="vcc-form-hint" style="align-self: center;">
+                        <i class="fas fa-shield-alt" style="color: var(--vcc-primary);"></i>
+                        FDA 21 CFR Part 11
+                    </span>
+                </div>
+            </div>
+
+            <!-- ================================================================
+                 Section 1: Status Glowny TSA
+                 ================================================================ -->
+            <div class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-signal" style="color: var(--vcc-primary);"></i>
+                        Status Główny TSA
+                    </h2>
+                </div>
+
+                <!-- Status tiles -->
+                <div class="status-grid">
+                    <div class="status-item" th:classappend="${tsaStatus.enabled} ? 'enabled' : 'disabled'">
+                        <div class="status-label">TSA Enabled</div>
+                        <div class="status-value"
+                             th:text="${tsaStatus.enabled} ? 'Włączone' : 'Wyłączone'">Status</div>
+                    </div>
+
+                    <div class="status-item" th:classappend="${tsaStatus.configured} ? 'enabled' : 'disabled'">
+                        <div class="status-label">Konfiguracja</div>
+                        <div class="status-value"
+                             th:text="${tsaStatus.configured} ? 'Skonfigurowane' : 'Brak konfiguracji'">Config</div>
+                    </div>
+
+                    <div class="status-item" th:classappend="${tsaStatus.available} ? 'available' : 'unavailable'">
+                        <div class="status-label">Dostępność</div>
+                        <div class="status-value" id="status-availability"
+                             th:text="${tsaStatus.available} ? 'Dostępne' : 'Niedostępne'">Availability</div>
+                    </div>
+
+                    <div class="status-item" th:classappend="${tsaStatus.fallbackEnabled} ? 'enabled' : 'disabled'">
+                        <div class="status-label">Tryb Fallback</div>
+                        <div class="status-value"
+                             th:text="${tsaStatus.fallbackEnabled} ? 'Włączone' : 'Wyłączone'">Fallback</div>
+                    </div>
+                </div>
+
+                <!-- Key-value detail -->
+                <div class="vcc-detail-grid" style="background: var(--surface-page); border-radius: var(--radius-md); padding: var(--sp-3); border: 1px solid var(--border-subtle);">
+                    <div class="tsa-detail-row">
+                        <span class="tsa-detail-key">TSA URL</span>
+                        <span class="tsa-detail-val"
+                              th:text="${tsaStatus.url} ?: 'Nie skonfigurowane'">URL</span>
+                    </div>
+                    <div class="tsa-detail-row">
+                        <span class="tsa-detail-key">Timeout</span>
+                        <span class="tsa-detail-val">
+                            <span th:text="${tsaStatus.timeoutMs}">30000</span> ms
+                        </span>
+                    </div>
+                    <div class="tsa-detail-row">
+                        <span class="tsa-detail-key">Ostatnie sprawdzenie</span>
+                        <span class="tsa-detail-val" id="last-check-time"
+                              th:text="${#temporals.format(tsaStatus.lastCheck, 'dd.MM.yyyy HH:mm:ss')}">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================================
+                 Section 2: Status Compliance
+                 ================================================================ -->
+            <div class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-balance-scale" style="color: var(--vcc-primary);"></i>
+                        Status Compliance
+                    </h2>
+                </div>
+
+                <div id="compliance-status">
+                    <!-- Compliance label + badge -->
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: var(--sp-3);">
+                        <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: 500;">
+                            FDA 21 CFR Part 11 Compliance:
+                        </span>
+                        <span id="compliance-badge"
+                              class="vcc-status vcc-status--degraded">Sprawdzanie...</span>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div class="recommendations">
+                        <div class="recommendations__title">Rekomendacje</div>
+                        <div id="recommendations-list">
+                            <div class="recommendation-item">Sprawdzanie konfiguracji TSA...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================================
+                 Section 3: Aktywny Test Polaczenia TSA
+                 ================================================================ -->
+            <div class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-plug" style="color: var(--vcc-primary);"></i>
+                        Aktywny Test Połączenia TSA
+                    </h2>
+                </div>
+
+                <button id="test-tsa-btn" class="btn-test" onclick="testTsaConnection()">
+                    <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
+                         viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                    Testuj Połączenie
+                </button>
+
+                <div id="test-result" class="test-result"></div>
+            </div>
+
+            <!-- Auto-refresh notice -->
+            <div class="auto-refresh-notice">
+                <i class="fas fa-sync-alt"></i>
+                Status odświeżany automatycznie co 30 sekund
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+        let autoRefreshInterval;
+
+        // Formats an ISO date string into Polish locale format
+        function formatDate(dateString) {
+            const d = new Date(dateString);
+            return d.toLocaleDateString('pl-PL', {
+                year: 'numeric', month: '2-digit', day: '2-digit'
+            }) + ' ' + d.toLocaleTimeString('pl-PL', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        // Auto-refresh: fetch status and update dynamic elements
+        function refreshTsaStatus() {
+            fetch('/api/admin/tsa/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateComplianceStatus(data);
+
+                    // Update availability tile
+                    const availTile = document.getElementById('status-availability');
+                    const availParent = availTile.parentElement;
+                    if (data.available) {
+                        availTile.textContent = 'Dostępne';
+                        availParent.classList.remove('unavailable');
+                        availParent.classList.add('available');
+                    } else {
+                        availTile.textContent = 'Niedostępne';
+                        availParent.classList.remove('available');
+                        availParent.classList.add('unavailable');
+                    }
+
+                    document.getElementById('last-check-time').textContent = formatDate(data.lastCheck);
+                })
+                .catch(error => {
+                    console.error('Error refreshing TSA status:', error);
+                });
+        }
+
+        // Update compliance badge and recommendations from API response
+        function updateComplianceStatus(data) {
+            const badge = document.getElementById('compliance-badge');
+            const recommendationsList = document.getElementById('recommendations-list');
+
+            badge.className = 'vcc-status';
+            switch (data.complianceStatus) {
+                case 'COMPLIANT':
+                    badge.classList.add('vcc-status--compliant');
+                    badge.textContent = 'Zgodne';
+                    break;
+                case 'DEGRADED':
+                    badge.classList.add('vcc-status--degraded');
+                    badge.textContent = 'Ograniczone';
+                    break;
+                case 'NON_COMPLIANT':
+                    badge.classList.add('vcc-status--non-compliant');
+                    badge.textContent = 'Niezgodne';
+                    break;
+                default:
+                    badge.classList.add('vcc-status--none');
+                    badge.textContent = 'Nieznane';
+            }
+
+            recommendationsList.innerHTML = '';
+            if (data.recommendations && data.recommendations.length > 0) {
+                data.recommendations.forEach(rec => {
+                    const div = document.createElement('div');
+                    div.className = 'recommendation-item';
+                    div.textContent = rec;
+                    recommendationsList.appendChild(div);
+                });
+            } else {
+                const div = document.createElement('div');
+                div.className = 'recommendation-item';
+                div.textContent = 'Brak dodatkowych rekomendacji';
+                recommendationsList.appendChild(div);
+            }
+        }
+
+        // SVG icon markup reused for the test button
+        const testBtnIconSvg = `<svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+        </svg>`;
+
+        function testTsaConnection() {
+            const button = document.getElementById('test-tsa-btn');
+            const result = document.getElementById('test-result');
+
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testowanie...';
+            result.style.display = 'none';
+
+            fetch('/api/admin/tsa/test')
+                .then(response => response.json())
+                .then(data => {
+                    button.disabled = false;
+                    button.innerHTML = testBtnIconSvg + ' Testuj Połączenie';
+
+                    result.className = 'test-result ' + (data.success ? 'success' : 'error');
+                    result.style.display = 'block';
+
+                    if (data.success) {
+                        result.innerHTML =
+                            '<div style="margin-bottom:5px;font-weight:600;">Test pomyslny</div>' +
+                            '<div>Czas odpowiedzi: <span style="font-family:\'DM Mono\',monospace;">' + data.duration + '</span> ms</div>' +
+                            '<div>Czas testu: <span style="font-family:\'DM Mono\',monospace;">' + formatDate(data.timestamp) + '</span></div>';
+                    } else {
+                        result.innerHTML =
+                            '<div style="margin-bottom:5px;font-weight:600;">Test nieudany</div>' +
+                            '<div>Blad: <span style="font-family:\'DM Mono\',monospace;">' + (data.error || 'Nieznany blad') + '</span></div>' +
+                            '<div>Czas testu: <span style="font-family:\'DM Mono\',monospace;">' + formatDate(data.timestamp) + '</span></div>';
+                    }
+                })
+                .catch(error => {
+                    button.disabled = false;
+                    button.innerHTML = testBtnIconSvg + ' Testuj Połączenie';
+
+                    result.className = 'test-result error';
+                    result.style.display = 'block';
+                    result.innerHTML =
+                        '<div style="margin-bottom:5px;font-weight:600;">Blad testu HTTP</div>' +
+                        '<div>' + error.message + '</div>';
+                });
+        }
+
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', function () {
+            refreshTsaStatus();
+            autoRefreshInterval = setInterval(refreshTsaStatus, 30000);
+        });
+
+        // Clean up timer when leaving the page
+        window.addEventListener('beforeunload', function () {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+
+</body>
+
+</html>

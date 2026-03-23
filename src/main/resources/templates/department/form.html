@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit ? 'Edycja działu' : 'Nowy dział'}">Dział</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('departments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('departments', 'Działy', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Form header -->
+            <div class="vcc-form-header">
+                <h1 class="vcc-form-header__title"
+                    th:text="${isEdit} ? 'Edycja działu' : 'Nowy dział'">
+                    Dział
+                </h1>
+                <p class="vcc-form-header__subtitle">Pola wymagane są oznaczone <span class="vcc-required">*</span></p>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Form card -->
+            <div class="vcc-form-card vcc-animate-fade-in">
+                <form th:action="${isEdit} ? @{/departments/{id}(id=${department.id()})} : @{/departments}"
+                      method="post"
+                      th:object="${department}">
+
+                    <!-- Section 1: Informacje -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Informacje</legend>
+
+                        <div class="vcc-form-group">
+                            <label for="companyId" class="vcc-form-label">
+                                Firma <span class="vcc-required">*</span>
+                            </label>
+                            <select class="vcc-form-select"
+                                    id="companyId"
+                                    th:field="*{companyId}"
+                                    required>
+                                <option value="">-- Wybierz firmę --</option>
+                                <option th:each="comp : ${companies}"
+                                        th:value="${comp.id}"
+                                        th:text="${comp.name}">
+                                </option>
+                            </select>
+                            <span class="vcc-form-hint">Dział zostanie przypisany do wybranej firmy</span>
+                        </div>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="name" class="vcc-form-label">
+                                    Nazwa działu <span class="vcc-required">*</span>
+                                </label>
+                                <input type="text"
+                                       class="vcc-form-input"
+                                       id="name"
+                                       th:field="*{name}"
+                                       placeholder="np. Dział Laboratoryjny"
+                                       required>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="abbreviation" class="vcc-form-label">
+                                    Skrót działu <span class="vcc-required">*</span>
+                                </label>
+                                <input type="text"
+                                       class="vcc-form-input vcc-form-input--mono"
+                                       id="abbreviation"
+                                       th:field="*{abbreviation}"
+                                       placeholder="np. LAB"
+                                       maxlength="20"
+                                       required>
+                                <span class="vcc-form-hint">Używany w numerach RPW (np. 1/LAB-ORS/2026)</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 2: Opis -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Opis</legend>
+
+                        <div class="vcc-form-group">
+                            <label for="description" class="vcc-form-label">Opis działu</label>
+                            <textarea class="vcc-form-textarea"
+                                      id="description"
+                                      th:field="*{description}"
+                                      rows="3"
+                                      placeholder="Opcjonalny opis działu"></textarea>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 3: Ustawienia -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Ustawienia</legend>
+
+                        <div class="vcc-form-check">
+                            <input type="checkbox"
+                                   id="hasLaboratories"
+                                   th:field="*{hasLaboratories}">
+                            <div class="vcc-form-check__text">
+                                <span class="vcc-form-check__label">Dział ma pracownie (podpracownie)</span>
+                                <span class="vcc-form-check__hint">Zaznacz jeśli dział dzieli się na mniejsze pracownie (np. Dział Laboratoryjny -> ORS, PALZPZ, HLA...)</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Actions -->
+                    <div class="vcc-form-actions">
+                        <a th:href="@{/departments}" class="vcc-form-btn-cancel">
+                            <i class="fas fa-times"></i> Anuluj
+                        </a>
+                        <button type="submit" class="vcc-form-btn-submit">
+                            <i class="fas fa-check"></i>
+                            <span th:text="${isEdit} ? 'Zapisz zmiany' : 'Dodaj dział'">Zapisz</span>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+</body>
+
+</html>

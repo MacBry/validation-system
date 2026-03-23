@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Wgraj certyfikat — ' + ${company.name} + ' — VCC'">Wgraj certyfikat</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('certificates')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('certificates', 'Certyfikaty', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Breadcrumb -->
+            <nav class="vcc-breadcrumb" aria-label="Breadcrumb">
+                <a th:href="@{/}">Dashboard</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <a th:href="@{/certificates}">Certyfikaty</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <span class="vcc-breadcrumb__current"
+                      th:text="'Wgraj: ' + ${company.name}">Wgraj certyfikat</span>
+            </nav>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Form header -->
+            <div class="vcc-form-header">
+                <h1 class="vcc-form-header__title">
+                    Wgraj certyfikat PKCS12
+                </h1>
+                <p class="vcc-form-header__subtitle">
+                    Firma: <strong th:text="${company.name}">Firma</strong>
+                    — Poprzedni aktywny certyfikat zostanie automatycznie dezaktywowany
+                </p>
+            </div>
+
+            <!-- Form card -->
+            <div class="vcc-form-card vcc-animate-fade-in" style="max-width:600px;">
+                <form th:action="@{/certificates/company/{id}/upload(id=${company.id})}"
+                      method="post"
+                      enctype="multipart/form-data">
+
+                    <!-- Security notice -->
+                    <div class="vcc-form-info" style="margin-bottom:var(--sp-4);">
+                        <i class="fas fa-shield-alt"></i>
+                        <div>
+                            Certyfikat jest używany do kwalifikowanego podpisu elektronicznego walidacji (FDA 21 CFR Part 11 / eIDAS).
+                            Upewnij się, że certyfikat jest ważny i należy do tej firmy.
+                        </div>
+                    </div>
+
+                    <fieldset class="vcc-form-section">
+                        <legend>
+                            <i class="fas fa-file-certificate" style="color:var(--vcc-primary);"></i>
+                            Plik certyfikatu
+                        </legend>
+
+                        <div class="vcc-form-group">
+                            <label for="keystoreFile" class="vcc-form-label">
+                                Plik keystore (.p12 / .pfx) <span class="vcc-required">*</span>
+                            </label>
+                            <input type="file"
+                                   id="keystoreFile"
+                                   name="keystoreFile"
+                                   class="vcc-form-input"
+                                   accept=".p12,.pfx"
+                                   required
+                                   style="padding:8px 12px;cursor:pointer;">
+                            <span class="vcc-form-hint">Obsługiwane formaty: PKCS12 (.p12, .pfx). Maksymalny rozmiar: 5 MB</span>
+                        </div>
+
+                        <div class="vcc-form-group">
+                            <label for="keystorePassword" class="vcc-form-label">
+                                Hasło keystore <span class="vcc-required">*</span>
+                            </label>
+                            <div style="position:relative;">
+                                <input type="password"
+                                       id="keystorePassword"
+                                       name="keystorePassword"
+                                       class="vcc-form-input"
+                                       placeholder="Hasło do pliku .p12"
+                                       required
+                                       autocomplete="off">
+                                <button type="button"
+                                        onclick="toggleKsPassword()"
+                                        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;">
+                                    <i class="fas fa-eye" id="ksPasswordEye"></i>
+                                </button>
+                            </div>
+                            <span class="vcc-form-hint">
+                                <i class="fas fa-lock" style="font-size:0.7rem;"></i>
+                                Hasło jest przechowywane w zaszyfrowanej bazie danych
+                            </span>
+                        </div>
+                    </fieldset>
+
+                    <!-- Actions -->
+                    <div class="vcc-form-actions">
+                        <a th:href="@{/certificates}" class="vcc-form-btn-cancel">
+                            <i class="fas fa-times"></i> Anuluj
+                        </a>
+                        <button type="submit" class="vcc-form-btn-submit" id="submitBtn">
+                            <i class="fas fa-upload"></i>
+                            Wgraj certyfikat
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    function toggleKsPassword() {
+        var field = document.getElementById('keystorePassword');
+        var icon = document.getElementById('ksPasswordEye');
+        if (field.type === 'password') {
+            field.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            field.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    // Show loading state on submit
+    document.querySelector('form').addEventListener('submit', function() {
+        var btn = document.getElementById('submitBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Wgrywanie...';
+        }
+    });
+    </script>
+
+</body>
+
+</html>

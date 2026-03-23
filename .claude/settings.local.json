@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(statusline)",
+      "Bash(mvn compile:*)",
+      "Bash(python:*)",
+      "Bash(\"/c/Program Files/Maven/apache-maven-3.6.2-bin/apache-maven-3.6.2/bin/mvn\" compile:*)",
+      "Bash(\"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe\":*)",
+      "WebSearch",
+      "WebFetch(domain:pl.hostadvice.com)"
+    ]
+  }
+}

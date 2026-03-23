@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${materialDto.id} ? 'Edycja typu materiału' : 'Nowy typ materiału'">Typ materiału</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('materials')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('materials', 'Typy materiałów', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Form header -->
+            <div class="vcc-form-header">
+                <h1 class="vcc-form-header__title"
+                    th:text="${materialDto.id} ? 'Edycja typu materiału' : 'Nowy typ materiału'">
+                    Typ materiału
+                </h1>
+                <p class="vcc-form-header__subtitle">Pola wymagane są oznaczone <span class="vcc-required">*</span></p>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Form card -->
+            <div class="vcc-form-card vcc-animate-fade-in">
+                <form th:action="${materialDto.id} ? @{/material-types/{id}(id=${materialDto.id})} : @{/material-types}"
+                      th:object="${materialDto}"
+                      method="post">
+
+                    <!-- Section 1: Informacje -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Informacje</legend>
+
+                        <div class="vcc-form-group">
+                            <label for="name" class="vcc-form-label">
+                                Nazwa materiału <span class="vcc-required">*</span>
+                            </label>
+                            <input type="text"
+                                   class="vcc-form-input"
+                                   th:classappend="${#fields.hasErrors('name')} ? 'is-error'"
+                                   id="name"
+                                   th:field="*{name}"
+                                   placeholder="np. Odczynniki">
+                            <div class="vcc-form-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                            <span class="vcc-form-hint">Unikalna nazwa identyfikująca typ materiału</span>
+                        </div>
+
+                        <div class="vcc-form-group">
+                            <label for="description" class="vcc-form-label">Opis</label>
+                            <textarea class="vcc-form-textarea"
+                                      id="description"
+                                      th:field="*{description}"
+                                      placeholder="np. Odczynniki laboratoryjne do badań"></textarea>
+                            <span class="vcc-form-hint">Opcjonalny opis przeznaczenia materiału</span>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 2: Temperatura przechowywania -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Temperatura przechowywania</legend>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="minStorageTemp" class="vcc-form-label">
+                                    Minimalna temp. [°C]
+                                </label>
+                                <input type="number"
+                                       class="vcc-form-input"
+                                       step="0.1"
+                                       id="minStorageTemp"
+                                       th:field="*{minStorageTemp}"
+                                       placeholder="np. -25.0">
+                                <span class="vcc-form-hint">Dolna granica zakresu</span>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="maxStorageTemp" class="vcc-form-label">
+                                    Maksymalna temp. [°C]
+                                </label>
+                                <input type="number"
+                                       class="vcc-form-input"
+                                       step="0.1"
+                                       id="maxStorageTemp"
+                                       th:field="*{maxStorageTemp}"
+                                       placeholder="np. -15.0">
+                                <span class="vcc-form-hint">Górna granica zakresu</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 3: Parametry MKT -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Parametry MKT i standard</legend>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="activationEnergy" class="vcc-form-label">
+                                    Energia aktywacji (Delta H) [kJ/mol]
+                                </label>
+                                <input type="number"
+                                       class="vcc-form-input"
+                                       step="0.01"
+                                       id="activationEnergy"
+                                       th:field="*{activationEnergy}"
+                                       placeholder="np. 83.14">
+                                <span class="vcc-form-hint">Wartość do obliczeń MKT (Standard: 83.14)</span>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="standardSource" class="vcc-form-label">
+                                    Standard / Źródło
+                                </label>
+                                <input type="text"
+                                       class="vcc-form-input"
+                                       id="standardSource"
+                                       th:field="*{standardSource}"
+                                       placeholder="np. WHO TRS 961">
+                                <span class="vcc-form-hint">Podstawa prawna lub standard (np. WHO, ICH)</span>
+                            </div>
+                        </div>
+
+                        <div class="vcc-form-group">
+                            <label for="application" class="vcc-form-label">Zastosowanie</label>
+                            <input type="text"
+                                   class="vcc-form-input"
+                                   id="application"
+                                   th:field="*{application}"
+                                   placeholder="np. Banki krwi, apteki">
+                            <span class="vcc-form-hint">Gdzie dany typ materiału jest stosowany</span>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 4: Status -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Status</legend>
+
+                        <div class="vcc-form-check">
+                            <input type="checkbox" id="active" th:field="*{active}">
+                            <div class="vcc-form-check__text">
+                                <span class="vcc-form-check__label">Materiał aktywny</span>
+                                <span class="vcc-form-check__hint">Aktywne materiały są dostępne do wyboru w formularzach urządzeń. Nieaktywne materiały nie będą widoczne.</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Actions -->
+                    <div class="vcc-form-actions">
+                        <a th:href="@{/material-types}" class="vcc-form-btn-cancel">
+                            <i class="fas fa-times"></i> Anuluj
+                        </a>
+                        <button type="submit" class="vcc-form-btn-submit">
+                            <i class="fas fa-check"></i>
+                            <span th:text="${materialDto.id} ? 'Zapisz zmiany' : 'Utwórz materiał'">Zapisz</span>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+</body>
+
+</html>

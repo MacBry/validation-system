@@ -1,0 +1,55 @@
+/* Custom styles for Validation System */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.footer {
+    margin-top: auto;
+    border-top: 1px solid #dee2e6;
+}
+
+.invalid-feedback {
+    display: block;
+}
+
+/* Ensure minimum height for page content */
+.flex-grow-1 {
+    flex-grow: 1;
+}
+
+/* Better spacing for form elements */
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+/* Badge styles */
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+/* Button group spacing */
+.btn + .btn,
+.btn + form {
+    margin-left: 0.25rem;
+}

@@ -43,6 +43,7 @@ public class SecurityConfig {
         private final CsrfViolationHandler csrfViolationHandler;
         private final SecurityKeyService securityKeyService;
         private final SessionRegistry sessionRegistry;
+        private final ContentSecurityPolicyNonceFilter nonceFilter;
 
         @Bean
         public PasswordEncoder passwordEncoder() {
@@ -111,9 +112,18 @@ public class SecurityConfig {
                                                 .xssProtection(xss -> {}) // Enable XSS protection with defaults
                                                 .httpStrictTransportSecurity(hsts -> hsts.disable())
                                                 .contentSecurityPolicy(csp -> csp.policyDirectives(
-                                                                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self';")));
+                                                "default-src 'self'; " +
+                                                                "script-src 'self' 'nonce-{nonce}'; " +
+                                                                "style-src 'self' 'unsafe-inline'; " + // Bootstrap still needs unsafe-inline for styles unless handled individually
+                                                                "img-src 'self' data: blob:; " +
+                                                                "font-src 'self' data:; " +
+                                                                "connect-src 'self'; " +
+                                                                "frame-ancestors 'self';")));
 
                 http.authenticationProvider(authenticationProvider());
+
+                // Dodaj filtr generujący nonce dla CSP (musi być przed filtracją dostępu)
+                http.addFilterBefore(nonceFilter, UsernamePasswordAuthenticationFilter.class);
 
                 // Dodaj filtr wymuszonej zmiany hasła po uwierzytelnieniu
                 http.addFilterAfter(forcedPasswordChangeFilter, UsernamePasswordAuthenticationFilter.class);

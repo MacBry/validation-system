@@ -7,7 +7,12 @@
     <title th:text="${title}">System Walidacji</title>
 
     <!-- CSRF Token Meta Tags for GMP Compliance -->
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
     <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+
+    <!-- Session Configuration -->
+    <meta name="session-timeout" th:content="${@environment.getProperty('app.security.session.timeout-minutes', '30') * 60}">
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
@@ -87,6 +92,7 @@
     <!-- Scripts Fragment -->
     <div th:fragment="scripts">
         <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+        <script th:src="@{/js/session-timer.js}" th:nonce="${cspNonce}"></script>
     </div>
 
 </body>

@@ -82,6 +82,31 @@
         </div>
     </div>
 
+    <!-- Session Expiration Warning Modal (GMP Compliance) -->
+    <div class="modal fade" id="sessionExpirationModal" tabindex="-1" aria-labelledby="sessionExpirationModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content border-warning shadow">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="sessionExpirationModalLabel">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Twoja sesja zaraz wygaśnie!
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>Ze względów bezpieczeństwa (GMP / FDA 21 CFR Part 11) sesja wygasa po 30 minutach bezczynności.</p>
+                    <div class="alert alert-secondary text-center py-3">
+                        <span class="d-block mb-1 text-muted small">Pozostały czas:</span>
+                        <strong id="sessionTimerDisplay" class="text-danger font-monospace h3">2:00</strong>
+                    </div>
+                    <p class="mb-0 text-center">Czy chcesz przedłużyć sesję i kontynuować pracę?</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" id="extendSessionBtn" class="btn btn-primary px-4">Przedłuż sesję</button>
+                    <a th:href="@{/login?logout}" class="btn btn-outline-secondary">Wyloguj teraz</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer Fragment -->
     <footer th:fragment="footer" class="footer mt-auto py-3 bg-light">
         <div class="container text-center">

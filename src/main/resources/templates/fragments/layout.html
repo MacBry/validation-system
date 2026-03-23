@@ -12,7 +12,7 @@
     <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
 
     <!-- Session Configuration -->
-    <meta name="session-timeout" th:content="${@environment.getProperty('app.security.session.timeout-minutes', '30') * 60}">
+    <meta name="session-timeout" th:content="${sessionTimeoutSeconds != null ? sessionTimeoutSeconds : 1800}">
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">

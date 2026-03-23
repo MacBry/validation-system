@@ -24,6 +24,9 @@ public class NavContextAdvice {
     private final SecurityService securityService;
     private final CompanyService companyService;
 
+    @org.springframework.beans.factory.annotation.Value("${app.security.session.timeout-minutes:30}")
+    private int sessionTimeoutMinutes;
+
     @ModelAttribute
     public void addNavCompanyContext(Model model) {
         try {
@@ -51,6 +54,9 @@ public class NavContextAdvice {
                         .collect(Collectors.joining(", "));
                 model.addAttribute("navCompanyContext", names);
             }
+
+            // Dodaj czas wygaśnięcia sesji w sekundach dla session-timer.js
+            model.addAttribute("sessionTimeoutSeconds", sessionTimeoutMinutes * 60);
         } catch (Exception ignored) {
             // Brak kontekstu bezpieczeństwa (np. statyczne zasoby)
         }

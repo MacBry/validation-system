@@ -111,15 +111,7 @@ public class SecurityConfig {
                                 .headers(headers -> headers
                                                 .frameOptions(frameOptions -> frameOptions.sameOrigin())
                                                 .xssProtection(xss -> {}) // Enable XSS protection with defaults
-                                                .httpStrictTransportSecurity(hsts -> hsts.disable())
-                                                .contentSecurityPolicy(csp -> csp.policyDirectives(
-                                                "default-src 'self'; " +
-                                                                "script-src 'self' 'nonce-{nonce}'; " +
-                                                                "style-src 'self' 'unsafe-inline'; " + // Bootstrap still needs unsafe-inline for styles unless handled individually
-                                                                "img-src 'self' data: blob:; " +
-                                                                "font-src 'self' data:; " +
-                                                                "connect-src 'self'; " +
-                                                                "frame-ancestors 'self';")));
+                                                .httpStrictTransportSecurity(hsts -> hsts.disable()));
 
                 http.authenticationProvider(authenticationProvider());
 

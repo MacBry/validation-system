@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -25,6 +27,9 @@ import java.nio.file.Paths;
 public class CertificateFileController {
 
     private final CalibrationService calibrationService;
+
+    @Value("${app.calibration.certificates-path:./uploads/certificates}")
+    private String certificatesBaseDir;
 
     @PreAuthorize("hasAnyRole('ADMIN', 'QUALITY_MANAGER', 'AUDITOR', 'OPERATIONAL_MANAGER')")
     @GetMapping("/{calibrationId}")
@@ -42,22 +47,18 @@ public class CertificateFileController {
                 return ResponseEntity.notFound().build();
             }
             
-            log.info("Ścieżka certyfikatu z bazy: {}", calibration.getCertificateFilePath());
-            
-            
-            Path filePath = Paths.get(calibration.getCertificateFilePath()).normalize();
-            
-            // Jeśli ścieżka jest względna, zamień na bezwzględną
-            if (!filePath.isAbsolute()) {
-                filePath = Paths.get(System.getProperty("user.dir"), calibration.getCertificateFilePath()).normalize();
-            }
+            // 1. Walidacja ścieżki i zabezpieczenie przed Path Traversal
+            // GMP COMPLIANCE: Absolutna kontrola nad dostępem do plików na dysku.
+            Path basePath = Paths.get(certificatesBaseDir).toAbsolutePath().normalize();
+            Path filePath = basePath.resolve(calibration.getCertificateFilePath()).normalize();
 
-            // Path Traversal Mitigation: Ensure the resolved path is within the application directory
-            Path baseDir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
-            if (!filePath.toAbsolutePath().normalize().startsWith(baseDir)) {
-                log.error("Zablokowano próbę Path Traversal dla ID {}: {}", calibrationId, filePath);
+            // Upewnij się, że wynikowa ścieżka nadal znajduje się wewnątrz katalogu bazowego
+            if (!filePath.startsWith(basePath)) {
+                log.error("🛑 Próba Path Traversal! Base: {}, Target: {}", basePath, filePath);
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Dostęp do pliku zabroniony");
             }
+
+            File file = filePath.toFile();
             
             log.info("Próba odczytu certyfikatu z: {}", filePath.toAbsolutePath());
             

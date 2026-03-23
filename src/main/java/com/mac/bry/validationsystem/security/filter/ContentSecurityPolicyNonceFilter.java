@@ -34,6 +34,18 @@ public class ContentSecurityPolicyNonceFilter extends OncePerRequestFilter {
         // Zapisz nonce w atrybutach żądania dla Thymeleaf
         request.setAttribute(NONCE_ATTRIBUTE, nonce);
 
+        // Ustaw nagłówek Content-Security-Policy z dynamicznym nonce
+        String cspHeader = String.format(
+            "default-src 'self'; " +
+            "script-src 'self' 'nonce-%s'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: blob:; " +
+            "font-src 'self' data:; " +
+            "connect-src 'self'; " +
+            "frame-ancestors 'self';", nonce);
+        
+        response.setHeader("Content-Security-Policy", cspHeader);
+
         filterChain.doFilter(request, response);
     }
 }

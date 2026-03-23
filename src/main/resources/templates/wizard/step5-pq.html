@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Krok 5 - Lista kontrolna PQ - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:replace="~{fragments/csrf-token :: csrf-meta}"></th:replace>
+    <th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:replace>
+    <style>
+        .wizard-container { max-width: 860px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+
+        /* PQ checklist rows */
+        .pq-item {
+            display: grid;
+            grid-template-columns: 1fr 120px 180px;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border-default, #e5e7ef);
+        }
+        .pq-item:last-child { border-bottom: none; }
+
+        .pq-item__code {
+            font-size: 0.82rem;
+            font-weight: 700;
+            font-family: 'DM Mono', monospace;
+            color: var(--text-primary, #1a1f3a);
+        }
+        .pq-item__desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary, #6b7280);
+            margin-top: 3px;
+        }
+
+        .pq-item select,
+        .pq-item input[type="text"] {
+            height: 36px;
+            padding: 0 10px;
+            background: var(--surface-page, #f7f8fc);
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem;
+            color: var(--text-primary, #1a1f3a);
+            font-family: inherit;
+            outline: none;
+            transition: border-color var(--duration-fast, 0.15s);
+            width: 100%;
+        }
+
+        .pq-item select:focus,
+        .pq-item input[type="text"]:focus {
+            border-color: var(--vcc-primary, #667eea);
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.12);
+        }
+
+        .autosave-notice {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.77rem; color: var(--text-muted, #9298ae);
+            margin-bottom: var(--sp-4, 1rem);
+        }
+
+        @media (max-width: 640px) {
+            .pq-item { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard kwalifikacji', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">Krok 5 — Lista kontrolna PQ</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:replace="~{wizard/fragments/wizard-nav :: wizard-nav(5, draft.stepLockFrom)}"></th:replace>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Lista kontrolna PQ</h2>
+                        <p class="wizard-step-header__desc">Potwierdź spełnienie wymagań wydajnościowych dla każdej pozycji. Dane są zapisywane automatycznie.</p>
+                    </div>
+
+                    <div class="autosave-notice">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        Odpowiedzi są zapisywane automatycznie po każdej zmianie.
+                    </div>
+
+                    <!-- Table header -->
+                    <div style="display:grid; grid-template-columns:1fr 120px 180px; gap:12px; padding: 6px 0;
+                                font-size:0.72rem; font-weight:600; color:var(--text-muted,#9298ae);
+                                text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border-default,#e5e7ef);">
+                        <span>Wymaganie</span>
+                        <span>Wynik</span>
+                        <span>Komentarz</span>
+                    </div>
+
+                    <!-- Checklist items -->
+                    <div th:each="item : ${pqItems}" class="pq-item"
+                         th:attr="data-item-id=${item.id}">
+                        <div>
+                            <div class="pq-item__code" th:text="${item.itemCode}">PQ-001</div>
+                            <div class="pq-item__desc" th:text="${item.itemDescription}">Opis wymagania...</div>
+                        </div>
+                        <select class="status-select"
+                                th:attr="onchange='performSave(' + ${item.id} + ')'">
+                            <option value="">—</option>
+                            <option value="true"  th:selected="${item.passed == true}">TAK</option>
+                            <option value="false" th:selected="${item.passed == false}">NIE</option>
+                        </select>
+                        <input type="text" class="comment-input"
+                               th:value="${item.comment}"
+                               placeholder="Komentarz..."
+                               th:attr="onblur='performSave(' + ${item.id} + ')'">
+                    </div>
+
+                    <div class="wizard-actions" style="margin-top: var(--sp-6, 1.5rem);">
+                        <a th:href="@{/wizard/{id}/back/4(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" class="wizard-btn-next" onclick="navigateToStep6()">
+                            Dalej <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript">
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function performSave(itemId) {
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const row = document.querySelector(`[data-item-id="${itemId}"]`);
+            const passed = row.querySelector('.status-select').value;
+            const comment = row.querySelector('.comment-input').value;
+
+            if (passed === '') return;
+
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            if (!csrfToken || csrfToken === '') { csrfToken = getCookie('XSRF-TOKEN'); csrfHeader = 'X-XSRF-TOKEN'; }
+
+            const params = new URLSearchParams();
+            params.append('itemId', itemId);
+            params.append('passed', passed);
+            params.append('comment', comment);
+            if (csrfToken) params.append('_csrf', csrfToken);
+
+            const headers = { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' };
+            if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+            fetch('/wizard/' + draftId + '/api/step5/pq', {
+                method: 'POST', headers: headers, body: params
+            }).then(async r => {
+                if (!r.ok) {
+                    const text = await r.text();
+                    try { const json = JSON.parse(text); throw new Error(json.message || 'Błąd serwera'); }
+                    catch(e) { throw new Error('Błąd HTTP ' + r.status); }
+                }
+                return r.json();
+            }).then(() => {
+                console.log('PQ item saved:', itemId);
+            }).catch(e => {
+                console.error('Autosave error:', e);
+            });
+        }
+
+        function navigateToStep6() {
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            window.location.href = '/wizard/' + draftId + '/step/6';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+﻿version: '3.8'
+
+services:
+  vcc-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: vcc-application
+    restart: always
+    ports:
+      - "80:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=${DB_URL:-jdbc:mysql://vcc-db:3306/validation_db?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&zeroDateTimeBehavior=convertToNull}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-validationuser}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_REDIS_HOST=vcc-redis
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_MAIL_HOST=smtp.gmail.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
+      - APP_TSA_URL=http://${TSA_IP}:8080/tsa
+      - APP_TSA_USERNAME=\
+      - APP_TSA_PASSWORD=\
+      - APP_SECURITY_REMEMBER_ME_KEY=${REMEMBER_ME_KEY}
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for vcc-db:3306...' &&
+      while ! nc -z vcc-db 3306; do
+        sleep 1
+      done &&
+      echo 'vcc-db is up, starting application...' &&
+      java -jar app.jar --spring.profiles.active=prod
+      "
+    volumes:
+      - vcc-uploads:/app/uploads
+      - vcc-signed-docs:/var/app/signed-documents
+      - vcc-logs:/var/log/validation-system
+    depends_on:
+      vcc-db:
+        condition: service_healthy
+      vcc-redis:
+        condition: service_started
+    networks:
+      - vcc-network
+
+  vcc-db:
+    image: mysql:8.0
+    container_name: vcc-database
+    restart: always
+    environment:
+      - MYSQL_DATABASE=validation_db
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${DB_USERNAME:-validationuser}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - vcc-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 20
+      start_period: 60s
+    networks:
+      - vcc-network
+
+  vcc-redis:
+    image: redis:6-alpine
+    container_name: vcc-cache
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    networks:
+      - vcc-network
+
+networks:
+  vcc-network:
+    driver: bridge
+
+volumes:
+  vcc-db-data:
+  vcc-uploads:
+  vcc-signed-docs:
+  vcc-logs:

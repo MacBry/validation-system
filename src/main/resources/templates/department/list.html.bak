@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Działy</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--g1:#667eea;--g2:#764ba2;--white:#fff;--surface:#f7f8fc;--border:#e8eaf0;--tm:#1a1d2e;--ts:#6b7080;--sh:0 20px 60px rgba(0,0,0,.18);--r:14px;--rs:8px}
+body{font-family:'DM Sans',sans-serif;background:linear-gradient(135deg,var(--g1),var(--g2));min-height:100vh;padding:24px 16px 40px;color:var(--tm)}
+.page{max-width:1200px;margin:0 auto}
+.topnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.brand{color:#fff;font-size:1.2rem;font-weight:600}
+.brand span{opacity:.6;font-weight:400}
+.nav-links{display:flex;gap:8px;flex-wrap:wrap}
+.nav-link{color:rgba(255,255,255,.75);text-decoration:none;font-size:.85rem;font-weight:500;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.25);transition:all .2s}
+.nav-link:hover,.nav-link.active{background:rgba(255,255,255,.15);color:#fff}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.toolbar-title{color:#fff;font-size:1.5rem;font-weight:600}
+.btn-add{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--g1);border:none;border-radius:var(--rs);padding:10px 20px;font-size:.9rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;text-decoration:none;transition:opacity .2s,transform .15s}
+.btn-add:hover{opacity:.9;transform:translateY(-1px)}
+.btn-add svg{width:18px;height:18px}
+.flash.ok{background:#f0fdf4;border:1px solid #86efac;color:#166534;padding:14px 20px;border-radius:var(--rs);margin-bottom:16px;font-size:.88rem}
+.flash.err{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:14px 20px;border-radius:var(--rs);margin-bottom:16px;font-size:.88rem}
+.card{background:var(--white);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.empty-state{padding:60px 20px;text-align:center;color:var(--ts)}
+.empty-state svg{width:48px;height:48px;margin-bottom:16px;opacity:.4}
+.empty-state p{font-size:1rem;margin-bottom:4px}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:2px solid var(--border)}
+thead th{padding:14px 18px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ts);text-align:left}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface)}
+td{padding:14px 18px;font-size:.88rem;color:var(--tm);vertical-align:middle}
+.dept-badge{display:inline-block;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:600}
+.dept-name{font-weight:500}
+.check-yes{color:#10b981;font-weight:600;font-size:.82rem}
+.check-no{color:var(--ts);font-size:.82rem}
+.actions{display:flex;gap:6px;justify-content:flex-end}
+.btn-edit{display:inline-flex;align-items:center;padding:6px 12px;background:transparent;color:var(--g1);border:1.5px solid var(--g1);text-decoration:none;border-radius:var(--rs);font-size:.78rem;font-weight:600;transition:all .2s}
+.btn-edit:hover{background:var(--g1);color:#fff}
+.btn-del{display:inline-flex;align-items:center;padding:6px 12px;background:transparent;color:#e53e3e;border:1.5px solid #e53e3e;border-radius:var(--rs);font-size:.78rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-del:hover{background:#e53e3e;color:#fff}
+.footer-bar{display:flex;align-items:center;padding:16px 20px;border-top:1px solid var(--border);color:var(--ts);font-size:.82rem;gap:8px}
+.footer-bar .count{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border-radius:20px;padding:2px 12px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="topnav">
+    <span class="brand">Validation System <span>/ Działy</span></span>
+    <div class="nav-links">
+      <a href="/measurements" class="nav-link">Pomiary</a>
+      <a href="/devices" class="nav-link">Urządzenia</a>
+      <a href="/recorders" class="nav-link">Rejestratory</a>
+      <a href="/departments" class="nav-link active">Działy</a>
+      <a href="/laboratories" class="nav-link">Pracownie</a>
+      <a href="/validations" class="nav-link">Walidacje</a>
+      <a href="/material-types" class="nav-link">Materiały</a>
+    </div>
+  </nav>
+
+  <div th:if="${success}" class="flash ok" th:text="${success}"></div>
+  <div th:if="${error}" class="flash err" th:text="${error}"></div>
+
+  <div class="toolbar">
+    <span class="toolbar-title">Działy organizacyjne</span>
+    <a th:href="@{/departments/new}" class="btn-add">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Dodaj dział
+    </a>
+  </div>
+
+  <div class="card">
+    <div th:if="${#lists.isEmpty(departments)}" class="empty-state">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+      <p>Brak działów w systemie</p>
+      <small>Dodaj pierwszy dział organizacyjny</small>
+    </div>
+    <table th:unless="${#lists.isEmpty(departments)}">
+      <thead>
+        <tr>
+          <th>Skrót</th>
+          <th>Nazwa</th>
+          <th>Opis</th>
+          <th>Pracownie</th>
+          <th style="text-align:right">Akcje</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="dept : ${departments}">
+          <td><span class="dept-badge" th:text="${dept.abbreviation()}">–</span></td>
+          <td><span class="dept-name" th:text="${dept.name()}">–</span></td>
+          <td><span style="color:var(--ts);font-size:.82rem" th:text="${dept.description() != null ? dept.description() : '—'}">–</span></td>
+          <td>
+            <span th:if="${dept.hasLaboratories()}" class="check-yes">✓ Tak</span>
+            <span th:unless="${dept.hasLaboratories()}" class="check-no">— Nie</span>
+          </td>
+          <td>
+            <div class="actions">
+              <a th:href="@{/departments/{id}/edit(id=${dept.id()})}" class="btn-edit">Edytuj</a>
+              <form th:action="@{/departments/{id}/delete(id=${dept.id()})}" method="post" style="display:inline" onsubmit="return confirm('Czy na pewno chcesz usunąć ten dział?')">
+                <button type="submit" class="btn-del">Usuń</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div th:unless="${#lists.isEmpty(departments)}" class="footer-bar">
+      Łącznie: <span class="count" th:text="${#lists.size(departments)}">0</span> działów
+    </div>
+  </div>
+</div>
+</body>
+</html>

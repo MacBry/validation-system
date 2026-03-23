@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # ============================================================
+  # Nginx Reverse Proxy
+  # ============================================================
+  vcc-nginx:
+    image: nginx:alpine
+    container_name: vcc-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - vcc-logs:/var/log/nginx
+    depends_on:
+      - vcc-app
+    networks:
+      - vcc-network
+
+  # ============================================================
+  # Spring Boot Application
+  # ============================================================
+  vcc-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: vcc-application
+    restart: always
+    # No public port exposure -- Nginx handles external traffic
+    expose:
+      - "8080"
+    environment:
+      # Database
+      - SPRING_DATASOURCE_URL=jdbc:mysql://vcc-db:3306/validation_db?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Europe/Warsaw&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=validationuser
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      # JPA -- use 'update' for initial deploy, switch to 'validate' once stable
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      # Flyway disabled -- Hibernate auto-DDL handles schema
+      - SPRING_FLYWAY_ENABLED=false
+      # Redis -- prod properties use ${REDIS_HOST:localhost} etc.
+      - REDIS_HOST=vcc-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${DB_PASSWORD}
+      - SPRING_REDIS_HOST=vcc-redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=${DB_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=vcc-redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=${DB_PASSWORD}
+      # Mail (disabled for demo)
+      - SPRING_MAIL_HOST=localhost
+      - SPRING_MAIL_PORT=25
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=false
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=false
+      # TSA -- use public free TSA
+      - APP_TSA_ENABLED=true
+      - APP_TSA_URL=http://timestamp.digicert.com
+      - APP_TSA_FALLBACK_ENABLED=true
+      - APP_TSA_TIMEOUT=15000
+      # Security -- remember-me key must be 32+ chars
+      - APP_SECURITY_REMEMBER_ME_KEY=Vcc2026ProdRememberMeSecretKey!@42Chars
+      # Password policy (relaxed for demo)
+      - APP_SECURITY_PASSWORD_MIN_LENGTH=8
+      # Thymeleaf -- debug to see template errors during initial deploy
+      - LOGGING_LEVEL_ORG_THYMELEAF=INFO
+      - LOGGING_LEVEL_COM_MAC_BRY_VALIDATIONSYSTEM=INFO
+      # Server
+      - SERVER_PORT=8080
+      - SERVER_SSL_ENABLED=false
+      - SERVER_SERVLET_SESSION_COOKIE_SECURE=false
+      # JVM memory settings
+      - JAVA_OPTS=-Xmx1024M -Xms256M -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for MySQL at vcc-db:3306...' &&
+      while ! nc -z vcc-db 3306; do
+        sleep 1;
+      done &&
+      echo 'MySQL is ready. Starting application...' &&
+      java $$JAVA_OPTS -jar app.jar --spring.profiles.active=prod
+      "
+    volumes:
+      - vcc-uploads:/app/uploads
+      - vcc-signed-docs:/var/app/signed-documents
+      - vcc-logs:/var/log/validation-system
+    depends_on:
+      vcc-db:
+        condition: service_healthy
+      vcc-redis:
+        condition: service_started
+    networks:
+      - vcc-network
+    deploy:
+      resources:
+        limits:
+          memory: 1400M
+        reservations:
+          memory: 512M
+
+  # ============================================================
+  # MySQL 8.0 Database
+  # ============================================================
+  vcc-db:
+    image: mysql:8.0
+    container_name: vcc-database
+    restart: always
+    environment:
+      - MYSQL_DATABASE=validation_db
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_USER=validationuser
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max-connections=100
+      --innodb-buffer-pool-size=128M
+      --innodb-log-file-size=48M
+    volumes:
+      - vcc-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - vcc-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ============================================================
+  # Redis Cache (Rate Limiting)
+  # ============================================================
+  vcc-redis:
+    image: redis:6-alpine
+    container_name: vcc-cache
+    restart: always
+    command: redis-server --requirepass ${DB_PASSWORD} --maxmemory 64mb --maxmemory-policy allkeys-lru
+    networks:
+      - vcc-network
+    deploy:
+      resources:
+        limits:
+          memory: 96M
+
+networks:
+  vcc-network:
+    driver: bridge
+
+volumes:
+  vcc-db-data:
+  vcc-uploads:
+  vcc-signed-docs:
+  vcc-logs:

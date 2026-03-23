@@ -1,0 +1,146 @@
+###############################################################################
+# VALIDATION SYSTEM v2.12.0-ENTERPRISE - Backup Services (Docker Compose)
+###############################################################################
+#
+# USAGE:
+#   docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d
+#
+# This is a docker compose OVERLAY. It adds backup-related services to the
+# main application stack. It should be merged with the primary
+# docker-compose.yml at runtime.
+#
+###############################################################################
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # MySQL Backup Sidecar
+  # ===========================================================================
+  # Runs scheduled mysqldump inside the same Docker network as the database.
+  # No need to expose MySQL port externally.
+  # ===========================================================================
+  backup-mysql:
+    image: mysql:8.0
+    container_name: vcc-backup-mysql
+    restart: unless-stopped
+    volumes:
+      - backup-data:/backups
+      - ./backup-infrastructure/scripts:/scripts:ro
+      - backup-logs:/var/log/validation-system/backups
+      # MySQL credentials via .my.cnf mounted read-only
+      - ./backup-infrastructure/docker/.my.cnf:/root/.my.cnf:ro
+    environment:
+      TZ: Europe/Warsaw
+      MYSQL_HOST: vcc-database
+      DB_HOST: vcc-database
+      DB_PORT: "3306"
+      DB_USERNAME: ${DB_USERNAME:-validation_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-eu-central-1}
+      BACKUP_GPG_RECIPIENT: ${BACKUP_GPG_RECIPIENT:-}
+      BACKUP_ALERT_EMAIL: ${BACKUP_ALERT_EMAIL:-}
+      BACKUP_SLACK_WEBHOOK: ${BACKUP_SLACK_WEBHOOK:-}
+      BACKUP_OPERATOR: docker-cron
+    entrypoint: /bin/bash
+    command: >
+      -c "
+      echo '=== VCC Backup Sidecar Starting ===';
+
+      # Install cron
+      apt-get update -qq && apt-get install -y -qq cron gzip awscli gnupg2 mailutils > /dev/null 2>&1;
+
+      # Make scripts executable
+      chmod +x /scripts/*.sh;
+
+      # Create cron schedule
+      cat > /etc/cron.d/vcc-backup << 'CRON'
+      # Daily full backup (Mon-Sat 02:00)
+      0 2 * * 1-6 root /scripts/combined-backup.sh daily >> /var/log/validation-system/backups/cron.log 2>&1
+      # Weekly full backup (Sunday 03:00)
+      0 3 * * 0 root /scripts/combined-backup.sh weekly >> /var/log/validation-system/backups/cron.log 2>&1
+      # Monthly archive backup (1st of month 04:00)
+      0 4 1 * * root /scripts/combined-backup.sh monthly >> /var/log/validation-system/backups/cron.log 2>&1
+      # Binary log backup (every 6 hours)
+      0 */6 * * * root /scripts/mysql-incremental-backup.sh binlog >> /var/log/validation-system/backups/cron.log 2>&1
+      # Healthcheck (every 4 hours)
+      0 */4 * * * root /scripts/backup-healthcheck.sh >> /var/log/validation-system/backups/cron.log 2>&1
+      CRON
+
+      chmod 0644 /etc/cron.d/vcc-backup;
+      crontab /etc/cron.d/vcc-backup;
+
+      # Create log directory
+      mkdir -p /var/log/validation-system/backups;
+
+      echo 'Cron schedule installed. Starting cron daemon...';
+      cron -f;
+      "
+    networks:
+      - vcc-network
+    depends_on:
+      - vcc-database
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+
+  # ===========================================================================
+  # Backup Monitoring Dashboard (optional)
+  # ===========================================================================
+  # Lightweight status page for backup health.
+  # Access at http://localhost:9090/backup-status
+  # ===========================================================================
+  backup-monitor:
+    image: alpine:3.19
+    container_name: vcc-backup-monitor
+    restart: unless-stopped
+    volumes:
+      - backup-data:/backups:ro
+      - backup-logs:/var/log/validation-system/backups:ro
+      - ./backup-infrastructure/monitoring:/monitoring:ro
+    ports:
+      - "9090:8080"
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      apk add --no-cache bash curl;
+      while true; do
+        /monitoring/generate-status-page.sh > /tmp/status.html 2>/dev/null || true;
+        {
+          echo 'HTTP/1.1 200 OK';
+          echo 'Content-Type: text/html';
+          echo '';
+          cat /tmp/status.html;
+        } | nc -l -p 8080 -q 1 || true;
+      done
+      "
+    networks:
+      - vcc-network
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+
+volumes:
+  backup-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/backups/validation-system
+  backup-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/log/validation-system/backups
+
+networks:
+  vcc-network:
+    external: true

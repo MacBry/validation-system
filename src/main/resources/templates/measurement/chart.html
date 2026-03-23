@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wykres Temperatury - Testo</title>
+    <script th:src="@{/js/vendor/chart.umd.min.js}"></script>
+    <script th:src="@{/js/vendor/chartjs-adapter-date-fns.bundle.min.js}"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .metadata {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+            line-height: 2.2;
+        }
+
+        .metadata span {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 8px;
+            padding: 5px 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-bottom: 30px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        button.active {
+            background: #764ba2;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            color: #764ba2;
+        }
+
+        .measurements-table {
+            margin-top: 40px;
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        .measurements-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .measurements-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .measurements-table tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+            transition: background-color 0.2s;
+        }
+
+        .measurements-table tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .measurements-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .measurements-table td {
+            padding: 10px 12px;
+        }
+
+        .measurements-table td:first-child {
+            color: #999;
+            font-weight: 500;
+        }
+
+        .measurements-table .temp-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .table-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-top: 50px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .print-header {
+            display: none;
+        }
+
+        .print-header h1 {
+            font-size: 1.4em;
+            margin-bottom: 8px;
+        }
+
+        .print-header .metadata {
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .print-header .metadata span {
+            margin-bottom: 4px;
+            padding: 3px 8px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+            }
+
+            .controls,
+            .back-link {
+                display: none;
+            }
+
+            .table-section {
+                page-break-before: always;
+            }
+
+            .table-title {
+                display: none;
+            }
+
+            .print-header {
+                display: block !important;
+                page-break-after: avoid;
+            }
+
+            .print-header h1 {
+                font-size: 1.2em;
+                margin-bottom: 5px;
+            }
+
+            .print-header .metadata {
+                font-size: 0.75em;
+                margin-top: 5px;
+                margin-bottom: 10px;
+            }
+
+            .print-header .metadata span {
+                margin-bottom: 2px;
+                padding: 2px 6px;
+            }
+
+            .measurements-table {
+                page-break-before: avoid;
+                font-size: 0.75em;
+            }
+
+            .measurements-table th {
+                padding: 6px 8px;
+                font-size: 0.8em;
+            }
+
+            .measurements-table td {
+                padding: 4px 8px;
+                line-height: 1.2;
+            }
+
+            .measurements-table thead {
+                display: table-header-group;
+            }
+
+            .measurements-table tbody tr {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a href="/measurements" class="back-link">← Powrót do listy pomiarów</a>
+
+        <h1>📊 Wykres Temperatury -
+            <span th:text="${series.deviceName}">Urządzenie</span> ·
+            #<span th:text="${series.deviceInventoryNumber}">INV-001</span> ·
+            Komora: <span th:text="${series.deviceChamberType}">-</span>
+        </h1>
+        <div class="metadata">
+            <span><strong>Plik:</strong> <span th:text="${series.originalFilename}">-</span></span>
+            <span><strong>Rejestrator:</strong> #<span th:text="${series.recorderSerialNumber}">00000000</span></span>
+            <span><strong>Pozycja:</strong> <span th:text="${series.recorderPosition?.displayName}">-</span></span>
+            <span><strong>Okres:</strong>
+                <span
+                    th:text="${series.formattedFirstMeasurementTime} + ' - ' + ${series.formattedLastMeasurementTime}">-</span>
+            </span>
+            <span><strong>Pomiarów:</strong> <span th:text="${series.measurementCount}">-</span></span>
+        </div>
+
+        <div class="controls">
+            <button onclick="changeChartType('line')" class="active" id="btnLine">📈 Liniowy</button>
+            <button onclick="changeChartType('bar')" id="btnBar">📊 Słupkowy</button>
+            <button onclick="toggleMovingAverage()" id="btnAvg">📉 Średnia krocząca</button>
+            <button onclick="exportChart()">💾 Zapisz PNG</button>
+            <button onclick="window.print()">🖨️ Drukuj</button>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="temperatureChart"></canvas>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Temperatura Minimalna</h3>
+                <div class="value" th:text="${#numbers.formatDecimal(series.minTemperature, 1, 1)} + '°C'">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Temperatura Maksymalna</h3>
+                <div class="value" th:text="${#numbers.formatDecimal(series.maxTemperature, 1, 1)} + '°C'">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Temperatura Średnia</h3>
+                <div class="value" th:text="${#numbers.formatDecimal(series.avgTemperature, 1, 1)} + '°C'">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Zakres</h3>
+                <div class="value"
+                    th:text="${#numbers.formatDecimal(series.maxTemperature - series.minTemperature, 1, 1)} + '°C'">-
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela pomiarów z nagłówkiem dla druku -->
+        <div class="table-section">
+            <!-- Nagłówek widoczny tylko przy druku -->
+            <div class="print-header">
+                <h1>📋 Tabela Temperatur -
+                    <span th:text="${series.deviceName}">Urządzenie</span> ·
+                    #<span th:text="${series.deviceInventoryNumber}">INV-001</span> ·
+                    Komora: <span th:text="${series.deviceChamberType}">-</span>
+                </h1>
+                <div class="metadata">
+                    <span><strong>Plik:</strong> <span th:text="${series.originalFilename}">-</span></span>
+                    <span><strong>Rejestrator:</strong> #<span
+                            th:text="${series.recorderSerialNumber}">00000000</span></span>
+                    <span><strong>Pozycja:</strong> <span
+                            th:text="${series.recorderPosition?.displayName}">-</span></span>
+                    <span><strong>Okres:</strong>
+                        <span
+                            th:text="${series.formattedFirstMeasurementTime} + ' - ' + ${series.formattedLastMeasurementTime}">-</span>
+                    </span>
+                    <span><strong>Pomiarów:</strong> <span th:text="${series.measurementCount}">-</span></span>
+                </div>
+            </div>
+
+            <h2 class="table-title">📋 Szczegółowe dane pomiarowe</h2>
+            <table class="measurements-table">
+                <thead>
+                    <tr>
+                        <th>Lp.</th>
+                        <th>Data pomiaru</th>
+                        <th>Godzina pomiaru</th>
+                        <th>Temperatura</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="point, iterStat : ${measurementPoints}">
+                        <td th:text="${iterStat.count}">1</td>
+                        <td th:text="${#temporals.format(point.measurementTime, 'yyyy-MM-dd')}">2026-01-28</td>
+                        <td th:text="${#temporals.format(point.measurementTime, 'HH:mm:ss')}">12:00:00</td>
+                        <td class="temp-cell" th:text="${#numbers.formatDecimal(point.temperature, 1, 1)} + ' °C'">4.5
+                            °C</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // Dane z Thymeleaf
+        const testoData = {
+            metadata: {
+                filename: /*[[${series.originalFilename}]]*/ '',
+                measurementCount: /*[[${series.measurementCount}]]*/ 0
+            },
+            readings: [
+                /*[# th:each="point : ${measurementPoints}"]*/
+                {
+                    dateTime: /*[[${point.measurementTime}]]*/ '',
+                    temperature: /*[[${point.temperature}]]*/ 0
+                },
+                /*[/]*/
+            ]
+        };
+
+        let chart;
+        let showMovingAverage = false;
+
+        // Inicjalizacja
+        document.addEventListener('DOMContentLoaded', function () {
+            createChart();
+        });
+
+        function calculateMovingAverage(data, windowSize = 5) {
+            const result = [];
+            for (let i = 0; i < data.length; i++) {
+                const start = Math.max(0, i - Math.floor(windowSize / 2));
+                const end = Math.min(data.length, i + Math.ceil(windowSize / 2));
+                const window = data.slice(start, end);
+                const avg = window.reduce((sum, val) => sum + val, 0) / window.length;
+                result.push(avg);
+            }
+            return result;
+        }
+
+        function createChart() {
+            const ctx = document.getElementById('temperatureChart').getContext('2d');
+
+            const labels = testoData.readings.map(r => new Date(r.dateTime));
+            const temperatures = testoData.readings.map(r => r.temperature);
+
+            const datasets = [{
+                label: 'Temperatura',
+                data: temperatures,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderWidth: 2,
+                tension: 0.1,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }];
+
+            if (showMovingAverage) {
+                const movingAvg = calculateMovingAverage(temperatures, 5);
+                datasets.push({
+                    label: 'Średnia krocząca (5 pkt)',
+                    data: movingAvg,
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    tension: 0.4,
+                    pointRadius: 0
+                });
+            }
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: false
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function (context) {
+                                    return context.dataset.label + ': ' +
+                                        context.parsed.y.toFixed(1) + '°C';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'HH:mm',
+                                    day: 'dd.MM'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Czas'
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Temperatura (°C)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function changeChartType(type) {
+            chart.config.type = type;
+            chart.update();
+
+            // Update button states
+            document.querySelectorAll('.controls button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const btnId = 'btn' + type.charAt(0).toUpperCase() + type.slice(1);
+            const btn = document.getElementById(btnId);
+            if (btn) btn.classList.add('active');
+        }
+
+        function toggleMovingAverage() {
+            showMovingAverage = !showMovingAverage;
+            createChart();
+
+            const btn = document.getElementById('btnAvg');
+            if (showMovingAverage) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+
+        function exportChart() {
+            const url = chart.toBase64Image();
+            const link = document.createElement('a');
+            link.download = 'wykres_temperatura_testo.png';
+            link.href = url;
+            link.click();
+        }
+        /*]]>*/
+    </script>
+</body>
+
+</html>

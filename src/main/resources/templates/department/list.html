@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Działy - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('departments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+
+        <header th:replace="~{fragments/topbar :: topbar('departments', 'Działy', true, 'deptSearchInput')}"></header>
+
+        <main class="vcc-page">
+
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Działy organizacyjne</h1>
+                <div class="vcc-page-header__actions">
+                    <a th:href="@{/departments/new}" class="vcc-btn--action"
+                       sec:authorize="hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_COMPANY_ADMIN')">
+                        <i class="fas fa-plus"></i> Dodaj dział
+                    </a>
+                </div>
+            </div>
+
+            <div th:if="${success}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
+            </div>
+            <div th:if="${error}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+            </div>
+
+            <div class="vcc-data-card vcc-animate-fade-in">
+
+                <div th:if="${#lists.isEmpty(departments)}" class="vcc-empty-state">
+                    <i class="fas fa-sitemap vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title">Brak działów w systemie</p>
+                    <p class="vcc-empty-state__desc">Dodaj pierwszy dział organizacyjny</p>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(departments)}" class="vcc-table-wrap">
+                    <table class="vcc-table">
+                        <thead>
+                            <tr>
+                                <th>Skrót</th>
+                                <th>Nazwa</th>
+                                <th>Opis</th>
+                                <th>Pracownie</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="dept : ${departments}">
+                                <td><span class="vcc-table__label" th:text="${dept.abbreviation()}">--</span></td>
+                                <td><span class="vcc-table__primary" th:text="${dept.name()}">--</span></td>
+                                <td><span class="vcc-table__muted" th:text="${dept.description() != null ? dept.description() : '—'}">--</span></td>
+                                <td>
+                                    <span th:if="${dept.hasLaboratories()}" class="vcc-badge vcc-badge--success">
+                                        <i class="fas fa-check"></i> Tak
+                                    </span>
+                                    <span th:unless="${dept.hasLaboratories()}" class="vcc-badge vcc-badge--neutral">
+                                        Nie
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="vcc-table__actions">
+                                        <a th:href="@{/departments/{id}(id=${dept.id()})}" class="vcc-btn--table vcc-btn--table-primary">
+                                            <i class="fas fa-eye"></i> Szczegóły
+                                        </a>
+                                        <a th:href="@{/departments/{id}/edit(id=${dept.id()})}" class="vcc-btn--table vcc-btn--table-outline"
+                                           th:if="${#authorization.expression('hasRole(''ROLE_SUPER_ADMIN'')') or @securityService.hasAccessToDepartment(dept.id())}">
+                                            <i class="fas fa-edit"></i> Edytuj
+                                        </a>
+                                        <form th:action="@{/departments/{id}/delete(id=${dept.id()})}" method="post" style="display:inline"
+                                              th:if="${#authorization.expression('hasRole(''ROLE_SUPER_ADMIN'')') or (#authorization.expression('hasRole(''ROLE_COMPANY_ADMIN'')') and @securityService.hasAccessToDepartment(dept.id()))}"
+                                              onsubmit="return confirm('Czy na pewno chcesz usunąć ten dział?')">
+                                            <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
+                                                <i class="fas fa-trash-alt"></i> Usuń
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(departments)}" class="vcc-data-card__footer">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge" th:text="${#lists.size(departments)}">0</span> działów
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+    <script>
+    (function() {
+        var input = document.getElementById('deptSearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            document.querySelectorAll('.vcc-table tbody tr').forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+    </script>
+</body>
+
+</html>

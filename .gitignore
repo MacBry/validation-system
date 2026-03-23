@@ -1,0 +1,69 @@
+# Java / Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+.settings/
+.project
+.classpath
+.factorypath
+bin/
+out/
+.vscode/
+
+# Logs
+*.log
+logs/
+/var/log/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets & Config
+.env
+*.p12
+*.jks
+ssh_keys/
+*.key
+*.pem
+application-prod.properties
+# (Exclude application-prod.properties if it contains secrets; 
+# if it only has placeholders, it's fine to keep it, but 
+# it's safer to keep sensitive values in ENV or separate .properties)
+
+# Temporary/Analysis Files
+Vi2DebugAnalyzer*.java
+Vi2ParseMethod_Fixed.java
+vps_app_logs.txt
+deploy_tmp/
+deploy-vps.sh
+test_*.log
+test_*.txt
+*.zip
+*.jfif
+*.png
+*.jpg
+*.webp
+*.vi2
+uploads/
+zap.yaml
+!src/main/resources/static/images/*.jpg
+!src/main/resources/static/images/*.png
+!src/main/resources/static/images/*.webp

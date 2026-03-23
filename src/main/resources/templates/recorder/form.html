@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${recorderDto.id} ? 'Edycja rejestratora' : 'Nowy rejestrator'">Rejestrator</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('recorders')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('recorders', 'Rejestratory', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Form header -->
+            <div class="vcc-form-header">
+                <h1 class="vcc-form-header__title"
+                    th:text="${recorderDto.id} ? 'Edycja rejestratora TESTO' : 'Nowy rejestrator TESTO'">
+                    Rejestrator
+                </h1>
+                <p class="vcc-form-header__subtitle">Pola wymagane są oznaczone <span class="vcc-required">*</span></p>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Form card -->
+            <div class="vcc-form-card vcc-animate-fade-in">
+                <form th:action="${recorderDto.id} ? @{/recorders/{id}(id=${recorderDto.id})} : @{/recorders}"
+                      th:object="${recorderDto}"
+                      method="post">
+
+                    <!-- Section 1: Informacje o rejestratorze -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Informacje o rejestratorze</legend>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="serialNumber" class="vcc-form-label">
+                                    Numer seryjny <span class="vcc-required">*</span>
+                                </label>
+                                <input type="text"
+                                       class="vcc-form-input vcc-form-input--mono"
+                                       th:classappend="${#fields.hasErrors('serialNumber')} ? 'is-error'"
+                                       id="serialNumber"
+                                       th:field="*{serialNumber}"
+                                       placeholder="np. 58980778">
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('serialNumber')}" th:errors="*{serialNumber}"></div>
+                            </div>
+                            <div class="vcc-form-group">
+                                <label for="model" class="vcc-form-label">
+                                    Model <span class="vcc-required">*</span>
+                                </label>
+                                <input type="text"
+                                       class="vcc-form-input"
+                                       th:classappend="${#fields.hasErrors('model')} ? 'is-error'"
+                                       id="model"
+                                       th:field="*{model}"
+                                       placeholder="np. Testo 175 T1">
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('model')}" th:errors="*{model}"></div>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 2: Przypisanie do działu -->
+                    <fieldset class="vcc-form-section">
+                        <legend>Przypisanie do działu</legend>
+
+                        <div class="vcc-form-row">
+                            <div class="vcc-form-group">
+                                <label for="departmentId" class="vcc-form-label">
+                                    Dział <span class="vcc-required">*</span>
+                                </label>
+                                <select class="vcc-form-select"
+                                        th:classappend="${#fields.hasErrors('departmentId')} ? 'is-error'"
+                                        th:field="*{departmentId}"
+                                        id="departmentId"
+                                        onchange="loadLaboratories()">
+                                    <option value="">-- Wybierz dział --</option>
+                                    <option th:each="dept : ${departments}"
+                                            th:value="${dept.id}"
+                                            th:text="${dept.name}"
+                                            th:data-has-laboratories="${dept.hasLaboratories}"></option>
+                                </select>
+                                <div class="vcc-form-error" th:if="${#fields.hasErrors('departmentId')}" th:errors="*{departmentId}"></div>
+                            </div>
+
+                            <div class="vcc-form-group" id="laboratoryGroup" style="display:none;">
+                                <label for="laboratoryId" class="vcc-form-label">
+                                    Pracownia <span class="vcc-form-label--hint">(opcjonalne)</span>
+                                </label>
+                                <select class="vcc-form-select"
+                                        th:field="*{laboratoryId}"
+                                        id="laboratoryId">
+                                    <option value="">-- Brak pracowni --</option>
+                                    <option th:if="${laboratories != null}"
+                                            th:each="lab : ${laboratories}"
+                                            th:value="${lab.id}"
+                                            th:text="${lab.fullName}"></option>
+                                </select>
+                                <span class="vcc-form-hint">Niektore działy nie mają pracowni</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Section 3: Status (only for edit) -->
+                    <fieldset th:if="${recorderDto.id != null}" class="vcc-form-section">
+                        <legend>Status</legend>
+
+                        <div class="vcc-form-group">
+                            <label for="status" class="vcc-form-label">
+                                Status rejestratora <span class="vcc-required">*</span>
+                            </label>
+                            <select class="vcc-form-select"
+                                    th:classappend="${#fields.hasErrors('status')} ? 'is-error'"
+                                    id="status"
+                                    th:field="*{status}">
+                                <option value="">-- Wybierz status --</option>
+                                <option th:each="st : ${statuses}"
+                                        th:value="${st}"
+                                        th:text="${st.displayName}"></option>
+                            </select>
+                            <div class="vcc-form-error" th:if="${#fields.hasErrors('status')}" th:errors="*{status}"></div>
+                            <span class="vcc-form-hint">Status aktualizuje się automatycznie na podstawie ważności wzorcowań</span>
+                        </div>
+                    </fieldset>
+
+                    <!-- Info box for new recorders -->
+                    <div th:if="${recorderDto.id == null}" class="vcc-form-info vcc-form-info--warning">
+                        <strong>Uwaga:</strong> Nowy rejestrator zostanie utworzony ze statusem NIEAKTYWNY.
+                        Status zmieni się na AKTYWNY po dodaniu ważnego wzorcowania.
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="vcc-form-actions">
+                        <a th:href="@{/recorders}" class="vcc-form-btn-cancel">
+                            <i class="fas fa-times"></i> Anuluj
+                        </a>
+                        <button type="submit" class="vcc-form-btn-submit">
+                            <i class="fas fa-check"></i>
+                            <span th:text="${recorderDto.id} ? 'Zapisz zmiany' : 'Utwórz rejestrator'">Utwórz</span>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </main>
+
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    function loadLaboratories() {
+        var departmentSelect = document.getElementById('departmentId');
+        var laboratoryGroup = document.getElementById('laboratoryGroup');
+        var laboratorySelect = document.getElementById('laboratoryId');
+
+        var selectedOption = departmentSelect.options[departmentSelect.selectedIndex];
+        var departmentId = selectedOption.value;
+        var hasLaboratories = selectedOption.getAttribute('data-has-laboratories') === 'true';
+
+        if (!departmentId) {
+            laboratoryGroup.style.display = 'none';
+            laboratorySelect.innerHTML = '<option value="">-- Brak pracowni --</option>';
+            return;
+        }
+
+        if (!hasLaboratories) {
+            laboratoryGroup.style.display = 'none';
+            laboratorySelect.innerHTML = '<option value="">-- Brak pracowni --</option>';
+            laboratorySelect.value = '';
+            return;
+        }
+
+        laboratoryGroup.style.display = 'block';
+        laboratorySelect.innerHTML = '<option value="">Ładowanie...</option>';
+        laboratorySelect.parentElement.classList.add('vcc-form-loading');
+
+        fetch('/recorders/api/departments/' + departmentId + '/laboratories')
+            .then(function(response) { return response.json(); })
+            .then(function(laboratories) {
+                laboratorySelect.innerHTML = '<option value="">-- Wybierz pracownię (opcjonalne) --</option>';
+                laboratories.forEach(function(lab) {
+                    var option = document.createElement('option');
+                    option.value = lab.id;
+                    option.textContent = lab.name;
+                    laboratorySelect.appendChild(option);
+                });
+                laboratorySelect.parentElement.classList.remove('vcc-form-loading');
+            })
+            .catch(function(error) {
+                console.error('Błąd podczas ładowania pracowni:', error);
+                laboratorySelect.innerHTML = '<option value="">Błąd ładowania</option>';
+                laboratorySelect.parentElement.classList.remove('vcc-form-loading');
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var departmentSelect = document.getElementById('departmentId');
+        if (departmentSelect && departmentSelect.value) {
+            loadLaboratories();
+        }
+    });
+    </script>
+
+</body>
+
+</html>

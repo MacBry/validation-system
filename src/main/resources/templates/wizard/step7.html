@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Krok 7 - Przegląd serii - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:replace="~{fragments/csrf-token :: csrf-meta}"></th:replace>
+    <style>
+        .wizard-container { max-width: 860px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+
+        /* Series review block */
+        .series-block {
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem) var(--sp-6, 1.5rem);
+            margin-bottom: var(--sp-4, 1rem);
+            background: var(--surface-card, #fff);
+        }
+        .series-block__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--sp-4, 1rem);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .series-block__date {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+            font-family: 'DM Mono', monospace;
+        }
+        .series-block__sn {
+            font-size: 0.8rem;
+            color: var(--text-muted, #9298ae);
+            margin-left: 8px;
+        }
+        .badge-ref {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 9px;
+            background: #fef9c3; color: #713f12;
+            border-radius: 99px; font-size: 0.7rem; font-weight: 700;
+        }
+        .badge-position {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 9px;
+            background: rgba(102,126,234,0.10); color: var(--vcc-primary, #667eea);
+            border-radius: 99px; font-size: 0.7rem; font-weight: 700;
+        }
+
+        /* Stats grid */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .stat-item {
+            background: var(--surface-page, #f7f8fc);
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: 10px 12px;
+        }
+        .stat-item__label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-muted, #9298ae);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        .stat-item__value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+            font-family: 'DM Mono', monospace;
+        }
+        .series-block__meta {
+            font-size: 0.77rem;
+            color: var(--text-muted, #9298ae);
+        }
+        .series-block__meta span + span { margin-left: 14px; }
+
+        /* Alert no series */
+        .alert-danger-vcc {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 16px;
+            background: #fef2f2; border: 1px solid #fca5a5;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.85rem; color: #991b1b;
+            margin-bottom: var(--sp-4, 1rem);
+        }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard kwalifikacji', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">Krok 7 — Przegląd serii</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:replace="~{wizard/fragments/wizard-nav :: wizard-nav(7, draft.stepLockFrom)}"></th:replace>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Przegląd wybranych serii pomiarowych</h2>
+                        <p class="wizard-step-header__desc">Sprawdź dane wybranych serii przed obliczeniem statystyk walidacji. Aby zmienić wybór, wróć do poprzedniego kroku.</p>
+                    </div>
+
+                    <!-- Error: no series -->
+                    <div th:if="${#lists.isEmpty(selectedSeries)}" class="alert-danger-vcc">
+                        <i class="fas fa-exclamation-circle" style="flex-shrink:0; margin-top:2px;"></i>
+                        <span>Nie wybrano żadnej serii pomiarowej. Wróć do kroku 6 i wybierz serie.</span>
+                    </div>
+
+                    <!-- Series blocks -->
+                    <div th:each="s : ${selectedSeries}" class="series-block">
+                        <div class="series-block__header">
+                            <div>
+                                <span class="series-block__date"
+                                      th:text="${#temporals.format(s.firstMeasurementTime, 'yyyy-MM-dd HH:mm')}">Date</span>
+                                <span class="series-block__sn"
+                                      th:text="'(' + ${s.recorderSerialNumber} + ')'">SN12345</span>
+                            </div>
+                            <div>
+                                <span th:if="${s.isReferenceRecorder}" class="badge-ref">
+                                    <i class="fas fa-star" style="font-size:0.6rem;"></i> REFERENCYJNY
+                                </span>
+                                <span th:if="${!s.isReferenceRecorder}" class="badge-position"
+                                      th:text="'Pozycja: ' + ${s.recorderPosition}">A1</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-item__label">Min [°C]</div>
+                                <div class="stat-item__value"
+                                     th:text="${#numbers.formatDecimal(s.minTemperature, 1, 2)}">1.20</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-item__label">Max [°C]</div>
+                                <div class="stat-item__value"
+                                     th:text="${#numbers.formatDecimal(s.maxTemperature, 1, 2)}">4.50</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-item__label">Avg [°C]</div>
+                                <div class="stat-item__value"
+                                     th:text="${#numbers.formatDecimal(s.avgTemperature, 1, 2)}">2.80</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-item__label">MKT [°C]</div>
+                                <div class="stat-item__value"
+                                     th:text="${#numbers.formatDecimal(s.mktTemperature, 1, 2)}">3.05</div>
+                            </div>
+                        </div>
+
+                        <div class="series-block__meta">
+                            <span><i class="fas fa-file"></i> <span th:text="${s.originalFilename}">data.vi2</span></span>
+                            <span><i class="fas fa-list-ol"></i> <span th:text="${s.measurementCount} + ' pomiarów'">100 pomiarów</span></span>
+                            <span><i class="fas fa-clock"></i> <span th:text="${s.measurementCount * s.measurementIntervalMinutes} + ' min'">100 min</span></span>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <a th:href="@{/wizard/{id}/back/6(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" class="wizard-btn-next" onclick="navigateToStep8()">
+                            Zatwierdź i oblicz statystyki <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript">
+        function navigateToStep8() {
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            window.location.href = '/wizard/' + draftId + '/step/8';
+        }
+    </script>
+</body>
+</html>

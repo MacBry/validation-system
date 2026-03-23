@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+
+<div th:fragment="results">
+    <div class="vcc-search-results-content">
+        
+        <!-- Empty Results -->
+        <div th:if="${(foundDevices == null or foundDevices.isEmpty()) and (foundRecorders == null or foundRecorders.isEmpty()) and (foundValidations == null or foundValidations.isEmpty())}" 
+             class="vcc-search-no-results" style="padding: 2rem; text-align: center; opacity: 0.6;">
+            <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+            Brak wyników dla frazy: <strong th:text="${searchQuery}"></strong>
+        </div>
+
+        <!-- Section 1: Devices and Recorders -->
+        <div th:if="${(foundDevices != null and !foundDevices.isEmpty()) or (foundRecorders != null and !foundRecorders.isEmpty())}" 
+             class="vcc-search-section vcc-animate-fade-in">
+            <h4 class="vcc-section-title" style="margin-top: 0; font-size: 0.9rem;">Urządzenia i Rejestratory</h4>
+            <div class="vcc-recent-table" style="margin-bottom: 2rem;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Typ</th>
+                            <th>Nazwa / Model</th>
+                            <th>Nr Inwentarzowy / Seryjny</th>
+                            <th>Lokalizacja</th>
+                            <th>Akcja</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Devices -->
+                        <tr th:each="d : ${foundDevices}">
+                            <td><i class="fas fa-cube" style="color: var(--vcc-primary);"></i></td>
+                            <td th:text="${d.name}">Urządzenie</td>
+                            <td><code th:text="${d.inventoryNumber}" style="background: rgba(102,126,234,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">INW-123</code></td>
+                            <td th:text="${d.department != null ? d.department.name : '-'}">Dział</td>
+                            <td>
+                                <a th:href="@{/devices/{id}(id=${d.id})}" class="vcc-btn vcc-btn--ghost vcc-btn--sm">
+                                    <i class="fas fa-eye"></i> Pokaż
+                                </a>
+                            </td>
+                        </tr>
+                        <!-- Recorders -->
+                        <tr th:each="r : ${foundRecorders}">
+                            <td><i class="fas fa-thermometer-half" style="color: var(--vcc-accent);"></i></td>
+                            <td th:text="${r.model}">Testo 174T</td>
+                            <td><code th:text="${r.serialNumber}" style="background: rgba(139,92,246,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">SN-123</code></td>
+                            <td th:text="${r.department != null ? r.department.name : '-'}">Dział</td>
+                            <td>
+                                <a th:href="@{/recorders/{id}(id=${r.id})}" class="vcc-btn vcc-btn--ghost vcc-btn--sm">
+                                    <i class="fas fa-eye"></i> Pokaż
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 2: Validations -->
+        <div th:if="${foundValidations != null and !foundValidations.isEmpty()}" 
+             class="vcc-search-section vcc-animate-fade-in">
+            <h4 class="vcc-section-title" style="font-size: 0.9rem;">Powiązane Walidacje</h4>
+            <div class="vcc-recent-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Urządzenie</th>
+                            <th>RPW</th>
+                            <th>Status</th>
+                            <th>Akcja</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="v : ${foundValidations}">
+                            <td th:text="${v.createdDate != null ? #temporals.format(v.createdDate, 'dd.MM.yyyy HH:mm') : '-'}">01.01.2026</td>
+                            <td th:text="${v.coolingDevice != null ? v.coolingDevice.name : '-'}">Urządzenie</td>
+                            <td th:text="${v.validationPlanNumber}">1/2026</td>
+                            <td>
+                                <span class="vcc-badge"
+                                      th:classappend="${v.status != null and v.status.name() == 'COMPLETED'} ? 'vcc-badge--success'
+                                                    : (${v.status != null and v.status.name() == 'FAILED'} ? 'vcc-badge--danger'
+                                                    : (${v.status != null and v.status.name() == 'IN_PROGRESS'} ? 'vcc-badge--warning'
+                                                    : 'vcc-badge--neutral'))"
+                                      th:text="${v.status != null ? v.status.toString() : 'DRAFT'}">DRAFT</span>
+                            </td>
+                            <td>
+                                <a th:href="@{/validations/{id}(id=${v.id})}" class="vcc-btn vcc-btn--ghost vcc-btn--sm">
+                                    <i class="fas fa-eye"></i> Szczegóły
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

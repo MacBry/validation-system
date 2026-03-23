@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+
+<body>
+    <th:block th:fragment="section(summaryStats, validation)">
+
+        <!-- ============================================================ -->
+        <!-- SEKCJA A — Globalne Statystyki Temperatury -->
+        <!-- ============================================================ -->
+        <div class="stats-section" style="
+                background:#fff;
+                border-radius:14px;
+                box-shadow:0 2px 12px rgba(102,126,234,.08);
+                padding:28px 32px;
+                margin-bottom:20px;">
+
+            <!-- Nagłówek sekcji -->
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:0; cursor:pointer; user-select:none;"
+                onclick="toggleSection('sectionAContent', 'iconA')">
+                <div style="
+                        width:36px; height:36px;
+                        background: linear-gradient(135deg,#8b9cf7,#a07cc5);
+                        border-radius:9px;
+                        display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24" style="width:18px;height:18px">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                </div>
+                <div>
+                    <div
+                        style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#8b95a8;margin-bottom:2px">
+                        SEKCJA A
+                    </div>
+                    <div style="font-size:1.05rem;font-weight:600;color:#1a1d2e">
+                        Globalne Statystyki Temperatury
+                    </div>
+                </div>
+                <div style="margin-left:auto; font-size:.75rem; color:#8b95a8; font-style:italic;">
+                    Obliczono:
+                    <span
+                        th:text="${summaryStats != null && summaryStats.calculatedAt != null ? #temporals.format(summaryStats.calculatedAt, 'dd.MM.yyyy HH:mm') : '–'}">–</span>
+                </div>
+
+                <!-- Chevron Toggle -->
+                <div style="margin-left:14px;">
+                    <svg id="iconA"
+                        style="width:22px;height:22px;color:#a4adc5;transition:transform 0.3s;transform:rotate(0deg);"
+                        fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Zawartość sekcji A -->
+            <div id="sectionAContent" style="display:block; padding-top:22px;">
+
+                <!-- Komunikat braku danych -->
+                <div th:if="${summaryStats == null}"
+                    style="text-align:center; padding:30px; border:1px dashed #e0e7ff; border-radius:10px; color:#8b95a8;">
+                    Brak danych statystycznych.
+                </div>
+
+                <!-- Siatka kafelków (4 kolumny) -->
+                <div th:if="${summaryStats != null}"
+                    style="display:grid; grid-template-columns: repeat(4, 1fr); gap:14px;">
+                    <!-- A.1 — Średnia siatki -->
+                    <div style="background:#f4f6fb; border-radius:10px; padding:16px; border:1px solid #e0e7ff;">
+                        <div
+                            style="font-size:.65rem; color:#8b95a8; font-weight:600; text-transform:uppercase; margin-bottom:4px;">
+                            Średnia Siatki</div>
+                        <div style="font-size:1.35rem; font-weight:700; color:#4a6cf7;"
+                            th:text="${summaryStats.formattedOverallAvgTemp}">–</div>
+                    </div>
+
+                    <!-- A.2 — Max. siatki -->
+                    <div style="background:#fef5f5; border-radius:10px; padding:16px; border:1px solid #fce0e0;">
+                        <div
+                            style="font-size:.65rem; color:#b85c5c; font-weight:600; text-transform:uppercase; margin-bottom:4px;">
+                            Max. Siatki</div>
+                        <div style="font-size:1.35rem; font-weight:700; color:#d97070;"
+                            th:text="${summaryStats.formattedGlobalMaxTemp}">–</div>
+                    </div>
+
+                    <!-- A.3 — Min. siatki -->
+                    <div style="background:#f2f8fc; border-radius:10px; padding:16px; border:1px solid #dbeafe;">
+                        <div
+                            style="font-size:.65rem; color:#4a8ab5; font-weight:600; text-transform:uppercase; margin-bottom:4px;">
+                            Min. Siatki</div>
+                        <div style="font-size:1.35rem; font-weight:700; color:#5a9ec7;"
+                            th:text="${summaryStats.formattedGlobalMinTemp}">–</div>
+                    </div>
+
+                    <!-- A.4 — Odchylenie Std. -->
+                    <div style="background:#f6f4fb; border-radius:10px; padding:16px; border:1px solid #e8e0f8;">
+                        <div
+                            style="font-size:.65rem; color:#8070a8; font-weight:600; text-transform:uppercase; margin-bottom:4px;">
+                            Odchylenie Std.</div>
+                        <div style="font-size:1.35rem; font-weight:700; color:#9580c7;"
+                            th:text="${summaryStats.formattedGlobalStdDev}">–</div>
+                    </div>
+
+                    <!-- A.5 — Rozszerzona niepewność -->
+                    <div style="background:#fdf8f2; border-radius:10px; padding:16px; border:2px solid #f5dfc0;">
+                        <div
+                            style="font-size:.65rem; color:#a07848; font-weight:700; text-transform:uppercase; margin-bottom:4px;">
+                            Niepewność U (GUM)</div>
+                        <div style="font-size:1.35rem; font-weight:800; color:#c08850;"
+                            th:text="${summaryStats.formattedGlobalExpandedUncertainty}">–</div>
+                    </div>
+
+                    <!-- A.6 — Hotspot -->
+                    <div style="background:#faf5fc; border-radius:10px; padding:16px; border:1px solid #f0e0f8;">
+                        <div
+                            style="font-size:.65rem; color:#9870a8; font-weight:600; text-transform:uppercase; margin-bottom:4px;">
+                            Hotspot</div>
+                        <div style="font-size:1.35rem; font-weight:700; color:#b888cc;"
+                            th:text="${summaryStats.formattedHotspotTemp}">–</div>
+                    </div>
+
+                    <!-- A.7 — Coldspot -->
+                    <div style="background:#f2faf6; border-radius:10px; padding:16px; border:1px solid #d0eede;">
+                        <div
+                            style="font-size:.65rem; color:#4a8870; font-weight:600; text-transform:uppercase; margin-bottom:4px;">
+                            Coldspot</div>
+                        <div style="font-size:1.35rem; font-weight:700; color:#5aa888;"
+                            th:text="${summaryStats.formattedColdspotTemp}">–</div>
+                    </div>
+
+                    <!-- A.8 — CV% -->
+                    <div style="background:#f8f9fb; border-radius:10px; padding:16px; border:1px solid #e2e8f0;">
+                        <div
+                            style="font-size:.65rem; color:#7a8598; font-weight:600; text-transform:uppercase; margin-bottom:4px;">
+                            Zmienność (CV%)</div>
+                        <div style="font-size:1.35rem; font-weight:700; color:#8b95a8;"
+                            th:text="${summaryStats.formattedGlobalCvPercentage}">–</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SEKCJA B — MKT (Mean Kinetic Temperature) -->
+        <!-- ============================================================ -->
+        <div class="stats-section" style="
+                background: #fff;
+                border-radius: 14px;
+                box-shadow: 0 2px 12px rgba(102,126,234,.08);
+                padding: 28px 32px;
+                margin-bottom: 20px;">
+
+            <!-- Nagłówek sekcji -->
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:0; cursor:pointer; user-select:none;"
+                onclick="toggleSection('sectionBContent', 'iconB')">
+                <div style="
+                        width:36px; height:36px;
+                        background: linear-gradient(135deg,#6ec7a8,#4aad8a);
+                        border-radius:9px;
+                        display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24" style="width:18px;height:18px">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a1 1 0 001-1V8a1 1 0 00-.293-.707l-5-5A1 1 0 0015 2H4a1 1 0 00-1 1v15a1 1 0 001 1z" />
+                    </svg>
+                </div>
+                <div>
+                    <div
+                        style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#8b95a8">
+                        Protokół walidacyjny · Tabela B</div>
+                    <div style="font-size:1.05rem;font-weight:700;color:#1a1d2e">Mean Kinetic Temperature (MKT)</div>
+                </div>
+                <div style="margin-left:auto; font-size:.72rem; font-style:italic; color:#8b95a8;">
+                    WHO TRS 953 | ΔH/R = <span
+                        th:text="${summaryStats != null ? summaryStats.formattedDeltaHR : '–'}">–</span>
+                </div>
+
+                <!-- Chevron Toggle -->
+                <div style="margin-left:14px;">
+                    <svg id="iconB"
+                        style="width:22px;height:22px;color:#a4adc5;transition:transform 0.3s;transform:rotate(-180deg);"
+                        fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Zawartość sekcji B -->
+            <div id="sectionBContent" style="display:none; padding-top:22px;">
+                <div th:if="${summaryStats == null}"
+                    style="text-align:center; padding:30px; border:1px dashed #e0e7ff; border-radius:10px; color:#8b95a8;">
+                    Brak danych MKT.
+                </div>
+
+                <div th:if="${summaryStats != null}"
+                    style="display:grid; grid-template-columns: repeat(3,1fr); gap:14px;">
+                    <!-- B.1 — Globalny MKT -->
+                    <div
+                        style="background:#f0f7f4; border-radius:10px; padding:20px; border:1px solid #d0eede; text-align:center;">
+                        <div
+                            style="font-size:.68rem;font-weight:600;color:#5aa888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                            Globalny MKT</div>
+                        <div style="font-size:1.8rem;font-weight:700;line-height:1;color:#3d8a6e;"
+                            th:text="${summaryStats.formattedGlobalMkt}">–</div>
+                        <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">Siatka (Arrhenius)</div>
+                    </div>
+
+                    <!-- B.3 — Najgorszy MKT -->
+                    <div
+                        style="background:#fef5f5; border-radius:10px; padding:20px; border:1px solid #fce0e0; text-align:center;">
+                        <div
+                            style="font-size:.68rem;font-weight:600;color:#c07878;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                            MKT Worst Case</div>
+                        <div style="font-size:1.8rem;font-weight:700;line-height:1;color:#c06060;"
+                            th:text="${summaryStats.formattedMktWorstValue}">–</div>
+                        <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">Seria #<span
+                                th:text="${summaryStats.mktWorstSeriesId ?: '–'}"></span></div>
+                    </div>
+
+                    <!-- B.4 — Najlepszy MKT -->
+                    <div
+                        style="background:#f2f8fc; border-radius:10px; padding:20px; border:1px solid #dbeafe; text-align:center;">
+                        <div
+                            style="font-size:.68rem;font-weight:600;color:#5a9ec7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                            MKT Best Case</div>
+                        <div style="font-size:1.8rem;font-weight:700;line-height:1;color:#4888b0;"
+                            th:text="${summaryStats.formattedMktBestValue}">–</div>
+                        <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">Seria #<span
+                                th:text="${summaryStats.mktBestSeriesId ?: '–'}"></span></div>
+                    </div>
+
+                    <!-- B.5 — MKT referencyjny -->
+                    <div
+                        style="background:#f4f4fb; border-radius:10px; padding:20px; border:1px solid #e0e0f8; text-align:center;">
+                        <div
+                            style="font-size:.68rem;font-weight:600;color:#7d80c7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                            MKT Referencyjny</div>
+                        <div style="font-size:1.8rem;font-weight:700;line-height:1;color:#6568b8;"
+                            th:if="${summaryStats.mktReferenceValue != null}"
+                            th:text="${summaryStats.formattedMktReferenceValue}">–</div>
+                        <div style="font-size:1.05rem;font-weight:600;color:#a4adc5;line-height:1.4"
+                            th:unless="${summaryStats.mktReferenceValue != null}">Brak serii ref.</div>
+                        <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">Otoczenie komory</div>
+                    </div>
+
+                    <!-- B.6 — Delta MKT -->
+                    <div th:if="${summaryStats.mktDeltaInternalVsReference != null}"
+                        th:style="'background: ' + (${summaryStats.mktDeltaInternalVsReference &lt; 0} ? '#f0f7f4' : (${summaryStats.mktDeltaInternalVsReference &lt; 3} ? '#fdf8f2' : '#fef5f5')) + '; border-radius:10px; padding:20px; border:1px solid ' + (${summaryStats.mktDeltaInternalVsReference &lt; 0} ? '#d0eede' : (${summaryStats.mktDeltaInternalVsReference &lt; 3} ? '#f5dfc0' : '#fce0e0')) + '; text-align:center;'">
+                        <div
+                            style="font-size:.68rem;font-weight:600;color:#8b95a8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                            Δ MKT Komora vs. Otoczenie</div>
+                        <div th:style="'font-size:1.8rem;font-weight:700;line-height:1;color:' + (${summaryStats.mktDeltaInternalVsReference &lt; 0} ? '#3d8a6e' : (${summaryStats.mktDeltaInternalVsReference &lt; 3} ? '#c08850' : '#c06060'))"
+                            th:text="${summaryStats.formattedMktDelta}">–</div>
+                        <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">
+                            <span th:if="${summaryStats.mktDeltaInternalVsReference &lt; 0}">Komora chłodzi</span>
+                            <span
+                                th:if="${summaryStats.mktDeltaInternalVsReference &gt;= 0 and summaryStats.mktDeltaInternalVsReference &lt; 3}">Sprawdź wydajność</span>
+                            <span th:if="${summaryStats.mktDeltaInternalVsReference &gt;= 3}">Problem krytyczny</span>
+                        </div>
+                    </div>
+                    <div th:unless="${summaryStats.mktDeltaInternalVsReference != null}"
+                        style="background:#f8f9fb; border:2px dashed #e0e7ff; border-radius:10px; padding:20px; color:#8b95a8; text-align:center; display:flex; align-items:center; justify-content:center;">
+                        <span style="font-size:.82rem;">Δ MKT niedostępne</span>
+                    </div>
+
+                    <!-- Spread MKT -->
+                    <div
+                        style="background:#f6f4fb; border-radius:10px; padding:20px; border:1px solid #e8e0f8; text-align:center;">
+                        <div
+                            style="font-size:.68rem;font-weight:600;color:#9580c7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                            Spread MKT</div>
+                        <div style="font-size:1.8rem;font-weight:700;line-height:1;color:#7c68b0;">
+                            <span th:if="${summaryStats.mktWorstValue != null and summaryStats.mktBestValue != null}"
+                                th:text="${#numbers.formatDecimal(summaryStats.mktWorstValue - summaryStats.mktBestValue, 1, 2) + '°C'}">–</span>
+                            <span
+                                th:unless="${summaryStats.mktWorstValue != null and summaryStats.mktBestValue != null}">–</span>
+                        </div>
+                        <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">worst − best</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SEKCJA C  Czas w zakresie / Zgodność temperaturowa (Compliance) -->
+        <!-- ============================================================ -->
+        <div class="stats-section" style="
+                background: #fff;
+                border-radius: 14px;
+                box-shadow: 0 2px 12px rgba(102,126,234,.08);
+                padding: 28px 32px;
+                margin-bottom: 20px;">
+
+            <!-- Nagłówek -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:0; cursor:pointer; user-select:none;"
+                onclick="toggleSection('sectionCContent', 'iconC')">
+                <div
+                    style="width:36px;height:36px;background:linear-gradient(135deg,#e0b870,#c8a058);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24" style="width:18px;height:18px">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <div
+                        style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#8b95a8">
+                        Protokół walidacyjny Tabela C</div>
+                    <div style="font-size:1.05rem;font-weight:700;color:#1a1d2e">Zgodność Temperaturowa - Czas w
+                        Zakresie</div>
+                </div>
+
+                <!-- Chevron Toggle -->
+                <div style="margin-left:auto;">
+                    <svg id="iconC"
+                        style="width:22px;height:22px;color:#a4adc5;transition:transform 0.3s;transform:rotate(-180deg);"
+                        fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Zawartość sekcji C -->
+            <div id="sectionCContent" style="display:none; padding-top:22px;">
+                <div th:if="${summaryStats == null}"
+                    style="text-align:center; padding:30px; border:1px dashed #e0e7ff; border-radius:10px; color:#8b95a8;">
+                    Brak danych zgodności.
+                </div>
+
+                <div th:if="${summaryStats != null}">
+                    <!-- Rząd kafelków C.1-C.4 -->
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;">
+
+                        <!-- C.1 Czas w zakresie -->
+                        <div
+                            style="background:#f0f7f4;border-radius:10px;padding:20px;border:1px solid #d0eede;text-align:center;">
+                            <div
+                                style="font-size:.68rem;font-weight:600;color:#5aa888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                                Czas w zakresie</div>
+                            <div style="font-size:1.5rem;font-weight:700;line-height:1;color:#3d8a6e;"
+                                th:text="${summaryStats.formattedTotalTimeIn}">–</div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">Σ wszystkich serii</div>
+                        </div>
+
+                        <!-- C.2 Czas poza zakresem -->
+                        <div
+                            th:style="'background:' + (${summaryStats.totalTimeOutOfRangeMinutes == 0} ? '#f0f7f4' : '#fef5f5') + ';border-radius:10px;padding:20px;border:1px solid ' + (${summaryStats.totalTimeOutOfRangeMinutes == 0} ? '#d0eede' : '#fce0e0') + ';text-align:center;'">
+                            <div
+                                th:style="'font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;color:' + (${summaryStats.totalTimeOutOfRangeMinutes == 0} ? '#5aa888' : '#c07878')">
+                                Poza zakresem</div>
+                            <div th:style="'font-size:1.5rem;font-weight:700;line-height:1;color:' + (${summaryStats.totalTimeOutOfRangeMinutes == 0} ? '#3d8a6e' : '#c06060')"
+                                th:text="${summaryStats.formattedTotalTimeOut}">–</div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px"
+                                th:text="${summaryStats.totalTimeOutOfRangeMinutes == 0 ? 'Brak przekroczeń' : 'Wymaga analizy'}">
+                            </div>
+                        </div>
+
+                        <!-- C.3 Compliance % -->
+                        <div
+                            th:style="'background:' + (${summaryStats.globalCompliancePercentage == null} ? '#f8f9fb' : (${summaryStats.globalCompliancePercentage >= 99} ? '#f0f7f4' : (${summaryStats.globalCompliancePercentage >= 95} ? '#f5f9f0' : '#fdf8f2'))) + ';border-radius:10px;padding:20px;border:1px solid ' + (${summaryStats.globalCompliancePercentage == null} ? '#e2e8f0' : (${summaryStats.globalCompliancePercentage >= 99} ? '#d0eede' : (${summaryStats.globalCompliancePercentage >= 95} ? '#dce8c8' : '#f5dfc0'))) + ';text-align:center;'">
+                            <div
+                                th:style="'font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;color:' + (${summaryStats.globalCompliancePercentage == null} ? '#8b95a8' : (${summaryStats.globalCompliancePercentage >= 99} ? '#5aa888' : (${summaryStats.globalCompliancePercentage >= 95} ? '#7a9858' : '#c08850')))">
+                                Compliance</div>
+                            <div th:style="'font-size:1.8rem;font-weight:700;line-height:1;color:' + (${summaryStats.globalCompliancePercentage == null} ? '#8b95a8' : (${summaryStats.globalCompliancePercentage >= 99} ? '#3d8a6e' : (${summaryStats.globalCompliancePercentage >= 95} ? '#608838' : '#c08850')))"
+                                th:text="${summaryStats.formattedCompliancePercentage}">–</div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px"
+                                th:text="${summaryStats.globalCompliancePercentage == null ? 'Brak danych' : (summaryStats.globalCompliancePercentage >= 99 ? 'Doskonała' : (summaryStats.globalCompliancePercentage >= 95 ? 'GMP OK' : 'Analiza'))}">
+                            </div>
+                        </div>
+
+                        <!-- C.4 Przekroczenia -->
+                        <div
+                            th:style="'background:' + (${summaryStats.totalViolations == null or summaryStats.totalViolations == 0} ? '#f0f7f4' : '#fef5f5') + ';border-radius:10px;padding:20px;border:1px solid ' + (${summaryStats.totalViolations == null or summaryStats.totalViolations == 0} ? '#d0eede' : '#fce0e0') + ';text-align:center;'">
+                            <div
+                                th:style="'font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;color:' + (${summaryStats.totalViolations == null or summaryStats.totalViolations == 0} ? '#5aa888' : '#c07878')">
+                                Przekroczenia</div>
+                            <div th:style="'font-size:1.8rem;font-weight:700;line-height:1;color:' + (${summaryStats.totalViolations == null or summaryStats.totalViolations == 0} ? '#3d8a6e' : '#c06060')"
+                                th:text="${summaryStats.totalViolations ?: 0}">0</div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">incydentów</div>
+                        </div>
+                    </div>
+
+                    <!-- Dolny rząd C.5-C.7 -->
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+                        <!-- C.5 Max excursion -->
+                        <div
+                            style="background:#fef5f5;border-radius:10px;padding:20px;border:1px solid #fce0e0;text-align:center;">
+                            <div
+                                style="font-size:.68rem;font-weight:600;color:#c07878;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                                Max. Excursion</div>
+                            <div style="font-size:1.5rem;font-weight:700;line-height:1;color:#c06060;"
+                                th:text="${summaryStats.formattedMaxViolationDuration}">–</div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">Seria #<span
+                                    th:text="${summaryStats.maxViolationSeriesId ?: '–'}"></span></div>
+                        </div>
+
+                        <!-- C.6 Serie z przekroczeniami -->
+                        <div
+                            th:style="'background:' + (${summaryStats.seriesWithViolationsCount == null or summaryStats.seriesWithViolationsCount == 0} ? '#f0f7f4' : '#fef5f5') + ';border-radius:10px;padding:20px;border:1px solid ' + (${summaryStats.seriesWithViolationsCount == null or summaryStats.seriesWithViolationsCount == 0} ? '#d0eede' : '#fce0e0') + ';text-align:center;'">
+                            <div
+                                th:style="'font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;color:' + (${summaryStats.seriesWithViolationsCount == null or summaryStats.seriesWithViolationsCount == 0} ? '#5aa888' : '#c07878')">
+                                Serie z przekroczeniami</div>
+                            <div th:style="'font-size:1.8rem;font-weight:700;line-height:1;color:' + (${summaryStats.seriesWithViolationsCount == null or summaryStats.seriesWithViolationsCount == 0} ? '#3d8a6e' : '#c06060')">
+                                <span th:text="${summaryStats.seriesWithViolationsCount ?: 0}">0</span>
+                                <span style="font-size:1rem;color:#a4adc5;"> / <span
+                                        th:text="${summaryStats.totalSeriesCount ?: '?'}">?</span></span>
+                            </div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">lokalizacji</div>
+                        </div>
+
+                        <!-- C.7 Serie w pełni zgodne -->
+                        <div
+                            style="background:#f0f7f4;border-radius:10px;padding:20px;border:1px solid #d0eede;text-align:center;">
+                            <div
+                                style="font-size:.68rem;font-weight:600;color:#5aa888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                                Serie w pełni zgodne</div>
+                            <div style="font-size:1.8rem;font-weight:700;line-height:1;color:#3d8a6e;">
+                                <span th:text="${summaryStats.seriesFullyCompliantCount ?: 0}">0</span>
+                                <span style="font-size:1rem;color:#a4adc5;"> / <span
+                                        th:text="${summaryStats.totalSeriesCount ?: '?'}">?</span></span>
+                            </div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">lokalizacji</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SEKCJA D - Stabilność / Drift / Spike (Analiza trendu) -->
+        <!-- ============================================================ -->
+        <div class="stats-section" style="
+                background: #fff;
+                border-radius: 14px;
+                box-shadow: 0 2px 12px rgba(102,126,234,.08);
+                padding: 28px 32px;
+                margin-bottom: 20px;">
+
+            <!-- Nagłowek -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:0; cursor:pointer; user-select:none;"
+                onclick="toggleSection('sectionDContent', 'iconD')">
+                <div
+                    style="width:36px;height:36px;background:linear-gradient(135deg,#9580c7,#8070a8);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24" style="width:18px;height:18px">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                    </svg>
+                </div>
+                <div>
+                    <div
+                        style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#8b95a8">
+                        Protokół walidacyjny Tabela D</div>
+                    <div style="font-size:1.05rem;font-weight:700;color:#1a1d2e">Stabilność Termiczna - Drift & Spike
+                    </div>
+                </div>
+
+                <!-- Chevron Toggle -->
+                <div style="margin-left:auto;">
+                    <svg id="iconD"
+                        style="width:22px;height:22px;color:#a4adc5;transition:transform 0.3s;transform:rotate(-180deg);"
+                        fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Zawartość sekcji D -->
+            <div id="sectionDContent" style="display:none; padding-top:22px;">
+                <div th:if="${summaryStats == null}"
+                    style="text-align:center; padding:30px; border:1px dashed #e0e7ff; border-radius:10px; color:#8b95a8;">
+                    Brak danych stabilności.
+                </div>
+
+                <div th:if="${summaryStats != null}">
+                    <!-- Rząd kafelków D.1-D.6 Mix -->
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
+
+                        <!-- D.6 Dominująca klasyfikacja -->
+                        <div
+                            th:style="'background:' +
+                            (${summaryStats.dominantDriftClassification == null} ? '#f8f9fb' :
+                             (${summaryStats.dominantDriftClassification == 'STABLE'} ? '#f0f7f4' :
+                              (${summaryStats.dominantDriftClassification == 'DRIFT'} ? '#fdf8f2' :
+                               (${summaryStats.dominantDriftClassification == 'SPIKE'} ? '#fef5f5' : '#f4f4fb')))) + ';border-radius:10px;padding:20px;border:1px solid ' +
+                            (${summaryStats.dominantDriftClassification == null} ? '#e2e8f0' :
+                             (${summaryStats.dominantDriftClassification == 'STABLE'} ? '#d0eede' :
+                              (${summaryStats.dominantDriftClassification == 'DRIFT'} ? '#f5dfc0' :
+                               (${summaryStats.dominantDriftClassification == 'SPIKE'} ? '#fce0e0' : '#e0e0f8')))) + ';text-align:center;'">
+                            <div
+                                style="font-size:.68rem;font-weight:600;color:#8b95a8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                                Klasyfikacja (moda)</div>
+                            <div th:style="'font-size:1.5rem;font-weight:700;line-height:1.2;color:' +
+                                (${summaryStats.dominantDriftClassification == null} ? '#8b95a8' :
+                                 (${summaryStats.dominantDriftClassification == 'STABLE'} ? '#3d8a6e' :
+                                  (${summaryStats.dominantDriftClassification == 'DRIFT'} ? '#c08850' :
+                                   (${summaryStats.dominantDriftClassification == 'SPIKE'} ? '#c06060' : '#6568b8'))))"
+                                th:text="${summaryStats.formattedDominantClassification}">–</div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">dominująca w siatce</div>
+                        </div>
+
+                        <!-- D.1 Max Abs Trend -->
+                        <div
+                            th:style="'background:' +
+                            (${summaryStats.maxAbsTrendCoefficient == null} ? '#f8f9fb' :
+                             (${summaryStats.maxAbsTrendCoefficient &lt; 0.1} ? '#f0f7f4' :
+                              (${summaryStats.maxAbsTrendCoefficient &lt; 0.5} ? '#f5f9f0' : '#fdf8f2'))) + ';border-radius:10px;padding:20px;border:1px solid ' +
+                            (${summaryStats.maxAbsTrendCoefficient == null} ? '#e2e8f0' :
+                             (${summaryStats.maxAbsTrendCoefficient &lt; 0.1} ? '#d0eede' :
+                              (${summaryStats.maxAbsTrendCoefficient &lt; 0.5} ? '#dce8c8' : '#f5dfc0'))) + ';text-align:center;'">
+                            <div
+                                style="font-size:.68rem;font-weight:600;color:#8b95a8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                                Max Dryftu (worst)</div>
+                            <div th:style="'font-size:1.5rem;font-weight:700;line-height:1;color:' +
+                                (${summaryStats.maxAbsTrendCoefficient == null} ? '#8b95a8' :
+                                 (${summaryStats.maxAbsTrendCoefficient &lt; 0.1} ? '#3d8a6e' :
+                                  (${summaryStats.maxAbsTrendCoefficient &lt; 0.5} ? '#608838' : '#c08850')))"
+                                th:text="${summaryStats.formattedMaxAbsTrend}">–</div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">Seria #<span
+                                    th:text="${summaryStats.maxTrendSeriesId ?: '–'}"></span></div>
+                        </div>
+
+                        <!-- D.2 Średni Trend -->
+                        <div
+                            style="background:#f0f7f4;border-radius:10px;padding:20px;border:1px solid #d0eede;text-align:center;">
+                            <div
+                                style="font-size:.68rem;font-weight:600;color:#5aa888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                                Średni Dryftu (global)</div>
+                            <div style="font-size:1.5rem;font-weight:700;line-height:1;color:#3d8a6e;"
+                                th:text="${summaryStats.formattedAvgTrend}">–</div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">średnia ważona sesji</div>
+                        </div>
+                    </div>
+
+                    <!-- Dolny rząd D.3-D.5 -->
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+
+                        <!-- D.3 Spike'i -->
+                        <div
+                            th:style="'background:' + (${summaryStats.totalSpikeCount == null or summaryStats.totalSpikeCount == 0} ? '#f0f7f4' : '#fdf8f2') + ';border-radius:10px;padding:20px;border:1px solid ' + (${summaryStats.totalSpikeCount == null or summaryStats.totalSpikeCount == 0} ? '#d0eede' : '#f5dfc0') + ';text-align:center;'">
+                            <div
+                                th:style="'font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;color:' + (${summaryStats.totalSpikeCount == null or summaryStats.totalSpikeCount == 0} ? '#5aa888' : '#c08850')">
+                                Spike'i (suma)</div>
+                            <div th:style="'font-size:1.8rem;font-weight:700;line-height:1;color:' + (${summaryStats.totalSpikeCount == null or summaryStats.totalSpikeCount == 0} ? '#3d8a6e' : '#c08850')"
+                                th:text="${summaryStats.totalSpikeCount ?: 0}">0</div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">anomalii impulsowych</div>
+                        </div>
+
+                        <!-- D.4 Serie z driftem -->
+                        <div
+                            th:style="'background:' + (${summaryStats.seriesWithDriftCount == null or summaryStats.seriesWithDriftCount == 0} ? '#f0f7f4' : '#fdf8f2') + ';border-radius:10px;padding:20px;border:1px solid ' + (${summaryStats.seriesWithDriftCount == null or summaryStats.seriesWithDriftCount == 0} ? '#d0eede' : '#f5dfc0') + ';text-align:center;'">
+                            <div
+                                th:style="'font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;color:' + (${summaryStats.seriesWithDriftCount == null or summaryStats.seriesWithDriftCount == 0} ? '#5aa888' : '#c08850')">
+                                Serie z Driftem</div>
+                            <div th:style="'font-size:1.8rem;font-weight:700;line-height:1;color:' + (${summaryStats.seriesWithDriftCount == null or summaryStats.seriesWithDriftCount == 0} ? '#3d8a6e' : '#c08850')">
+                                <span th:text="${summaryStats.seriesWithDriftCount ?: 0}">0</span>
+                                <span style="font-size:1rem;color:#a4adc5;"> / <span
+                                        th:text="${summaryStats.totalSeriesCount ?: '?'}">?</span></span>
+                            </div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">DRIFT + MIXED</div>
+                        </div>
+
+                        <!-- D.5 Serie stabilne -->
+                        <div
+                            style="background:#f0f7f4;border-radius:10px;padding:20px;border:1px solid #d0eede;text-align:center;">
+                            <div
+                                style="font-size:.68rem;font-weight:600;color:#5aa888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                                Serie Stabilne</div>
+                            <div style="font-size:1.8rem;font-weight:700;line-height:1;color:#3d8a6e;">
+                                <span th:text="${summaryStats.seriesStableCount ?: 0}">0</span>
+                                <span style="font-size:1rem;color:#a4adc5;"> / <span
+                                        th:text="${summaryStats.totalSeriesCount ?: '?'}">?</span></span>
+                            </div>
+                            <div style="font-size:.72rem;color:#8b95a8;margin-top:6px">STABLE</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </th:block>
+</body>
+
+</html>

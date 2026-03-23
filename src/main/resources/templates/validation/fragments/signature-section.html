@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<body>
+<th:block th:fragment="section(signature, validation)">
+
+        <!-- Sekcja "Podpisz i zakończ" — widoczna dla DRAFT / APPROVED / REJECTED (brak podpisu) -->
+        <section th:if="${signature == null and validation.status.name() != 'COMPLETED'}"
+                 class="vcc-detail-section vcc-animate-fade-in" style="margin-bottom: 20px;">
+            <div class="vcc-detail-section__header">
+                <h2 class="vcc-detail-section__title">
+                    <i class="fas fa-shield-alt" style="font-size:.95rem;"></i>
+                    Podpisz i zakończ walidację
+                </h2>
+            </div>
+            <p style="font-size:.875rem;color:#8b95a8;margin-bottom:14px;line-height:1.6;">
+                Podpisanie elektroniczne jest <strong style="color:#1a1d2e;">nieodwracalne</strong>. Status zmieni się na
+                <strong style="color:#1a1d2e;">Zakończona</strong>, a formularz zostanie zaplombowany certyfikatem organizacji
+                (zgodnie z GMP Annex 11 §12).
+            </p>
+            <button type="button" onclick="document.getElementById('signOverlay').style.display='flex'"
+                class="vcc-btn--detail-primary" style="border:none;cursor:pointer;font-family:inherit;display:inline-flex;gap:8px;align-items:center;">
+                <i class="fas fa-shield-alt" style="font-size:.85rem;"></i>
+                Podpisz elektronicznie...
+            </button>
+        </section>
+
+        <!-- Sekcja "Podpis elektroniczny" — widoczna po podpisaniu -->
+        <section th:if="${signature != null}" class="vcc-detail-section vcc-animate-fade-in" style="margin-bottom: 20px;">
+            <div class="vcc-detail-section__header">
+                <h2 class="vcc-detail-section__title">
+                    <i class="fas fa-shield-alt" style="font-size:.95rem;"></i>
+                    Podpis elektroniczny
+                </h2>
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:16px;
+                             font-size:.78rem;font-weight:600;background:#e8f4ee;color:#3d8a6e;margin-left:auto;">
+                    <i class="fas fa-check" style="font-size:.65rem;"></i> Podpisano
+                </span>
+            </div>
+
+            <div class="vcc-detail-grid" style="margin-bottom:14px;">
+                <div class="vcc-detail-cell">
+                    <span class="vcc-detail-key">Podpisano przez</span>
+                    <span class="vcc-detail-value" th:text="${signature.signedBy}">---</span>
+                </div>
+                <div class="vcc-detail-cell">
+                    <span class="vcc-detail-key">Data i czas podpisu</span>
+                    <span class="vcc-detail-value vcc-detail-value--mono"
+                        th:text="${#temporals.format(signature.signedAt,'dd.MM.yyyy HH:mm:ss')}">---</span>
+                </div>
+                <div class="vcc-detail-cell" style="grid-column:1/-1;">
+                    <span class="vcc-detail-key">Oświadczenie (signing intent)</span>
+                    <span class="vcc-detail-value" th:text="${signature.signingIntent}">---</span>
+                </div>
+                <div class="vcc-detail-cell">
+                    <span class="vcc-detail-key">Certyfikat (DN)</span>
+                    <span class="vcc-detail-value vcc-detail-value--mono" style="font-size:.8rem;word-break:break-all;"
+                        th:text="${signature.certSubject}">---</span>
+                </div>
+                <div class="vcc-detail-cell">
+                    <span class="vcc-detail-key">Nr seryjny certyfikatu</span>
+                    <span class="vcc-detail-value vcc-detail-value--mono" th:text="${signature.certSerial}">---</span>
+                </div>
+            </div>
+
+            <div style="background:#f8f9fb;border:1px solid #e8eaf0;border-radius:10px;padding:14px 18px;margin-bottom:14px;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                    <i class="fas fa-shield-alt" style="font-size:.75rem;color:#7d93f7;"></i>
+                    <span style="font-size:.78rem;font-weight:600;color:#4a6cf7;">Hash SHA-256 podpisanego PDF</span>
+                </div>
+                <div style="font-family:'DM Mono',monospace;font-size:.72rem;word-break:break-all;
+                            color:#8b95a8;margin-top:6px;line-height:1.5;"
+                    th:text="${signature.documentHash}"></div>
+            </div>
+
+            <a th:href="@{/validations/{id}/signed-pdf(id=${validation.id})}"
+               class="vcc-btn--detail-outline"
+               style="display:inline-flex;gap:8px;align-items:center;text-decoration:none;">
+                <i class="fas fa-file-pdf" style="font-size:.85rem;"></i>
+                Pobierz podpisany PDF
+            </a>
+        </section>
+
+</th:block>
+</body>
+</html>

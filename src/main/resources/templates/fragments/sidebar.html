@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<body>
+
+    <!-- ====================================================================
+         Dark Sidebar Navigation
+         Usage: <aside th:replace="~{fragments/sidebar :: sidebar(activeItem)}">
+         activeItem: 'dashboard', 'devices', 'recorders', 'materials',
+                     'measurements', 'validations', 'wizard', 'companies',
+                     'departments', 'laboratories', 'users', 'audit',
+                     'certificates', 'tsa'
+         ==================================================================== -->
+
+    <aside th:fragment="sidebar(activeItem)" class="vcc-sidebar" id="vccSidebar">
+
+        <!-- Brand -->
+        <a th:href="@{/}" class="vcc-sidebar__brand">
+            <img th:src="@{/images/vcc-logo.jpg}" alt="VCC" />
+            <span class="vcc-sidebar__brand-text"><span>VCC</span> System</span>
+        </a>
+
+        <!-- Navigation -->
+        <nav class="vcc-sidebar__nav">
+
+            <!-- Podstawowe -->
+            <p class="vcc-sidebar__section-label">Menu</p>
+
+            <a th:href="@{/}"
+               class="vcc-sidebar__link"
+               th:classappend="${activeItem == 'dashboard'} ? 'vcc-sidebar__link--active' : ''">
+                <i class="fas fa-th-large"></i>
+                Dashboard
+            </a>
+
+            <a th:href="@{/devices}"
+               class="vcc-sidebar__link"
+               th:classappend="${activeItem == 'devices'} ? 'vcc-sidebar__link--active' : ''">
+                <i class="fas fa-cube"></i>
+                Urządzenia
+            </a>
+
+            <a th:href="@{/recorders}"
+               class="vcc-sidebar__link"
+               th:classappend="${activeItem == 'recorders'} ? 'vcc-sidebar__link--active' : ''">
+                <i class="fas fa-thermometer-half"></i>
+                Rejestratory
+            </a>
+
+            <a th:href="@{/material-types}"
+               class="vcc-sidebar__link"
+               th:classappend="${activeItem == 'materials'} ? 'vcc-sidebar__link--active' : ''">
+                <i class="fas fa-boxes-stacked"></i>
+                Typy materiałów
+            </a>
+
+            <!-- Procesy -->
+            <p class="vcc-sidebar__section-label">Procesy</p>
+
+            <a th:href="@{/measurements}"
+               class="vcc-sidebar__link"
+               th:classappend="${activeItem == 'measurements'} ? 'vcc-sidebar__link--active' : ''">
+                <i class="fas fa-chart-line"></i>
+                Serie pomiarowe
+            </a>
+
+            <a th:href="@{/validations}"
+               class="vcc-sidebar__link"
+               th:classappend="${activeItem == 'validations'} ? 'vcc-sidebar__link--active' : ''">
+                <i class="fas fa-clipboard-check"></i>
+                Walidacje
+            </a>
+
+            <a th:href="@{/wizard/}"
+               class="vcc-sidebar__link"
+               th:classappend="${activeItem == 'wizard'} ? 'vcc-sidebar__link--active' : ''">
+                <i class="fas fa-bolt"></i>
+                Wizard
+            </a>
+
+            <!-- Organizacja -->
+            <div sec:authorize="hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_COMPANY_ADMIN')">
+                <p class="vcc-sidebar__section-label">Organizacja</p>
+
+                <a th:href="@{/companies}"
+                   class="vcc-sidebar__link"
+                   th:classappend="${activeItem == 'companies'} ? 'vcc-sidebar__link--active' : ''">
+                    <i class="fas fa-building"></i>
+                    Firmy
+                </a>
+
+                <a th:href="@{/departments}"
+                   class="vcc-sidebar__link"
+                   th:classappend="${activeItem == 'departments'} ? 'vcc-sidebar__link--active' : ''">
+                    <i class="fas fa-sitemap"></i>
+                    Działy
+                </a>
+
+                <a th:href="@{/laboratories}"
+                   class="vcc-sidebar__link"
+                   th:classappend="${activeItem == 'laboratories'} ? 'vcc-sidebar__link--active' : ''">
+                    <i class="fas fa-flask"></i>
+                    Pracownie
+                </a>
+            </div>
+
+            <!-- Administracja -->
+            <div sec:authorize="hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_COMPANY_ADMIN', 'ROLE_ADMIN')">
+                <p class="vcc-sidebar__section-label">Administracja</p>
+
+                <a th:href="@{/users}"
+                   class="vcc-sidebar__link"
+                   th:classappend="${activeItem == 'users'} ? 'vcc-sidebar__link--active' : ''">
+                    <i class="fas fa-users"></i>
+                    Użytkownicy
+                </a>
+
+                <a th:href="@{/admin/audit}"
+                   class="vcc-sidebar__link"
+                   th:classappend="${activeItem == 'audit'} ? 'vcc-sidebar__link--active' : ''">
+                    <i class="fas fa-scroll"></i>
+                    Dziennik Audytu
+                </a>
+
+                <a th:href="@{/certificates}"
+                   class="vcc-sidebar__link"
+                   th:classappend="${activeItem == 'certificates'} ? 'vcc-sidebar__link--active' : ''"
+                   sec:authorize="hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_COMPANY_ADMIN')">
+                    <i class="fas fa-key"></i>
+                    Certyfikaty
+                </a>
+
+                <a th:href="@{/admin/tsa/status}"
+                   class="vcc-sidebar__link"
+                   th:classappend="${activeItem == 'tsa'} ? 'vcc-sidebar__link--active' : ''">
+                    <i class="fas fa-clock"></i>
+                    TSA Status
+                </a>
+            </div>
+
+        </nav>
+
+        <!-- Footer: User profile -->
+        <div class="vcc-sidebar__footer" sec:authorize="isAuthenticated()">
+            <div class="vcc-sidebar__user">
+                <div class="vcc-sidebar__avatar">
+                    <i class="fas fa-user" style="font-size:0.75rem;"></i>
+                </div>
+                <div class="vcc-sidebar__user-info">
+                    <div class="vcc-sidebar__user-name" sec:authentication="name">User</div>
+                    <div class="vcc-sidebar__user-role"
+                         th:if="${navCompanyContext != null}"
+                         th:text="${navCompanyContext}">Firma</div>
+                </div>
+                <div class="vcc-sidebar__user-actions">
+                    <a th:href="@{/profile/change-password}"
+                       class="vcc-sidebar__user-btn"
+                       title="Profil i zmiana hasła">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                    <form th:action="@{/logout}" method="post" style="margin:0;">
+                        <button type="submit"
+                                class="vcc-sidebar__user-btn vcc-sidebar__user-btn--danger"
+                                title="Wyloguj się">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </aside>
+
+    <!-- Sidebar overlay (mobile) -->
+    <div th:fragment="sidebar-overlay" class="vcc-sidebar-overlay" id="vccSidebarOverlay"
+         onclick="closeSidebar()"></div>
+
+    <!-- Sidebar toggle JS (inline, no external deps) -->
+    <script th:fragment="sidebar-js">
+    (function() {
+        var sidebar = document.getElementById('vccSidebar');
+        var overlay = document.getElementById('vccSidebarOverlay');
+        var toggleBtn = document.getElementById('vccSidebarToggle');
+
+        function openSidebar() {
+            if (!sidebar || !overlay) return;
+            sidebar.classList.add('is-open');
+            overlay.classList.add('is-open');
+            requestAnimationFrame(function() {
+                overlay.classList.add('is-visible');
+            });
+        }
+
+        function closeSidebar() {
+            if (!sidebar || !overlay) return;
+            overlay.classList.remove('is-visible');
+            setTimeout(function() {
+                sidebar.classList.remove('is-open');
+                overlay.classList.remove('is-open');
+            }, 250);
+        }
+
+        // Expose globally for overlay onclick
+        window.openSidebar = openSidebar;
+        window.closeSidebar = closeSidebar;
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function() {
+                if (sidebar.classList.contains('is-open')) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            });
+        }
+
+        // Close on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && sidebar && sidebar.classList.contains('is-open')) {
+                closeSidebar();
+            }
+        });
+    })();
+    </script>
+
+</body>
+
+</html>

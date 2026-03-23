@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Validation Cold Control</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('dashboard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('dashboard', 'Witaj ponownie', true, null)}"></header>
+
+        <!-- Dashboard body -->
+        <main class="vcc-dashboard" style="padding-top: var(--sp-8);">
+            <div class="vcc-dashboard__inner">
+
+                <!-- Search Results Overlay (Initially hidden) -->
+                <div id="vccDashboardSearch" class="vcc-search-results-overlay" style="display: none; min-height: 400px;">
+                    <div class="vcc-search-results-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 class="vcc-section-title" style="margin: 0;">Wyniki wyszukiwania</h2>
+                        <button type="button" class="vcc-btn vcc-btn--ghost vcc-btn--sm" id="vccClearSearch">
+                            <i class="fas fa-times"></i> Wyczyść
+                        </button>
+                    </div>
+                    <div id="vccSearchResultsContainer">
+                        <!-- AJAX content goes here -->
+                        <div class="vcc-search-loading" style="text-align: center; padding: 3rem; opacity: 0.5;">
+                            <i class="fas fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <p>Szukanie...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Default Dashboard Content -->
+                <div id="vccDashboardDefault">
+
+                <!-- Metric Cards Row -->
+                <div class="vcc-metrics vcc-stagger">
+
+                    <!-- Active Recorders -->
+                    <a th:href="@{/recorders}" style="text-decoration:none;color:inherit;">
+                        <div class="vcc-metric-card vcc-metric-card--temp vcc-animate-slide-up">
+                            <div>
+                                <p class="vcc-metric-card__label">Aktywne rejestratory</p>
+                                <p class="vcc-metric-card__value" th:text="${recorderCount != null ? recorderCount : '--'}">--</p>
+                                <p class="vcc-metric-card__sub">Rejestratory w systemie</p>
+                            </div>
+                            <i class="fas fa-thermometer-half vcc-metric-card__icon"></i>
+                        </div>
+                    </a>
+
+                    <!-- Active Devices -->
+                    <a th:href="@{/devices}" style="text-decoration:none;color:inherit;">
+                        <div class="vcc-metric-card vcc-metric-card--devices vcc-animate-slide-up">
+                            <div>
+                                <p class="vcc-metric-card__label">Aktywne urządzenia</p>
+                                <p class="vcc-metric-card__value" th:text="${deviceCount != null ? deviceCount : '--'}">--</p>
+                                <p class="vcc-metric-card__sub">Urządzenia w systemie</p>
+                            </div>
+                            <i class="fas fa-cube vcc-metric-card__icon"></i>
+                        </div>
+                    </a>
+
+
+                    <!-- Measurement Series -->
+                    <a th:href="@{/measurements}" style="text-decoration:none;color:inherit;">
+                        <div class="vcc-metric-card vcc-metric-card--avg vcc-animate-slide-up">
+                            <div>
+                                <p class="vcc-metric-card__label">Serie pomiarowe</p>
+                                <p class="vcc-metric-card__value" th:text="${seriesCount != null ? seriesCount : '--'}">--</p>
+                                <p class="vcc-metric-card__sub"
+                                   th:text="${measurementPointsCount != null ? measurementPointsCount + ' pkt pomiarowych' : 'Punkty pomiarowe'}">
+                                    Punkty pomiarowe
+                                </p>
+                            </div>
+                            <i class="fas fa-wave-square vcc-metric-card__icon"></i>
+                        </div>
+                    </a>
+
+                    <!-- Validation Compliance -->
+                    <a th:href="@{/validations}" style="text-decoration:none;color:inherit;">
+                        <div class="vcc-metric-card vcc-metric-card--compliance vcc-animate-slide-up">
+                            <div>
+                                <p class="vcc-metric-card__label">Zgodność walidacji</p>
+                                <p class="vcc-metric-card__value" th:text="${validationCompliance != null ? validationCompliance + '%' : '--'}">--</p>
+                                <p class="vcc-metric-card__sub" th:text="${validationCount != null ? validationCount + ' walidacji łącznie' : 'Walidacje w systemie'}">Walidacje w systemie</p>
+                            </div>
+                            <i class="fas fa-shield-check vcc-metric-card__icon"></i>
+                        </div>
+                    </a>
+
+                </div>
+
+                <!-- Wizard Development Notice -->
+
+
+                <!-- Last Validation Panel — hidden if no validations -->
+                <div th:if="${lastValidationSummary != null}"
+                     class="vcc-chart-card vcc-animate-fade-in"
+                     style="padding: 0; overflow: hidden;">
+
+                    <!-- Header -->
+                    <div class="vcc-chart-card__header"
+                         style="padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                        <h3 class="vcc-chart-card__title">
+                            <i class="fas fa-chart-bar" style="color: var(--vcc-primary); margin-right: 8px;"></i>
+                            Ostatnia Walidacja —
+                            <span class="vcc-badge vcc-badge--neutral" style="margin-left:6px;"
+                                  th:text="${lastValidationSummary.deviceName}">Urządzenie</span>
+                            &nbsp;
+                            <span style="font-size:0.8rem; opacity:0.6; font-weight:400;"
+                                  th:text="${lastValidationSummary.validationDate}">01.01.2026</span>
+                        </h3>
+                        <a class="vcc-btn vcc-btn--ghost vcc-btn--sm"
+                           th:href="@{/validations/{id}(id=${lastValidationSummary.validationId})}">
+                            <i class="fas fa-external-link-alt"></i> Szczegóły
+                        </a>
+                    </div>
+
+                    <!-- Split layout: Chart | 3D Map -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; min-height:320px;">
+
+                        <!-- LEFT: Bar chart - average temperature per position -->
+                        <div style="padding: 1.25rem 1rem 1.25rem 1.5rem; border-right: 1px solid rgba(255,255,255,0.08);">
+                            <p style="font-size:0.75rem; opacity:0.5; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.75rem;">
+                                Śr. temperatura wg pozycji [°C]
+                            </p>
+                            <canvas id="lastValidationChart" style="max-height:280px;"></canvas>
+                        </div>
+
+                        <!-- RIGHT: Animated 3D device map -->
+                        <div style="padding: 1.25rem 1.5rem 1.25rem 1rem; display:flex; flex-direction:column; align-items:center;">
+                            <p style="font-size:0.75rem; opacity:0.5; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.75rem; align-self:flex-start;">
+                                Mapa przestrzenna rejestratora [siatka 3×3×3]
+                            </p>
+                            <canvas id="device3DMap" style="width:100%; max-width:340px; height:260px;"></canvas>
+                            <div style="display:flex; gap:1rem; margin-top:0.5rem; font-size:0.7rem; opacity:0.6;">
+                                <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#667eea;margin-right:4px;"></span>niższe T</span>
+                                <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#8b5cf6;margin-right:4px;"></span>środkowe T</span>
+                                <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#764ba2;margin-right:4px;"></span>wyższe T</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions (card grid from original layout) -->
+                <h2 class="vcc-section-title">Szybki dostęp</h2>
+                <div class="vcc-card-grid vcc-stagger" style="margin-bottom: var(--sp-10);">
+
+                    <a th:href="@{/devices}" class="vcc-dash-card vcc-dash-card--devices vcc-animate-slide-up">
+                        <div class="vcc-dash-card__icon">
+                            <i class="fas fa-cube"></i>
+                        </div>
+                        <h3 class="vcc-dash-card__title">Urządzenia</h3>
+                        <p class="vcc-dash-card__desc">Zarządzanie urządzeniami chłodniczymi i ich parametrami</p>
+                    </a>
+
+                    <a th:href="@{/recorders}" class="vcc-dash-card vcc-dash-card--recorders vcc-animate-slide-up">
+                        <div class="vcc-dash-card__icon">
+                            <i class="fas fa-thermometer-half"></i>
+                        </div>
+                        <h3 class="vcc-dash-card__title">Rejestratory TESTO</h3>
+                        <p class="vcc-dash-card__desc">Rejestratory temperatury i ich wzorcowania</p>
+                    </a>
+
+                    <a th:href="@{/validations}" class="vcc-dash-card vcc-dash-card--validations vcc-animate-slide-up">
+                        <div class="vcc-dash-card__icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <h3 class="vcc-dash-card__title">Walidacje</h3>
+                        <p class="vcc-dash-card__desc">Walidacje urządzeń, raporty i podpisy elektroniczne</p>
+                    </a>
+
+                    <a th:href="@{/wizard/}" class="vcc-dash-card vcc-dash-card--wizard vcc-animate-slide-up">
+                        <div class="vcc-dash-card__icon">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <h3 class="vcc-dash-card__title">Kreator Walidacji</h3>
+                        <p class="vcc-dash-card__desc">Wieloetapowy kreator walidacji OQ / PQ / Mapowanie</p>
+                    </a>
+
+                </div> <!-- End of vcc-card-grid -->
+                </div>
+                <div class="vcc-flash vcc-flash--info vcc-animate-fade-in" style="margin-bottom: 2rem;">
+                    <i class="fas fa-wrench"></i>
+                    <span>
+                        <strong>Kreator Walidacji</strong> — funkcjonalność jest w trakcie projektowania i optymalizacji. Wkrótce będzie dostępna pełna wsparcie dla procedur OQ/PQ.
+                        <a href="/validations" style="color: var(--vcc-primary); text-decoration: underline; margin-left: 8px;">Przejdź do walidacji →</a>
+                    </span>
+                </div><!-- End of vccDashboardDefault -->
+
+                <!-- Recent Validations Table -->
+                <div class="vcc-recent-table vcc-animate-fade-in" th:if="${recentValidations != null and !recentValidations.isEmpty()}">
+                    <div class="vcc-recent-table__header">
+                        <h3 class="vcc-recent-table__title">
+                            <i class="fas fa-history" style="color: var(--vcc-primary); margin-right: 8px;"></i>
+                            Ostatnie walidacje
+                        </h3>
+                        <a th:href="@{/validations}" class="vcc-btn vcc-btn--outline vcc-btn--sm">
+                            <i class="fas fa-arrow-right"></i> Wszystkie
+                        </a>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data/Czas</th>
+                                <th>Urządzenie</th>
+                                <th>Typ</th>
+                                <th>Status</th>
+                                <th>Technik</th>
+                                <th>Akcja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="v : ${recentValidations}">
+                                <td th:text="${v.createdAt}">01.03.2026 14:30</td>
+                                <td th:text="${v.deviceName}">Zamrażarka Lab-01</td>
+                                <td th:text="${v.validationType}">OQ</td>
+                                <td>
+                                    <span class="vcc-badge"
+                                          th:classappend="${v.statusName == 'COMPLETED'} ? 'vcc-badge--success'
+                                                        : (${v.statusName == 'FAILED'} ? 'vcc-badge--danger'
+                                                        : (${v.statusName == 'IN_PROGRESS'} ? 'vcc-badge--warning'
+                                                        : 'vcc-badge--neutral'))"
+                                          th:text="${v.statusDisplay}">DRAFT</span>
+                                </td>
+                                <td th:text="${v.performedBy}">Jan Kowalski</td>
+                                <td>
+                                    <a th:href="@{/validations/{id}(id=${v.id})}"
+                                       class="vcc-btn vcc-btn--ghost vcc-btn--sm">
+                                        <i class="fas fa-eye"></i> Szczegóły
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Placeholder when no recent validations (static demo data) -->
+                <div class="vcc-recent-table vcc-animate-fade-in" th:if="${recentValidations == null or recentValidations.isEmpty()}">
+                    <div class="vcc-recent-table__header">
+                        <h3 class="vcc-recent-table__title">
+                            <i class="fas fa-history" style="color: var(--vcc-primary); margin-right: 8px;"></i>
+                            Ostatnie walidacje
+                        </h3>
+                        <a th:href="@{/validations}" class="vcc-btn vcc-btn--outline vcc-btn--sm">
+                            <i class="fas fa-arrow-right"></i> Wszystkie
+                        </a>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data/Czas</th>
+                                <th>Urządzenie</th>
+                                <th>Typ</th>
+                                <th>Status</th>
+                                <th>Technik</th>
+                                <th>Akcja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" style="text-align:center; color: var(--text-muted); padding: 32px 16px;">
+                                    <i class="fas fa-inbox" style="font-size:1.5rem; display:block; margin-bottom:8px; opacity:0.4;"></i>
+                                    Brak walidacji do wyświetlenia.
+                                    <a th:href="@{/validations}" style="display:block; margin-top:8px;">Przejdź do walidacji</a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Chart.js (self-hosted) -->
+    <script th:src="@{/js/vendor/chart.umd.min.js}"></script>
+
+    <!-- Sidebar toggle script -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <!-- Inject series data from Thymeleaf AFTER Chart.js — th:inline properly serializes Java List<Map> to JS -->
+    <script th:if="${lastValidationSummary != null}" th:inline="javascript">
+    /*<![CDATA[*/
+    window._vccSeries = /*[[${lastValidationSummary.series}]]*/ [];
+    /*]]>*/
+    </script>
+
+    <!-- Dashboard: Last Validation Chart + 3D Map (runs after Chart.js is loaded) -->
+    <script>
+    (function () {
+        var seriesData = window._vccSeries || [];
+        if (!seriesData.length) return;
+
+        var labels = [], avgs = [], mins = [], maxs = [], bgColors = [];
+        var minAll = Infinity, maxAll = -Infinity;
+
+        seriesData.forEach(function (s) {
+            if (s.isRef) return;
+            if (s.avg != null) { minAll = Math.min(minAll, s.avg); maxAll = Math.max(maxAll, s.avg); }
+        });
+
+        // Brand palette: indigo #667eea (102,126,234) → violet #764ba2 (118,75,162)
+        function tempColor(v, alpha) {
+            if (v == null || minAll === Infinity) return 'rgba(102,126,234,' + (alpha||1) + ')';
+            var range = maxAll - minAll;
+            var norm = range > 0 ? (v - minAll) / range : 0.5;
+            var r = Math.round(102 + norm * (118 - 102));
+            var g = Math.round(126 - norm * (126 - 75));
+            var b = Math.round(234 - norm * (234 - 162));
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + (alpha||1) + ')';
+        }
+
+        seriesData.forEach(function (s) {
+            if (s.isRef) return;
+            labels.push(s.label);
+            avgs.push(s.avg != null ? +parseFloat(s.avg).toFixed(2) : null);
+            mins.push(s.min != null ? +parseFloat(s.min).toFixed(2) : null);
+            maxs.push(s.max != null ? +parseFloat(s.max).toFixed(2) : null);
+            bgColors.push(tempColor(s.avg, 0.85));
+        });
+
+        // ── Chart.js Bar Chart ─────────────────────────────────────────────────
+        var ctx = document.getElementById('lastValidationChart');
+        if (ctx && typeof Chart !== 'undefined') {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'T śr. (°C)', data: avgs, backgroundColor: bgColors, borderRadius: 4, borderSkipped: false },
+                        { label: 'T min', data: mins, type: 'line', borderColor: 'rgba(139,92,246,0.7)', backgroundColor: 'transparent', pointRadius: 3, borderDash: [4,2], pointBackgroundColor: 'rgba(139,92,246,0.7)' },
+                        { label: 'T max', data: maxs, type: 'line', borderColor: 'rgba(102,126,234,0.9)', backgroundColor: 'transparent', pointRadius: 3, borderDash: [4,2], pointBackgroundColor: 'rgba(102,126,234,0.9)' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#a4adc5', font: { size: 11 }, usePointStyle: true, pointStyleWidth: 8 } },
+                        tooltip: {
+                            backgroundColor: '#1a1f3a',
+                            titleColor: '#e8eef5',
+                            bodyColor: '#a4adc5',
+                            borderColor: 'rgba(102,126,234,0.2)',
+                            borderWidth: 1,
+                            callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y + '°C'; } }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#a4adc5', font: { size: 10 } }, grid: { color: 'rgba(102,126,234,0.07)' } },
+                        y: { ticks: { color: '#a4adc5', font: { size: 10 }, callback: function(v){return v+'°C';} }, grid: { color: 'rgba(102,126,234,0.07)' } }
+                    }
+                }
+            });
+        }
+
+        // ── 3D Isometric Device Map ────────────────────────────────────────────
+        var canvas3D = document.getElementById('device3DMap');
+        if (!canvas3D) return;
+        var W = canvas3D.offsetWidth || 340;
+        var H = canvas3D.offsetHeight || 260;
+        canvas3D.width  = W * (window.devicePixelRatio || 1);
+        canvas3D.height = H * (window.devicePixelRatio || 1);
+        var c = canvas3D.getContext('2d');
+        c.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+        var CX = W / 2, CY = H * 0.45, TX = 28, TY = 16;
+
+        function iso(gx, gy, gz) {
+            return { sx: CX + (gx - gy) * TX, sy: CY + (gx + gy) * TY - gz * TY * 1.8 };
+        }
+        function lineISO(a, b) { c.beginPath(); c.moveTo(a.sx, a.sy); c.lineTo(b.sx, b.sy); c.stroke(); }
+
+        function dot(gx, gy, gz, color, lbl, r) {
+            var p = iso(gx, gy, gz);
+            r = r || 6;
+            c.beginPath(); c.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+            var g2 = c.createRadialGradient(p.sx-1, p.sy-1, 1, p.sx, p.sy, r);
+            g2.addColorStop(0, color); g2.addColorStop(1, color);
+            c.fillStyle = g2; c.fill();
+            c.strokeStyle = 'rgba(255,255,255,0.25)'; c.lineWidth = 0.8; c.stroke();
+            if (lbl) { c.fillStyle='#e2e8f0'; c.font='7px Inter,sans-serif'; c.textAlign='center'; c.fillText(lbl, p.sx, p.sy+2.5); }
+        }
+
+        var buildMap = {};
+        seriesData.forEach(function(s) {
+            if (!s.isRef && s.x && s.y && s.z) buildMap[s.x+','+s.y+','+s.z] = s;
+        });
+
+        var angle = 0;
+        function animate() {
+            angle += 0.008;
+            c.save(); c.translate(0, Math.sin(angle*2)*2);
+            c.clearRect(0, -10, W, H+20);
+            c.strokeStyle = 'rgba(148,163,184,0.14)'; c.lineWidth = 0.5;
+            for (var xi=1;xi<=3;xi++) for (var yi=1;yi<=3;yi++) for (var zi=1;zi<=3;zi++) {
+                var p = iso(xi,yi,zi);
+                if (xi<3) lineISO(p, iso(xi+1,yi,zi));
+                if (yi<3) lineISO(p, iso(xi,yi+1,zi));
+                if (zi<3) lineISO(p, iso(xi,yi,zi+1));
+            }
+            for (var zi=1;zi<=3;zi++) for (var yi=3;yi>=1;yi--) for (var xi=1;xi<=3;xi++) {
+                var key = xi+','+yi+','+zi;
+                var s = buildMap[key];
+                var col = 'rgba(100,116,139,0.3)', r = 5, lbl = '';
+                if (s) { col = tempColor(s.avg); r = 7 + Math.sin(angle*3+xi+yi+zi)*1.5; lbl = s.label; }
+                dot(xi, yi, zi, col, lbl, r);
+            }
+            seriesData.forEach(function(s,i) {
+                if (!s.isRef) return;
+                var px = CX+85, py = H-20-i*18;
+                c.fillStyle = tempColor(s.avg, 0.85); c.fillRect(px, py, 10, 10);
+                c.fillStyle='#94a3b8'; c.font='7px Inter,sans-serif'; c.textAlign='left';
+                c.fillText('REF '+(s.label||''), px+14, py+8);
+            });
+            c.restore();
+            requestAnimationFrame(animate);
+        }
+        animate();
+    })();
+    </script>
+
+
+
+    <!-- Dashboard Search Script -->
+    <script>
+    (function() {
+        const searchInput = document.querySelector('.vcc-search-bar__input');
+        const defaultContent = document.getElementById('vccDashboardDefault');
+        const searchOverlay = document.getElementById('vccDashboardSearch');
+        const resultsContainer = document.getElementById('vccSearchResultsContainer');
+        const clearBtn = document.getElementById('vccClearSearch');
+        
+        let searchTimeout = null;
+
+        function performSearch(query) {
+            if (!query || query.trim().length < 2) {
+                hideSearch();
+                return;
+            }
+
+            showSearch();
+            resultsContainer.innerHTML = `
+                <div class="vcc-search-loading" style="text-align: center; padding: 3rem; opacity: 0.5;">
+                    <i class="fas fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <p>Szukanie...</p>
+                </div>`;
+
+            fetch(`/search?q=${encodeURIComponent(query)}`)
+                .then(response => response.text())
+                .then(html => {
+                    resultsContainer.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error('Search error:', err);
+                    resultsContainer.innerHTML = '<div style="color: var(--vcc-danger); padding: 2rem; text-align: center;">Wystąpił błąd podczas wyszukiwania.</div>';
+                });
+        }
+
+        function showSearch() {
+            defaultContent.style.display = 'none';
+            searchOverlay.style.display = 'block';
+        }
+
+        function hideSearch() {
+            defaultContent.style.display = 'block';
+            searchOverlay.style.display = 'none';
+            searchInput.value = '';
+        }
+
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value;
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => performSearch(query), 400);
+        });
+
+        clearBtn.addEventListener('click', hideSearch);
+    })();
+    </script>
+
+</body>
+
+</html>

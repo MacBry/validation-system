@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+
+<body>
+    <th:block th:fragment="section(summaryStats, validation)">
+
+        <!-- ============================================================ -->
+        <!-- SEKCJA H — Budżet Niepewności (GUM-Compliant) -->
+        <!-- ============================================================ -->
+        <div style="
+            background:#fff;
+            border-radius:14px;
+            box-shadow:0 2px 12px rgba(102,126,234,.08);
+            padding:28px 32px;
+            margin-bottom:20px;">
+
+            <!-- Nagłówek sekcji -->
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:0; cursor:pointer; user-select:none;"
+                onclick="toggleSection('sectionHContent', 'iconH')">
+                <div style="
+                    width:36px; height:36px;
+                    background: linear-gradient(135deg,#9580c7,#8070a8);
+                    border-radius:9px;
+                    display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24" style="width:18px;height:18px">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <div>
+                    <div
+                        style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#8b95a8;margin-bottom:2px">
+                        SEKCJA H
+                    </div>
+                    <div style="font-size:1.05rem;font-weight:700;color:#1a1d2e">
+                        Budżet Niepewności Pomiaru (GUM)
+                    </div>
+                    <div style="font-size:.82rem;color:#8b95a8;margin-top:2px">
+                        Zgodność z ISO/IEC 17025 — JCGM 100:2008
+                    </div>
+                </div>
+                <div style="margin-left:auto;">
+                    <svg id="iconH"
+                        style="width:22px;height:22px;color:#a4adc5;transition:transform .2s ease; transform: rotate(-180deg);"
+                        fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Zawartość sekcji H -->
+            <div id="sectionHContent" style="display:none; padding-top:24px;">
+
+                <!-- Komunikat braku danych -->
+                <div th:if="${summaryStats == null or summaryStats.validationUncertaintyBudget == null}"
+                    style="text-align:center; padding:30px; border:1px dashed #e8eaf0; border-radius:10px; color:#8b95a8;">
+                    Brak danych dla budżetu niepewności.
+                </div>
+
+                <th:block th:if="${summaryStats != null and summaryStats.validationUncertaintyBudget != null}"
+                    th:with="budget=${summaryStats.validationUncertaintyBudget}">
+
+                    <!-- H.1 Niepewność rozszerzona i poziom ufności -->
+                    <div style="background:#f4f4fb;
+                           border-left:3px solid #9580c7; padding:20px; border-radius:10px; margin-bottom:20px;">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <div
+                                style="width:32px;height:32px;background:linear-gradient(135deg,#9580c7,#8070a8);border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                <svg fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"
+                                    style="width:16px;height:16px">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <div style="font-size:.95rem;font-weight:600;color:#1a1d2e;">Niepewność Rozszerzona (U)
+                                </div>
+                                <div style="font-size:.8rem;color:#8b95a8;">k = <span
+                                        th:text="${budget.coverageFactor}">2.0</span> —
+                                    Poziom ufności: <span th:text="${budget.confidenceLevel}">95.45</span>%</div>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;">
+                            <div>
+                                <div style="font-size:2.2rem;font-weight:700;color:#7c68b0;font-family:monospace;">
+                                    ±<span
+                                        th:text="${#numbers.formatDecimal(budget.expandedUncertainty, 1, 3)}">0.150</span>°C
+                                </div>
+                                <div style="font-size:.8rem;color:#8b95a8;margin-top:4px;">
+                                    U = k × u<sub>c</sub> (GUM 2.3.5)
+                                </div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:.75rem;color:#8b95a8;margin-bottom:4px;">Niepewność kombinowana
+                                </div>
+                                <div style="font-size:1.4rem;font-weight:600;color:#1a1d2e;font-family:monospace;">
+                                    <span
+                                        th:text="${#numbers.formatDecimal(budget.combinedUncertainty, 1, 3)}">0.075</span>°C
+                                </div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:.75rem;color:#8b95a8;margin-bottom:4px;">Stopnie swobody</div>
+                                <div style="font-size:1.4rem;font-weight:600;color:#1a1d2e;font-family:monospace;">
+                                    <span th:text="${budget.degreesOfFreedom}">∞</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- H.2 Komponenty niepewności Typ A i Typ B -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+
+                        <!-- Typ A (Statystyczne) -->
+                        <div style="background:#fff;border:1.5px solid #e8eaf0;border-radius:10px;padding:20px;">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                                <div
+                                    style="width:28px;height:28px;background:#5a9ec7;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                    <span style="color:#fff;font-size:.8rem;font-weight:700;">A</span>
+                                </div>
+                                <div>
+                                    <div style="font-size:.9rem;font-weight:600;color:#1a1d2e;">Typ A (Statystyczne)
+                                    </div>
+                                    <div style="font-size:.75rem;color:#8b95a8;">Obliczone z analizy statystycznej</div>
+                                </div>
+                            </div>
+
+                            <div style="background:#f2f8fc;border-radius:8px;padding:16px;">
+                                <div
+                                    style="font-size:1.6rem;font-weight:700;color:#4a7fb0;font-family:monospace;text-align:center;">
+                                    <span
+                                        th:text="${#numbers.formatDecimal(budget.statisticalUncertainty, 1, 4)}">0.0245</span>°C
+                                </div>
+                                <div style="font-size:.75rem;color:#5a9ec7;text-align:center;margin-top:4px;">
+                                    u<sub>A</sub> = σ / √n (GUM 4.2)
+                                </div>
+
+                                <!-- Progress bar pokazujący udział w budżecie -->
+                                <div style="margin-top:12px;"
+                                    th:with="contribution=${budget.statisticalUncertainty * budget.statisticalUncertainty / (budget.combinedUncertainty * budget.combinedUncertainty) * 100}">
+                                    <div style="font-size:.7rem;color:#8b95a8;margin-bottom:4px;">
+                                        Udział w budżecie: <span
+                                            th:text="${#numbers.formatDecimal(contribution, 1, 1)}">15.2</span>%
+                                    </div>
+                                    <div style="background:#e8f0f6;border-radius:4px;height:6px;overflow:hidden;">
+                                        <div style="background:#5a9ec7;height:100%;border-radius:4px;"
+                                            th:style="'width:' + ${#numbers.formatDecimal(contribution, 1, 1)} + '%;'">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Typ B (Systematyczne) -->
+                        <div style="background:#fff;border:1.5px solid #e8eaf0;border-radius:10px;padding:20px;">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                                <div
+                                    style="width:28px;height:28px;background:#c08850;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                    <span style="color:#fff;font-size:.8rem;font-weight:700;">B</span>
+                                </div>
+                                <div>
+                                    <div style="font-size:.9rem;font-weight:600;color:#1a1d2e;">Typ B (Systematyczne)
+                                    </div>
+                                    <div style="font-size:.75rem;color:#8b95a8;">RSS z komponentów Typ B</div>
+                                </div>
+                            </div>
+
+                            <!-- Oblicz RSS z komponentów Typ B -->
+                            <th:block th:with="typeBSquared=${(budget.calibrationUncertainty ?: 0) * (budget.calibrationUncertainty ?: 0) +
+                                                          (budget.resolutionUncertainty ?: 0) * (budget.resolutionUncertainty ?: 0) +
+                                                          (budget.systematicUncertainty ?: 0) * (budget.systematicUncertainty ?: 0) +
+                                                          (budget.stabilityUncertainty ?: 0) * (budget.stabilityUncertainty ?: 0) +
+                                                          (budget.spatialUncertainty ?: 0) * (budget.spatialUncertainty ?: 0)},
+                                   typeB=${T(java.lang.Math).sqrt(typeBSquared)}">
+
+                                <div style="background:#faf6f0;border-radius:8px;padding:16px;">
+                                    <div
+                                        style="font-size:1.6rem;font-weight:700;color:#a07040;font-family:monospace;text-align:center;">
+                                        <span th:text="${#numbers.formatDecimal(typeB, 1, 4)}">0.0687</span>°C
+                                    </div>
+                                    <div style="font-size:.75rem;color:#c08850;text-align:center;margin-top:4px;">
+                                        u<sub>B</sub> = √(Σu<sub>i</sub>²) (GUM 5.1.2)
+                                    </div>
+
+                                    <!-- Progress bar -->
+                                    <div style="margin-top:12px;"
+                                        th:with="contribution=${typeBSquared / (budget.combinedUncertainty * budget.combinedUncertainty) * 100}">
+                                        <div style="font-size:.7rem;color:#8b95a8;margin-bottom:4px;">
+                                            Udział w budżecie: <span
+                                                th:text="${#numbers.formatDecimal(contribution, 1, 1)}">84.8</span>%
+                                        </div>
+                                        <div style="background:#f0e8dc;border-radius:4px;height:6px;overflow:hidden;">
+                                            <div style="background:#c08850;height:100%;border-radius:4px;"
+                                                th:style="'width:' + ${#numbers.formatDecimal(contribution, 1, 1)} + '%;'">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </th:block>
+                        </div>
+                    </div>
+
+                    <!-- H.3 Szczegółowe komponenty Typ B -->
+                    <div
+                        style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:20px;">
+                        <div
+                            style="font-size:.9rem;font-weight:600;color:#1a1d2e;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                            <svg fill="none" stroke="#8b95a8" stroke-width="2" viewBox="0 0 24 24"
+                                style="width:18px;height:18px">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            Komponenty niepewności Typ B
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+
+                            <!-- Kalibracja -->
+                            <div style="background:#fff;border-radius:8px;padding:14px;border:1px solid #e2e8f0;">
+                                <div style="font-size:.75rem;color:#8b95a8;margin-bottom:4px;">Kalibracja</div>
+                                <div style="font-size:1.2rem;font-weight:600;color:#4a6cf7;font-family:monospace;">
+                                    <span
+                                        th:text="${#numbers.formatDecimal(budget.calibrationUncertainty, 1, 4)}">0.0500</span>°C
+                                </div>
+                                <div style="font-size:.7rem;color:#8b95a8;">Z certyfikatu</div>
+                            </div>
+
+                            <!-- Rozdzielczość -->
+                            <div style="background:#fff;border-radius:8px;padding:14px;border:1px solid #e2e8f0;">
+                                <div style="font-size:.75rem;color:#8b95a8;margin-bottom:4px;">Rozdzielczość</div>
+                                <div style="font-size:1.2rem;font-weight:600;color:#5aa888;font-family:monospace;">
+                                    <span
+                                        th:text="${#numbers.formatDecimal(budget.resolutionUncertainty, 1, 4)}">0.0289</span>°C
+                                </div>
+                                <div style="font-size:.7rem;color:#8b95a8;">δ/(2√3)</div>
+                            </div>
+
+                            <!-- Systematyczna -->
+                            <div style="background:#fff;border-radius:8px;padding:14px;border:1px solid #e2e8f0;">
+                                <div style="font-size:.75rem;color:#8b95a8;margin-bottom:4px;">Systematyczna</div>
+                                <div style="font-size:1.2rem;font-weight:600;color:#c06060;font-family:monospace;">
+                                    <span
+                                        th:text="${#numbers.formatDecimal(budget.systematicUncertainty, 1, 4)}">0.0141</span>°C
+                                </div>
+                                <div style="font-size:.7rem;color:#8b95a8;">Bias korekcji</div>
+                            </div>
+
+                            <!-- Stabilność -->
+                            <div style="background:#fff;border-radius:8px;padding:14px;border:1px solid #e2e8f0;">
+                                <div style="font-size:.75rem;color:#8b95a8;margin-bottom:4px;">Stabilność</div>
+                                <div style="font-size:1.2rem;font-weight:600;color:#7c68b0;font-family:monospace;">
+                                    <span
+                                        th:text="${#numbers.formatDecimal(budget.stabilityUncertainty, 1, 4)}">0.0100</span>°C
+                                </div>
+                                <div style="font-size:.7rem;color:#8b95a8;">Drift długoterm.</div>
+                            </div>
+
+                            <!-- Przestrzenna (tylko dla walidacji) -->
+                            <div th:if="${budget.spatialUncertainty != null}"
+                                style="background:#fff;border-radius:8px;padding:14px;border:1.5px solid #9580c7;">
+                                <div style="font-size:.75rem;color:#8b95a8;margin-bottom:4px;">Przestrzenna</div>
+                                <div style="font-size:1.2rem;font-weight:600;color:#9580c7;font-family:monospace;">
+                                    <span
+                                        th:text="${#numbers.formatDecimal(budget.spatialUncertainty, 1, 4)}">0.0350</span>°C
+                                </div>
+                                <div style="font-size:.7rem;color:#9580c7;font-weight:500;">Niejednorodność</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- H.4 Analiza dominujących źródeł -->
+                    <div style="background:#f0f7f4;
+                           border-left:3px solid #5aa888; padding:20px; border-radius:10px; margin-bottom:20px;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                            <svg fill="none" stroke="#5aa888" stroke-width="2" viewBox="0 0 24 24"
+                                style="width:18px;height:18px">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            <div>
+                                <div style="font-size:.9rem;font-weight:600;color:#1a1d2e;">Dominujące źródło
+                                    niepewności</div>
+                                <div style="font-size:.75rem;color:#8b95a8;">Identyfikacja komponentu o największym
+                                    udziale</div>
+                            </div>
+                        </div>
+
+                        <div style="background:#e8f4ee;border-radius:8px;padding:16px;">
+                            <div style="font-size:1.1rem;font-weight:600;color:#3d8a6e;">
+                                <span th:text="${budget.dominantUncertaintySource ?: 'Kalibracja'}">Kalibracja</span>
+                            </div>
+                            <div style="font-size:.8rem;color:#4a9070;margin-top:4px;"
+                                th:text="${budget.calculationNotes ?: 'Komponent kalibracyjny dominuje w budżecie niepewności.'}">
+                                Komponent kalibracyjny dominuje w budżecie niepewności.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- H.5 Informacje dodatkowe -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+                        <!-- Parametry obliczeń -->
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+                            <div style="font-size:.85rem;font-weight:600;color:#1a1d2e;margin-bottom:12px;">
+                                Parametry obliczeń
+                            </div>
+                            <div style="display:grid;gap:8px;font-size:.8rem;">
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span style="color:#8b95a8;">Typ budżetu:</span>
+                                    <span style="color:#1a1d2e;font-weight:500;"
+                                        th:text="${budget.budgetType}">VALIDATION</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span style="color:#8b95a8;">Współczynnik k:</span>
+                                    <span style="color:#1a1d2e;font-weight:500;font-family:monospace;"
+                                        th:text="${budget.coverageFactor}">2.00</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span style="color:#8b95a8;">Poziom ufności:</span>
+                                    <span style="color:#1a1d2e;font-weight:500;"
+                                        th:text="${budget.confidenceLevel + '%'}">95.45%</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span style="color:#8b95a8;">Stopnie swobody:</span>
+                                    <span style="color:#1a1d2e;font-weight:500;font-family:monospace;"
+                                        th:text="${budget.degreesOfFreedom ?: '∞'}">∞</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Zgodność z normami -->
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
+                            <div style="font-size:.85rem;font-weight:600;color:#1a1d2e;margin-bottom:12px;">
+                                Zgodność z normami
+                            </div>
+                            <div style="display:grid;gap:8px;font-size:.8rem;">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:6px;height:6px;background:#5aa888;border-radius:50%;"></div>
+                                    <span style="color:#3d8a6e;">GUM (JCGM 100:2008)</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:6px;height:6px;background:#5aa888;border-radius:50%;"></div>
+                                    <span style="color:#3d8a6e;">ISO/IEC 17025:2017</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:6px;height:6px;background:#5aa888;border-radius:50%;"></div>
+                                    <span style="color:#3d8a6e;">FDA 21 CFR Part 11</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:6px;height:6px;background:#5aa888;border-radius:50%;"></div>
+                                    <span style="color:#3d8a6e;">EU GDP Guidelines</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </th:block>
+            </div>
+        </div>
+
+    </th:block>
+</body>
+
+</html>

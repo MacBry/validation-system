@@ -52,32 +52,129 @@ CREATE TABLE uncertainty_budgets (
     CONSTRAINT chk_confidence_level CHECK (confidence_level > 0 AND confidence_level <= 100)
 );
 
--- Add resolution field to thermo_recorders
-ALTER TABLE thermo_recorders
-ADD COLUMN resolution DECIMAL(4,3) NULL COMMENT 'Rozdzielczość cyfrowa [°C] (np. 0.100 dla TESTO)';
+-- Add resolution field to thermo_recorders (idempotent)
+SET @dbname = DATABASE();
+SET @columnname = 'resolution';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE CAST(TABLE_SCHEMA AS BINARY) = CAST(@dbname AS BINARY)
+   AND CAST(TABLE_NAME AS BINARY) = CAST('thermo_recorders' AS BINARY)
+   AND CAST(COLUMN_NAME AS BINARY) = CAST(@columnname AS BINARY)) = 0,
+  'ALTER TABLE thermo_recorders ADD COLUMN resolution DECIMAL(4,3) NULL COMMENT "Rozdzielczość cyfrowa [°C] (np. 0.100 dla TESTO)"',
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Add uncertainty_budget_id to measurement_series
-ALTER TABLE measurement_series
-ADD COLUMN uncertainty_budget_id BIGINT NULL COMMENT 'Budżet niepewności dla tej serii';
+-- Add uncertainty_budget_id to measurement_series (idempotent)
+SET @columnname = 'uncertainty_budget_id';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE CAST(TABLE_SCHEMA AS BINARY) = CAST(@dbname AS BINARY)
+   AND CAST(TABLE_NAME AS BINARY) = CAST('measurement_series' AS BINARY)
+   AND CAST(COLUMN_NAME AS BINARY) = CAST(@columnname AS BINARY)) = 0,
+  'ALTER TABLE measurement_series ADD COLUMN uncertainty_budget_id BIGINT NULL COMMENT "Budżet niepewności dla tej serii"',
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Add uncertainty_budget_id to validation_summary_stats (for validation-level budget)
-ALTER TABLE validation_summary_stats
-ADD COLUMN validation_uncertainty_budget_id BIGINT NULL COMMENT 'Budżet niepewności na poziomie walidacji';
+-- Add uncertainty_budget_id to validation_summary_stats (for validation-level budget) (idempotent)
+SET @columnname = 'validation_uncertainty_budget_id';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE CAST(TABLE_SCHEMA AS BINARY) = CAST(@dbname AS BINARY)
+   AND CAST(TABLE_NAME AS BINARY) = CAST('validation_summary_stats' AS BINARY)
+   AND CAST(COLUMN_NAME AS BINARY) = CAST(@columnname AS BINARY)) = 0,
+  'ALTER TABLE validation_summary_stats ADD COLUMN validation_uncertainty_budget_id BIGINT NULL COMMENT "Budżet niepewności na poziomie walidacji"',
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Create foreign key constraints
-ALTER TABLE measurement_series
-ADD CONSTRAINT fk_measurement_series_uncertainty_budget
-FOREIGN KEY (uncertainty_budget_id) REFERENCES uncertainty_budgets(id);
+-- Create foreign key constraints (idempotent)
+SET @dbname = DATABASE();
+SET @constraintname = 'fk_measurement_series_uncertainty_budget';
+SET @tablename = 'measurement_series';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+   WHERE CAST(CONSTRAINT_SCHEMA AS BINARY) = CAST(@dbname AS BINARY)
+   AND CAST(CONSTRAINT_NAME AS BINARY) = CAST(@constraintname AS BINARY)) = 0,
+  CONCAT('ALTER TABLE ', @tablename, ' ADD CONSTRAINT ', @constraintname, ' FOREIGN KEY (uncertainty_budget_id) REFERENCES uncertainty_budgets(id)'),
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE validation_summary_stats
-ADD CONSTRAINT fk_validation_stats_uncertainty_budget
-FOREIGN KEY (validation_uncertainty_budget_id) REFERENCES uncertainty_budgets(id);
+SET @constraintname = 'fk_validation_stats_uncertainty_budget';
+SET @tablename = 'validation_summary_stats';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+   WHERE CAST(CONSTRAINT_SCHEMA AS BINARY) = CAST(@dbname AS BINARY)
+   AND CAST(CONSTRAINT_NAME AS BINARY) = CAST(@constraintname AS BINARY)) = 0,
+  CONCAT('ALTER TABLE ', @tablename, ' ADD CONSTRAINT ', @constraintname, ' FOREIGN KEY (validation_uncertainty_budget_id) REFERENCES uncertainty_budgets(id)'),
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Create indexes for performance
-CREATE INDEX idx_uncertainty_budgets_type ON uncertainty_budgets(budget_type);
-CREATE INDEX idx_uncertainty_budgets_created_at ON uncertainty_budgets(created_at);
-CREATE INDEX idx_measurement_series_uncertainty_budget ON measurement_series(uncertainty_budget_id);
-CREATE INDEX idx_validation_stats_uncertainty_budget ON validation_summary_stats(validation_uncertainty_budget_id);
+-- Create indexes for performance (idempotent)
+SET @indexname = 'idx_uncertainty_budgets_type';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+   WHERE CAST(TABLE_SCHEMA AS BINARY) = CAST(@dbname AS BINARY)
+   AND CAST(TABLE_NAME AS BINARY) = CAST('uncertainty_budgets' AS BINARY)
+   AND CAST(INDEX_NAME AS BINARY) = CAST(@indexname AS BINARY)) = 0,
+  CONCAT('CREATE INDEX ', @indexname, ' ON uncertainty_budgets(budget_type)'),
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @indexname = 'idx_uncertainty_budgets_created_at';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+   WHERE CAST(TABLE_SCHEMA AS BINARY) = CAST(@dbname AS BINARY)
+   AND CAST(TABLE_NAME AS BINARY) = CAST('uncertainty_budgets' AS BINARY)
+   AND CAST(INDEX_NAME AS BINARY) = CAST(@indexname AS BINARY)) = 0,
+  CONCAT('CREATE INDEX ', @indexname, ' ON uncertainty_budgets(created_at)'),
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @indexname = 'idx_measurement_series_uncertainty_budget';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+   WHERE CAST(TABLE_SCHEMA AS BINARY) = CAST(@dbname AS BINARY)
+   AND CAST(TABLE_NAME AS BINARY) = CAST('measurement_series' AS BINARY)
+   AND CAST(INDEX_NAME AS BINARY) = CAST(@indexname AS BINARY)) = 0,
+  CONCAT('CREATE INDEX ', @indexname, ' ON measurement_series(uncertainty_budget_id)'),
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @indexname = 'idx_validation_stats_uncertainty_budget';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+   WHERE CAST(TABLE_SCHEMA AS BINARY) = CAST(@dbname AS BINARY)
+   AND CAST(TABLE_NAME AS BINARY) = CAST('validation_summary_stats' AS BINARY)
+   AND CAST(INDEX_NAME AS BINARY) = CAST(@indexname AS BINARY)) = 0,
+  CONCAT('CREATE INDEX ', @indexname, ' ON validation_summary_stats(validation_uncertainty_budget_id)'),
+  'SELECT 1'
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Set default resolution values based on recorder model
 UPDATE thermo_recorders

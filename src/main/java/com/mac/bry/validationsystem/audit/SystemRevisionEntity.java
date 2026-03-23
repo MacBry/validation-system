@@ -32,7 +32,7 @@ public class SystemRevisionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @RevisionNumber
-    @Column(name = "REV")
+    @Column(name = "id")
     private int id;
 
     /**
@@ -40,7 +40,7 @@ public class SystemRevisionEntity {
      * Envers wypełnia to pole automatycznie.
      */
     @RevisionTimestamp
-    @Column(name = "REVTSTMP")
+    @Column(name = "timestamp")
     private long timestamp;
 
     @Column(name = "user_id")

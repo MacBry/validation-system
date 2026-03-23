@@ -2,6 +2,7 @@ package com.mac.bry.validationsystem.security.config;
 
 import com.mac.bry.validationsystem.security.filter.ForcedPasswordChangeFilter;
 import com.mac.bry.validationsystem.security.filter.SessionSecurityFilter;
+import com.mac.bry.validationsystem.security.filter.ContentSecurityPolicyNonceFilter;
 import com.mac.bry.validationsystem.security.handler.CsrfViolationHandler;
 import com.mac.bry.validationsystem.security.handler.CustomAuthenticationFailureHandler;
 import com.mac.bry.validationsystem.security.handler.CustomAuthenticationSuccessHandler;

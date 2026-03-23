@@ -310,6 +310,17 @@
                     </suppressionFiles>
                 </configuration>
             </plugin>
+            
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>9.22.3</version>
+                <configuration>
+                    <url>jdbc:mysql://localhost:3306/validation_system?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=UTC&amp;allowPublicKeyRetrieval=true</url>
+                    <user>root</user>
+                    <password>admin</password>
+                </configuration>
+            </plugin>
         </plugins>
         
         <finalName>validation-system</finalName>

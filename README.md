@@ -1,211 +1,82 @@
-# 🚀 System Walidacji z Dekoderem Vi2
+# 🚀 Validation System V2 (Enterprise Edition)
 
-System do zarządzania walidacją urządzeń chłodniczych z obsługą plików .vi2 z rejestratorów TESTO.
+[![Java Version](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![License](https://img.shields.io/badge/License-Internal-blue.svg)](#)
 
-## ✅ Cechy
-
-- ✅ **Dekoder Vi2** - Parsowanie plików z rejestratorów TESTO
-- ✅ **Zarządzanie urządzeniami** - Lodówki, zamrażarki, chłodnie
-- ✅ **Serie pomiarowe** - Import i analiza danych temperaturowych
-- ✅ **Statystyki** - Min, max, średnia, granice alarmowe
-- ✅ **Interfejs WWW** - Bootstrap 5, responsywny design
-
-## 📋 Wymagania
-
-- **Java 17** lub nowsza
-- **Maven 3.6+**
-- **MySQL 8.0+**
-- **IntelliJ IDEA** lub Eclipse (opcjonalnie)
-
-## 🔧 Konfiguracja MySQL
-
-### Opcja 1: Automatyczne utworzenie bazy (ZALECANE)
-
-Aplikacja automatycznie utworzy bazę danych `validation_system` przy pierwszym uruchomieniu.
-
-**Upewnij się że MySQL działa i hasło root to `admin`:**
-
-```sql
--- Sprawdź czy możesz się zalogować:
-mysql -u root -p
-# Hasło: admin
-```
-
-Jeśli hasło jest inne, zmień w `src/main/resources/application.properties`:
-
-```properties
-spring.datasource.password=TWOJE_HASLO
-```
-
-### Opcja 2: Ręczne utworzenie bazy
-
-```sql
-mysql -u root -p
-
-CREATE DATABASE validation_system;
-USE validation_system;
-
--- Tabele zostaną utworzone automatycznie przez Hibernate
-```
-
-## 🚀 Uruchomienie
-
-### Metoda 1: Maven (zalecane)
-
-```bash
-cd validation-system-fresh
-mvn clean spring-boot:run
-```
-
-### Metoda 2: IntelliJ IDEA
-
-1. Otwórz projekt w IntelliJ
-2. Poczekaj aż Maven pobierze zależności
-3. Znajdź klasę `ValidationSystemApplication`
-4. Kliknij prawym → Run 'ValidationSystemApplication'
-
-### Metoda 3: JAR
-
-```bash
-mvn clean package
-java -jar target/validation-system-1.0.0.jar
-```
-
-## 🌐 Dostęp do aplikacji
-
-Po uruchomieniu otwórz przeglądarkę:
-
-```
-http://localhost:8080
-```
-
-## 📁 Upload plików .vi2
-
-1. Przejdź do: **Pomiary → Prześlij pliki .vi2**
-2. Wybierz pliki z rejestratora TESTO
-3. Kliknij "Prześlij"
-4. System automatycznie:
-   - Wydobędzie dane temperaturowe
-   - Obliczy statystyki
-   - Wygeneruje wykresy
-   - Zapisze w bazie danych
-
-## 📊 Format plików .vi2
-
-Obsługiwane pliki z rejestratorów TESTO:
-- Format: OLE2/CFB
-- Temperatury: -50°C do +50°C
-- Interwał: dowolny (domyślnie 3 godziny)
-- Liczba pomiarów: do 10000 punktów
-
-### Przykładowa nazwa pliku:
-```
-_58980778_2026_01_28_07_26_01.vi2
-  └─┬──┘  └────────┬────────────┘
-    │              └─ Data końca pomiarów
-    └─ Numer seryjny rejestratora
-```
-
-## 🔍 Struktura projektu
-
-```
-validation-system-fresh/
-├── src/main/java/com/mac/bry/validationsystem/
-│   ├── ValidationSystemApplication.java    # Główna klasa
-│   ├── measurement/
-│   │   ├── Vi2FileDecoder.java            # ⭐ DEKODER VI2
-│   │   ├── MeasurementSeries.java         # Encja serii
-│   │   ├── MeasurementPoint.java          # Encja punktu
-│   │   ├── MeasurementSeriesService.java  # Logika biznesowa
-│   │   └── MeasurementSeriesController.java # Kontroler REST
-│   ├── device/                             # Urządzenia chłodnicze
-│   ├── laboratory/                         # Pracownie
-│   └── calibration/                        # Świadectwa kalibracji
-├── src/main/resources/
-│   ├── application.properties              # Konfiguracja
-│   ├── templates/                          # Widoki Thymeleaf
-│   └── static/                             # CSS, JS, obrazy
-└── pom.xml                                 # Zależności Maven
-```
-
-## 🛠️ Rozwiązywanie problemów
-
-### Problem: `Access denied for user 'root'@'localhost'`
-
-**Rozwiązanie:**
-```sql
-mysql -u root -p
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'admin';
-FLUSH PRIVILEGES;
-```
-
-### Problem: `Table doesn't exist`
-
-**Rozwiązanie:**
-Usuń bazę i uruchom ponownie (Hibernate utworzy tabele):
-```sql
-DROP DATABASE validation_system;
-CREATE DATABASE validation_system;
-```
-
-### Problem: Port 8080 zajęty
-
-**Rozwiązanie:**
-Zmień port w `application.properties`:
-```properties
-server.port=8081
-```
-
-### Problem: Błąd parsowania pliku .vi2
-
-**Rozwiązanie:**
-1. Sprawdź czy plik to rzeczywiście format .vi2 z TESTO
-2. Zobacz logi w konsoli - dekoder podaje szczegóły błędu
-3. Plik może być uszkodzony - spróbuj ponownie wyeksportować z rejestratora
-
-## 📝 Logi
-
-Aplikacja loguje szczegółowe informacje o parsowaniu plików:
-
-```
-2026-02-06 14:00:00 INFO  Vi2FileDecoder : Rozpoczęcie parsowania pliku: _58980778...
-2026-02-06 14:00:00 DEBUG Vi2FileDecoder : Numer seryjny: 58980778
-2026-02-06 14:00:00 DEBUG Vi2FileDecoder : Strumień OLE2 zawiera 0 wartości, używam surowego pliku
-2026-02-06 14:00:00 DEBUG Vi2FileDecoder : Wykryto duży plik (5120 bajtów), szukanie początku danych
-2026-02-06 14:00:00 DEBUG Vi2FileDecoder : Znaleziono początek danych na offset: 2180
-2026-02-06 14:00:00 INFO  Vi2FileDecoder : Wyodrębniono 40 wartości temperatur
-2026-02-06 14:00:00 INFO  Vi2FileDecoder : Zakres temperatur: 4.0°C - 6.1°C, średnia: 4.948°C
-2026-02-06 14:00:00 INFO  Vi2FileDecoder : Utworzono 40 punktów pomiarowych z interwałem 10800 sekund (3.0 godzin)
-2026-02-06 14:00:00 INFO  Vi2FileDecoder : Pomyślnie sparsowano plik - 40 pomiarów od 2026-01-22 12:00:00 do 2026-01-27 09:00:00
-```
-
-## 🎯 Zgodność z TESTO
-
-Dekoder Vi2 został przetestowany z aplikacją TESTO i daje **identyczne wyniki**:
-
-| Parametr | TESTO | Nasz System | Status |
-|----------|-------|-------------|--------|
-| Liczba pomiarów | 40 | 40 | ✅ |
-| Min temperatura | 4.0°C | 4.0°C | ✅ |
-| Max temperatura | 6.1°C | 6.1°C | ✅ |
-| Średnia | 4.948°C | 4.948°C | ✅ |
-| Interwał | 3h | 3h | ✅ |
-| Okres | 22.01-27.01 | 22.01-27.01 | ✅ |
-
-## 📞 Wsparcie
-
-Jeśli masz problemy:
-1. Sprawdź logi w konsoli
-2. Sprawdź czy MySQL działa
-3. Sprawdź czy hasło w `application.properties` jest poprawne
-4. Sprawdź czy port 8080 jest wolny
-
-## 📄 Licencja
-
-Projekt wewnętrzny - wszelkie prawa zastrzeżone.
+A high-compliance web application designed for the pharmaceutical and laboratory sectors to manage, analyze, and validate cooling device performance. Features a proprietary binary decoder for TESTO `.vi2` data logger files.
 
 ---
 
-**Wersja:** 1.0.0 PRODUCTION READY  
-**Data:** 2026-02-06  
-**Status:** ✅ Gotowe do użycia
+## ✨ Key Features
+
+- 🛰️ **Proprietary Vi2 Decoder**: Parses complex OLE2/CFB binary streams from TESTO loggers with 100% accuracy compared to native software.
+- 📦 **Validation Wizard**: Step-by-step workflow (OQ/PQ) for qualifying fridges, freezers, and cold rooms.
+- 🛡️ **GMP Compliance**: Built-in Audit Trail, Electronic Signatures (TSA), and strict session security following FDA 21 CFR Part 11.
+- 📊 **Advanced Analytics**: Automatic calculation of stability, drift, and spike detection using specialized laboratory algorithms.
+- 📄 **Report Generation**: Fully automated PDF generation for validation packages and calibration certificates.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Backend**: Java 17, Spring Boot 3.x, Spring Security, Hibernate (Envers for Audit Trail).
+- **Database**: MySQL 8.0, Redis (Rate Limiting).
+- **Frontend**: Thymeleaf, Bootstrap 5, Highcharts (Data Visualization).
+- **Infrastructure**: Docker & Docker Compose.
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- JDK 17+
+- Maven 3.6+
+- Docker & Docker Compose
+
+### 1. Configure Secrets
+Create a `.env` file in the root directory (refer to `.env.example` if available):
+```env
+DB_PASSWORD=your_secure_password
+REDIS_PASSWORD=your_redis_password
+MAIL_PASSWORD=your_smtp_password
+```
+
+### 2. Launch Infrastructure
+```bash
+docker-compose up -d
+```
+
+### 3. Build & Run
+```bash
+mvn clean spring-boot:run
+```
+The application will be available at `https://localhost:8443`.
+
+---
+
+## 📂 Project Structure
+
+- `measurement/`: Core logic for `.vi2` binary parsing and temperature analysis.
+- `validation/`: Workflow engine for OQ/PQ processes.
+- `security/`: Advanced security filters and compliance-related access control.
+- `docs/`: GMP-required technical and functional specifications.
+
+---
+
+## 🔍 Technical Details: Vi2 Decoding
+
+The system decodes `.vi2` files by accessing internal OLE2 streams:
+- **Time Epoch**: 1961-07-09 01:30:00.
+- **Tick Resolution**: 131072 ticks per 24 hours.
+- **Data Block**: 8-byte sequences (4B Float32 Temperature + 4B Metadata Tick).
+
+For more details, see [Detailed Vi2 Specification](docs/DOKLADNY_DEKODER_VI2_V2.md).
+
+---
+
+## 📄 License
+Internal application. All rights reserved.
+
+**Version**: 2.12.0-ENTERPRISE  
+**Status**: ✅ Production Ready

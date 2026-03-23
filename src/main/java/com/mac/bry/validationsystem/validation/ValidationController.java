@@ -8,6 +8,7 @@ import com.mac.bry.validationsystem.measurement.RecorderPosition;
 import com.mac.bry.validationsystem.stats.ValidationSummaryStatsService;
 import com.mac.bry.validationsystem.security.repository.UserRepository;
 import com.mac.bry.validationsystem.security.service.AuditService;
+import com.mac.bry.validationsystem.security.util.UrlValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -326,7 +327,7 @@ public class ValidationController {
             RedirectAttributes redirectAttributes) {
         log.info("Aktualizacja statusu walidacji {} na {}", id, status);
 
-        String redirectTarget = returnUrl != null && !returnUrl.isEmpty()
+        String redirectTarget = (returnUrl != null && !returnUrl.isEmpty() && UrlValidator.isSafeInternalUrl(returnUrl))
                 ? "redirect:" + returnUrl
                 : "redirect:/validations/" + id;
 

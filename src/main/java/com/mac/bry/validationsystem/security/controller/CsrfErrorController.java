@@ -25,6 +25,10 @@ public class CsrfErrorController {
             @RequestParam(required = false) String returnUrl,
             Model model) {
 
+        // Validate returnUrl to prevent Open Redirect
+        String safeReturnUrl = com.mac.bry.validationsystem.security.util.UrlValidator.isSafeInternalUrl(returnUrl)
+                ? returnUrl : null;
+
         // Loguj że użytkownik został przekierowany na error page
         log.info("📄 CSRF Error Page: type={}, returnUrl={}, timestamp={}",
                 type, returnUrl, LocalDateTime.now());
@@ -35,7 +39,7 @@ public class CsrfErrorController {
 
         model.addAttribute("errorMessage", userMessage);
         model.addAttribute("technicalType", technicalType);
-        model.addAttribute("returnUrl", returnUrl);
+        model.addAttribute("returnUrl", safeReturnUrl);
         model.addAttribute("timestamp", LocalDateTime.now());
 
         return "error/csrf-error";

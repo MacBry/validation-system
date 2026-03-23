@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Krok 2 - Wybór urządzenia - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:replace="~{fragments/csrf-token :: csrf-meta}"></th:replace>
+    <th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:replace>
+    <style>
+        .wizard-container { max-width: 700px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex;
+            gap: var(--sp-4, 1rem);
+            justify-content: flex-end;
+            align-items: center;
+            padding-top: var(--sp-4, 1rem);
+            border-top: 1px solid var(--border-default, #e5e7ef);
+            flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 20px;
+            background: var(--surface-card, #fff);
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280);
+            text-decoration: none; cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 22px;
+            background: var(--vcc-primary, #667eea);
+            border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff;
+            cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+        .wizard-btn-next:disabled { opacity: 0.45; cursor: not-allowed; }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard kwalifikacji', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">Krok 2 — Wybór urządzenia</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:replace="~{wizard/fragments/wizard-nav :: wizard-nav(2, draft.stepLockFrom)}"></th:replace>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Wybór urządzenia chłodniczego</h2>
+                        <p class="wizard-step-header__desc">Wskaż urządzenie, którego dotyczy ta walidacja.</p>
+                    </div>
+
+                    <div class="vcc-form-section">
+                        <div class="vcc-form-row">
+                            <div>
+                                <label for="deviceId" class="vcc-form-label">
+                                    Urządzenie chłodnicze
+                                    <span class="vcc-required">*</span>
+                                </label>
+                                <select class="vcc-form-select" id="deviceId" name="coolingDeviceId" required>
+                                    <option value="">-- Wybierz urządzenie --</option>
+                                    <option th:each="device : ${devices}"
+                                            th:value="${device.id}"
+                                            th:text="${device.inventoryNumber + ' — ' + device.name}"
+                                            th:selected="${draft.coolingDevice != null && draft.coolingDevice.id == device.id}"></option>
+                                </select>
+                                <span class="vcc-form-hint">Wybierz urządzenie, dla którego będzie przeprowadzana kwalifikacja.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <a th:href="@{/wizard/{id}/back/1(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" class="wizard-btn-next" id="nextBtn" onclick="submitStep2()">
+                            Dalej <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript">
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function submitStep2() {
+            const selectedDeviceId = document.getElementById('deviceId').value;
+            if (!selectedDeviceId) {
+                alert('Proszę wybrać urządzenie.');
+                return;
+            }
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            if (!csrfToken || csrfToken === '') { csrfToken = getCookie('XSRF-TOKEN'); csrfHeader = 'X-XSRF-TOKEN'; }
+
+            const btn = document.getElementById('nextBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
+
+            const params = new URLSearchParams();
+            params.append('coolingDeviceId', selectedDeviceId);
+            if (csrfToken) params.append('_csrf', csrfToken);
+
+            const headers = { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' };
+            if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+            fetch('/wizard/' + draftId + '/api/step2', {
+                method: 'POST', headers: headers, body: params
+            }).then(async r => {
+                if (!r.ok) {
+                    const text = await r.text();
+                    try { const json = JSON.parse(text); throw new Error(json.message || 'Błąd serwera'); }
+                    catch(e) { throw new Error('Błąd HTTP ' + r.status + ': ' + text.substring(0, 100)); }
+                }
+                return r.json();
+            }).then(() => {
+                window.location.href = '/wizard/' + draftId + '/step/3';
+            }).catch(e => {
+                console.error('Error:', e);
+                alert('Błąd zapisu: ' + e.message);
+                btn.disabled = false;
+                btn.innerHTML = 'Dalej <i class="fas fa-arrow-right"></i>';
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Krok 6 - Serie pomiarowe - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:replace="~{fragments/csrf-token :: csrf-meta}"></th:replace>
+    <th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:replace>
+    <style>
+        .wizard-container { max-width: 960px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+
+        /* Upload panel */
+        .upload-panel {
+            border: 1.5px dashed var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-6, 1.5rem);
+            background: var(--surface-page, #f7f8fc);
+            margin-bottom: var(--sp-6, 1.5rem);
+        }
+        .upload-panel.is-open { display: block; }
+        .upload-panel.is-closed { display: none; }
+
+        .upload-panel__title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+            margin-bottom: var(--sp-4, 1rem);
+        }
+
+        .upload-panel__grid {
+            display: grid;
+            grid-template-columns: 1fr 140px auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .upload-panel select,
+        .upload-panel input[type="file"] {
+            height: 38px;
+            padding: 0 10px;
+            background: var(--surface-card, #fff);
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.83rem;
+            font-family: inherit;
+            color: var(--text-primary, #1a1f3a);
+            outline: none;
+            width: 100%;
+        }
+
+        .upload-panel input[type="file"] { padding: 6px 10px; height: auto; }
+
+        .upload-panel select:focus { border-color: var(--vcc-primary, #667eea); }
+
+        .btn-upload {
+            display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px;
+            background: var(--vcc-primary, #667eea); border: none;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s);
+            white-space: nowrap;
+        }
+        .btn-upload:hover:not(:disabled) { opacity: 0.88; }
+        .btn-upload:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-toggle-upload {
+            display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px;
+            background: none;
+            border: 1.5px solid var(--vcc-primary, #667eea);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.8rem; font-weight: 600; color: var(--vcc-primary, #667eea);
+            cursor: pointer;
+            transition: background var(--duration-fast, 0.15s);
+        }
+        .btn-toggle-upload:hover { background: rgba(102,126,234,0.06); }
+
+        /* Series table toolbar */
+        .series-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--sp-4, 1rem);
+        }
+        .series-toolbar__title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+        }
+
+        /* Badge ref */
+        .badge-ref {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 2px 8px;
+            background: #fef9c3;
+            color: #713f12;
+            border-radius: 99px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        @media (max-width: 660px) {
+            .upload-panel__grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard kwalifikacji', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">Krok 6 — Serie pomiarowe</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:replace="~{wizard/fragments/wizard-nav :: wizard-nav(6, draft.stepLockFrom)}"></th:replace>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Wybór serii pomiarowych</h2>
+                        <p class="wizard-step-header__desc">Zaznacz serie pomiarowe, które zostaną uwzględnione w raporcie walidacji. Możesz też wgrać nowe pliki .vi2.</p>
+                    </div>
+
+                    <!-- Upload panel (toggled) -->
+                    <div class="upload-panel is-closed" id="upload-section">
+                        <p class="upload-panel__title"><i class="fas fa-upload"></i> Wgraj nowe pliki .vi2</p>
+                        <form id="upload-form" enctype="multipart/form-data">
+                            <div class="upload-panel__grid">
+                                <div>
+                                    <label class="vcc-form-label" style="font-size:0.78rem; margin-bottom:4px;">Pliki .vi2</label>
+                                    <input type="file" name="files" multiple accept=".vi2" required>
+                                </div>
+                                <div>
+                                    <label class="vcc-form-label" style="font-size:0.78rem; margin-bottom:4px;">Pozycja</label>
+                                    <select name="recorderPosition" id="pos-select">
+                                        <option th:each="p : ${T(com.mac.bry.validationsystem.measurement.RecorderPosition).values()}"
+                                                th:value="${p}" th:text="${p}"></option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+                                        <input class="vcc-form-check-input" type="checkbox" name="isReferenceRecorder" id="isRef">
+                                        <label class="vcc-form-label" for="isRef" style="font-size:0.78rem; margin:0;">Referencyjny</label>
+                                    </div>
+                                    <button type="button" class="btn-upload" id="uploadBtn" onclick="uploadFiles()">
+                                        <i class="fas fa-upload"></i> Wgraj
+                                    </button>
+                                </div>
+                            </div>
+                            <div style="margin-top:10px;">
+                                <button type="button" class="wizard-btn-back" style="font-size:0.78rem; padding:6px 12px;" onclick="toggleUpload()">
+                                    Anuluj
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Toolbar -->
+                    <div class="series-toolbar">
+                        <span class="series-toolbar__title">Dostępne serie pomiarowe</span>
+                        <button class="btn-toggle-upload" onclick="toggleUpload()">
+                            <i class="fas fa-plus"></i> Dodaj pliki .vi2
+                        </button>
+                    </div>
+
+                    <!-- Warning if no series -->
+                    <div id="no-series-alert" th:if="${#lists.isEmpty(series)}"
+                         class="vcc-flash vcc-flash--warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Brak dostępnych serii pomiarowych dla tego urządzenia. Wgraj pliki .vi2, aby kontynuować.</span>
+                    </div>
+
+                    <!-- Series table -->
+                    <div class="vcc-table-wrap" id="series-table-wrap"
+                         th:style="${#lists.isEmpty(series) ? 'display:none' : ''}">
+                        <table class="vcc-table" id="series-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:44px;">Wybór</th>
+                                    <th>Data / Plik</th>
+                                    <th>Rejestrator (SN)</th>
+                                    <th>Pozycja</th>
+                                    <th>Czas</th>
+                                    <th>Tavg / MKT</th>
+                                </tr>
+                            </thead>
+                            <tbody id="series-tbody">
+                                <tr th:each="s : ${series}">
+                                    <td>
+                                        <input type="checkbox" class="series-checkbox"
+                                               th:value="${s.id}"
+                                               th:checked="${draft.selectedSeriesIds != null and #lists.contains(draft.selectedSeriesIds, s.id)}"
+                                               style="accent-color: var(--vcc-primary); width:16px; height:16px; cursor:pointer;">
+                                    </td>
+                                    <td>
+                                        <span class="vcc-table__primary"
+                                              th:text="${#temporals.format(s.firstMeasurementTime, 'yyyy-MM-dd HH:mm')}">Date</span>
+                                        <span class="vcc-table__secondary"
+                                              th:text="${s.originalFilename}">filename.vi2</span>
+                                    </td>
+                                    <td class="vcc-table__mono" th:text="${s.recorderSerialNumber}">SN12345</td>
+                                    <td>
+                                        <span th:if="${s.isReferenceRecorder}" class="badge-ref">
+                                            <i class="fas fa-star" style="font-size:0.6rem;"></i> REF
+                                        </span>
+                                        <span th:if="${!s.isReferenceRecorder}" th:text="${s.recorderPosition}">A1</span>
+                                    </td>
+                                    <td class="vcc-table__muted"
+                                        th:text="${s.measurementCount * s.measurementIntervalMinutes} + ' min'">60 min</td>
+                                    <td>
+                                        <span class="vcc-table__primary"
+                                              th:text="'Tavg: ' + ${#numbers.formatDecimal(s.avgTemperature, 1, 2)} + ' °C'">2.50 °C</span>
+                                        <span class="vcc-table__muted"
+                                              th:text="'MKT: ' + ${#numbers.formatDecimal(s.mktTemperature, 1, 2)} + ' °C'">2.60 °C</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="wizard-actions" style="margin-top: var(--sp-6, 1.5rem);">
+                        <a th:href="@{/wizard/{id}/back/5(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" class="wizard-btn-next" onclick="submitStep6()">
+                            Zapisz i kontynuuj <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        let selectedSeriesIds = /*[[${draft.selectedSeriesIds}]]*/ [];
+        if (!selectedSeriesIds) selectedSeriesIds = [];
+        /*]]>*/
+
+        function toggleUpload() {
+            const section = document.getElementById('upload-section');
+            section.classList.toggle('is-open');
+            section.classList.toggle('is-closed');
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        async function uploadFiles() {
+            const form = document.getElementById('upload-form');
+            const formData = new FormData(form);
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Wgrywanie...';
+
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            if (!csrfToken || csrfToken === '') { csrfToken = getCookie('XSRF-TOKEN'); csrfHeader = 'X-XSRF-TOKEN'; }
+
+            const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+            if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+            try {
+                const response = await fetch('/wizard/' + draftId + '/api/step6/upload', {
+                    method: 'POST', body: formData, headers: headers
+                });
+                if (!response.ok) {
+                    const text = await response.text();
+                    try { const json = JSON.parse(text); throw new Error(json.message || json.error || 'Błąd serwera'); }
+                    catch (e) { throw new Error(text.substring(0, 200) || 'Błąd podczas wgrywania'); }
+                }
+                const series = await response.json();
+                updateTable(series);
+                form.reset();
+                toggleUpload();
+                alert('Pomyślnie wgrano ' + series.length + ' serii.');
+            } catch (err) {
+                console.error(err);
+                alert('Błąd: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-upload"></i> Wgraj';
+            }
+        }
+
+        function updateTable(series) {
+            const tbody = document.getElementById('series-tbody');
+            const wrap = document.getElementById('series-table-wrap');
+            const alertEl = document.getElementById('no-series-alert');
+
+            if (series.length > 0) {
+                wrap.style.display = '';
+                if (alertEl) alertEl.style.display = 'none';
+                tbody.innerHTML = series.map(s => `
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="series-checkbox"
+                                   value="${s.id}"
+                                   ${selectedSeriesIds.includes(s.id) ? 'checked' : ''}
+                                   style="accent-color: var(--vcc-primary); width:16px; height:16px; cursor:pointer;">
+                        </td>
+                        <td>
+                            <span class="vcc-table__primary">${formatDate(s.firstMeasurementTime)}</span>
+                            <span class="vcc-table__secondary">${s.originalFilename}</span>
+                        </td>
+                        <td class="vcc-table__mono">${s.recorderSerialNumber}</td>
+                        <td>
+                            ${s.isReferenceRecorder
+                                ? '<span class="badge-ref"><i class="fas fa-star" style="font-size:0.6rem;"></i> REF</span>'
+                                : (s.recorderPosition || '')}
+                        </td>
+                        <td class="vcc-table__muted">${s.measurementCount * s.measurementIntervalMinutes} min</td>
+                        <td>
+                            <span class="vcc-table__primary">Tavg: ${s.avgTemperature != null ? s.avgTemperature.toFixed(2) : '-'} °C</span>
+                            <span class="vcc-table__muted">MKT: ${s.mktTemperature != null ? s.mktTemperature.toFixed(2) : '-'} °C</span>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                wrap.style.display = 'none';
+                if (alertEl) alertEl.style.display = '';
+            }
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.getFullYear() + '-' +
+                   String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                   String(d.getDate()).padStart(2, '0') + ' ' +
+                   String(d.getHours()).padStart(2, '0') + ':' +
+                   String(d.getMinutes()).padStart(2, '0');
+        }
+
+        function submitStep6() {
+            const checkboxes = document.querySelectorAll('.series-checkbox:checked');
+            const seriesIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+            if (seriesIds.length === 0) {
+                if (!confirm('Nie wybrano żadnej serii pomiarowej. Czy na pewno chcesz kontynuować?')) return;
+            }
+
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            if (!csrfToken || csrfToken === '') { csrfToken = getCookie('XSRF-TOKEN'); csrfHeader = 'X-XSRF-TOKEN'; }
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            };
+            if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+            fetch('/wizard/' + draftId + '/api/step6', {
+                method: 'POST', headers: headers, body: JSON.stringify(seriesIds)
+            }).then(async r => {
+                if (!r.ok) {
+                    const text = await r.text();
+                    throw new Error('Błąd HTTP ' + r.status + ': ' + text.substring(0, 100));
+                }
+                return r.json();
+            }).then(() => {
+                window.location.href = '/wizard/' + draftId + '/step/7';
+            }).catch(err => {
+                console.error('Error:', err);
+                alert('Błąd zapisu kroku 6: ' + err.message);
+            });
+        }
+    </script>
+</body>
+</html>

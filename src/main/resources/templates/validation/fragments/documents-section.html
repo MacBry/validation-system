@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<body>
+<th:block th:fragment="section(documents, validation)">
+
+        <!-- Document Registry Card -->
+        <section class="vcc-detail-section vcc-animate-fade-in" style="margin-bottom: 20px;">
+            <div class="vcc-detail-section__header">
+                <h2 class="vcc-detail-section__title">
+                    <i class="fas fa-file-alt" style="font-size:.95rem;"></i>
+                    Rejestr dokumentów
+                    <span th:if="${documents != null and !#lists.isEmpty(documents)}"
+                          style="display:inline-flex;align-items:center;justify-content:center;
+                                 min-width:22px;height:22px;padding:0 6px;border-radius:11px;
+                                 font-size:.72rem;font-weight:600;background:#e0e7ff;color:#4a6cf7;margin-left:8px;"
+                          th:text="${#lists.size(documents)}">0</span>
+                </h2>
+            </div>
+
+            <!-- Brak dokumentów -->
+            <div th:if="${documents == null or #lists.isEmpty(documents)}" class="vcc-detail-empty">
+                <i class="fas fa-file-alt" style="font-size:1.4rem;opacity:.35;margin-bottom:8px;display:block;color:#a4adc5;"></i>
+                <div style="font-size:.88rem;color:#8b95a8;">
+                    Żaden dokument nie został jeszcze wygenerowany.<br>
+                    <span style="font-size:.8rem;">Pobierz paczkę ZIP, aby zarejestrować dokumenty.</span>
+                </div>
+            </div>
+
+            <!-- Lista zarejestrowanych dokumentów -->
+            <div th:if="${documents != null and not #lists.isEmpty(documents)}">
+                <div th:each="doc : ${documents}"
+                     style="background:#f8f9fb;border:1px solid #e0e7ff;border-radius:10px;padding:16px 20px;margin-bottom:12px;">
+
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="font-weight:600;font-size:.9rem;color:#1a1d2e;" th:text="${doc.documentNumber}">SW/LAB/2026/001</div>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <!-- Badge "Dane zmienione" -->
+                            <span th:if="${doc.dataChanged}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+                                         border-radius:12px;font-size:.72rem;font-weight:600;
+                                         background:#fef3c7;border:1px solid #f5dfc0;color:#92400e;">
+                                <i class="fas fa-exclamation-triangle" style="font-size:.65rem;"></i> Dane zmienione
+                            </span>
+                            <span style="display:inline-flex;padding:3px 10px;border-radius:12px;font-size:.72rem;
+                                         font-weight:600;background:#e0e7ff;color:#4a6cf7;"
+                                  th:text="${doc.documentType.displayName}">Typ</span>
+                        </div>
+                    </div>
+
+                    <div class="vcc-detail-grid">
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Liczba generacji</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono" th:text="${doc.generationCount}">1</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Pierwsza generacja</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono"
+                                th:text="${doc.firstGeneratedAt != null ? #temporals.format(doc.firstGeneratedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Przez kogo (1.)</span>
+                            <span class="vcc-detail-value" th:text="${doc.firstGeneratedBy ?: '—'}">—</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Ostatnia generacja</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono"
+                                th:text="${doc.lastGeneratedAt != null ? #temporals.format(doc.lastGeneratedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Przez kogo (ost.)</span>
+                            <span class="vcc-detail-value" th:text="${doc.lastGeneratedBy ?: '—'}">—</span>
+                        </div>
+                    </div>
+
+                    <div th:if="${doc.pdfHashSha256 != null}"
+                         style="margin-top:12px;background:#f4f6fb;border:1px solid #e0e7ff;border-radius:8px;padding:12px 14px;">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <i class="fas fa-shield-alt" style="font-size:.75rem;color:#7d93f7;"></i>
+                            <span style="font-size:.78rem;font-weight:600;color:#4a6cf7;">Hash SHA-256 (1. generacja)</span>
+                        </div>
+                        <div style="font-family: 'DM Mono', monospace; font-size: .72rem; word-break: break-all;
+                                    color: #8b95a8; line-height: 1.5;"
+                            th:text="${doc.pdfHashSha256}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dokumenty walidacji -->
+        <section class="vcc-detail-section vcc-animate-fade-in" style="margin-bottom:20px;">
+            <div class="vcc-detail-section__header">
+                <h2 class="vcc-detail-section__title">
+                    <i class="fas fa-download" style="font-size:.95rem;"></i>
+                    Dokumenty walidacji
+                </h2>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <!-- Raport rejestratorów PDF -->
+                <a th:href="@{/validations/{id}/recorders-pdf(id=${validation.id})}" target="_blank"
+                    class="vcc-btn--detail-outline" style="display:inline-flex;gap:8px;align-items:center;text-decoration:none;width:fit-content;">
+                    <i class="fas fa-file-pdf" style="font-size:.85rem;"></i>
+                    Raport rejestratorów PDF
+                </a>
+                <p style="margin:0 0 8px 0;font-size:.82rem;color:#8b95a8;">Zestawienie rejestratorów: kalibracja, położenie, temperatury</p>
+
+                <button th:data-url="@{/validations/{id}/package(id=${validation.id})}"
+                    th:data-filename="'Walidacja_' + ${validation.id} + '_' + ${#temporals.format(validation.createdDate, 'yyyy-MM-dd')} + '.zip'"
+                    onclick="downloadFile(this.getAttribute('data-url'), this.getAttribute('data-filename'))"
+                    class="vcc-btn--detail-primary" style="border:none;cursor:pointer;font-family:inherit;width:fit-content;display:inline-flex;gap:8px;align-items:center;">
+                    <i class="fas fa-file-archive" style="font-size:.85rem;"></i>
+                    Pobierz paczkę ZIP
+                </button>
+                <p style="margin:0;font-size:.82rem;color:#8b95a8;">Dokumenty Word + PDF z wykresami</p>
+            </div>
+        </section>
+
+</th:block>
+</body>
+</html>

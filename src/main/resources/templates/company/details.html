@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Firma - ' + ${company.name}">Szczegoly firmy</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('companies')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('companies', 'Szczegóły firmy', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Breadcrumb -->
+            <nav class="vcc-breadcrumb" aria-label="Breadcrumb">
+                <a th:href="@{/}">Dashboard</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <a th:href="@{/companies}">Firmy</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <span class="vcc-breadcrumb__current" th:text="${company.name}">Nazwa</span>
+            </nav>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+
+            <!-- Detail header -->
+            <div class="vcc-detail-header vcc-animate-fade-in">
+                <div class="vcc-detail-header__info">
+                    <div class="vcc-detail-header__icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="vcc-detail-header__text">
+                        <h1 class="vcc-detail-header__title" th:text="${company.name}">Nazwa firmy</h1>
+                        <div class="vcc-detail-header__subtitle"
+                             th:text="${company.address != null ? company.address : 'Brak adresu'}">Adres</div>
+                        <div class="vcc-detail-meta">
+                            <span class="vcc-detail-meta__item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span th:text="${'Utworzono: ' + #temporals.format(company.createdDate, 'yyyy-MM-dd HH:mm')}">Data</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vcc-button-group">
+                    <a th:href="@{/companies/{id}/edit(id=${company.id})}" class="vcc-btn--detail-primary">
+                        <i class="fas fa-pen"></i>
+                        Edytuj
+                    </a>
+                    <a th:href="@{/companies}" class="vcc-btn--detail-outline">
+                        <i class="fas fa-arrow-left"></i>
+                        Powrot
+                    </a>
+                </div>
+            </div>
+
+            <!-- Section 1: Company Info -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-info-circle"></i>
+                        Informacje o firmie
+                    </h2>
+                </div>
+
+                <div class="vcc-detail-grid">
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Nazwa firmy</span>
+                        <span class="vcc-detail-value" th:text="${company.name}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Adres</span>
+                        <span class="vcc-detail-value" th:text="${company.address != null ? company.address : '---'}">---</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Data utworzenia</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono"
+                              th:text="${#temporals.format(company.createdDate, 'yyyy-MM-dd HH:mm')}">---</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Audit History (Envers) -->
+            <section class="vcc-detail-section vcc-animate-fade-in" id="enversSection">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-history"></i>
+                        Historia zmian (Envers)
+                    </h2>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:var(--sp-3);">
+                    Szczegolowy rejestr zmian -- GMP Annex 11 par.10
+                </p>
+
+                <div id="enversRevList" style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="color:var(--text-muted);font-size:.85rem;">Ladowanie historii...</div>
+                </div>
+
+                <div id="enversDiffArea" class="vcc-envers-diff" style="display:none;">
+                    <div class="vcc-envers-diff__title" id="enversDiffTitle"></div>
+                    <table class="vcc-detail-table">
+                        <thead>
+                            <tr>
+                                <th>Pole</th>
+                                <th style="color:var(--color-danger);">Przed</th>
+                                <th style="color:var(--color-success);">Po</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enversDiffBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <!-- Envers script -->
+    <script th:inline="javascript">
+    (function () {
+        var companyId = /*[[${company.id}]]*/ 0;
+
+        function badgeClass(type) {
+            var map = { ADD: 'vcc-envers-badge--add', MOD: 'vcc-envers-badge--mod', DEL: 'vcc-envers-badge--del' };
+            return map[type] || 'vcc-envers-badge--mod';
+        }
+        function badgeLabel(type) {
+            var map = { ADD: 'DODANIE', MOD: 'ZMIANA', DEL: 'USUNIECIE' };
+            return map[type] || type;
+        }
+
+        function loadRevisions() {
+            fetch('/companies/' + companyId + '/history')
+                .then(function(r) { return r.json(); })
+                .then(function(revs) {
+                    var el = document.getElementById('enversRevList');
+                    if (!revs || revs.length === 0) {
+                        el.innerHTML = '<div class="vcc-detail-empty">Brak rewizji w historii Envers.</div>';
+                        return;
+                    }
+                    el.innerHTML = revs.map(function(r) {
+                        return '<button class="vcc-envers-revision" onclick="loadDiff(' + r.revisionNumber + ',\'' + (r.timestamp||'') + '\',\'' + (r.username||'') + '\',\'' + (r.revisionType||'') + '\')">'
+                            + '<span style="font-size:.75rem;color:var(--text-muted);min-width:145px;">' + (r.timestamp || '') + '</span>'
+                            + '<span class="vcc-envers-badge ' + badgeClass(r.revisionType) + '">' + badgeLabel(r.revisionType) + '</span>'
+                            + '<span style="font-weight:500;">' + (r.username || '') + '</span>'
+                            + (r.fullName ? '<span style="font-size:.8rem;color:var(--text-muted);">(' + r.fullName + ')</span>' : '')
+                            + (r.ipAddress ? '<span style="margin-left:auto;font-size:.75rem;color:var(--text-muted);">' + r.ipAddress + '</span>' : '')
+                            + '</button>';
+                    }).join('');
+                })
+                .catch(function() {
+                    document.getElementById('enversRevList').innerHTML =
+                        '<div class="vcc-detail-empty" style="color:var(--color-danger);">Blad ladowania historii.</div>';
+                });
+        }
+
+        var _openRevNum = null;
+
+        window.loadDiff = function (revNum, ts, user, type) {
+            var area = document.getElementById('enversDiffArea');
+            var title = document.getElementById('enversDiffTitle');
+            var body = document.getElementById('enversDiffBody');
+
+            if (_openRevNum === revNum) {
+                area.style.display = 'none';
+                _openRevNum = null;
+                return;
+            }
+            _openRevNum = revNum;
+
+            area.style.display = 'block';
+            title.textContent = 'Rewizja #' + revNum + ' \u2014 ' + ts + ' \u2014 ' + user;
+            body.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted);">Ladowanie...</td></tr>';
+
+            fetch('/companies/' + companyId + '/history/' + revNum)
+                .then(function(r) { return r.json(); })
+                .then(function(diffs) {
+                    var rows = diffs
+                        .filter(function(d) { return d.changed; })
+                        .map(function(d) {
+                            return '<tr>'
+                                + '<td style="font-weight:500;">' + d.displayName + '</td>'
+                                + '<td style="color:var(--color-danger);text-decoration:line-through;">' + (d.oldValue != null ? d.oldValue : '\u2014') + '</td>'
+                                + '<td style="color:var(--color-success);">' + (d.newValue != null ? d.newValue : '\u2014') + '</td>'
+                                + '</tr>';
+                        }).join('');
+                    body.innerHTML = rows || '<tr><td colspan="3" style="color:var(--text-muted);">Brak zmian pol (pierwsza rewizja).</td></tr>';
+                })
+                .catch(function() {
+                    body.innerHTML = '<tr><td colspan="3" style="color:var(--color-danger);">Blad.</td></tr>';
+                });
+        };
+
+        loadRevisions();
+    })();
+    </script>
+
+</body>
+</html>

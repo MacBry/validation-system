@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dziennik Audytu - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('audit')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('audit', 'Dziennik Audytu', true, 'auditSearchInput')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Page header -->
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Dziennik Audytu</h1>
+                <div class="vcc-page-header__actions">
+                    <span class="vcc-form-hint" style="align-self:center;">
+                        <i class="fas fa-lock" style="color:var(--vcc-primary);"></i>
+                        GMP Annex 11 §10
+                    </span>
+                </div>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="vcc-data-card" style="padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3);">
+                <form th:action="@{/admin/audit}" method="get"
+                      style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+                    <div class="vcc-form-group" style="margin-bottom:0;flex:1;min-width:160px;">
+                        <label class="vcc-form-label" style="margin-bottom:4px;">Użytkownik</label>
+                        <input type="text"
+                               name="username"
+                               class="vcc-form-input"
+                               th:value="${usernameFilter}"
+                               placeholder="np. jan.kowalski"
+                               style="height:36px;">
+                    </div>
+                    <div class="vcc-form-group" style="margin-bottom:0;flex:1;min-width:140px;">
+                        <label class="vcc-form-label" style="margin-bottom:4px;">Adres IP</label>
+                        <input type="text"
+                               name="ipAddress"
+                               class="vcc-form-input vcc-form-input--mono"
+                               th:value="${ipAddressFilter}"
+                               placeholder="np. 192.168.1.1"
+                               style="height:36px;">
+                    </div>
+                    <input type="hidden" name="size" th:value="${pageSize}">
+                    <div style="display:flex;gap:8px;flex-shrink:0;">
+                        <button type="submit" class="vcc-btn--action" style="height:36px;padding:0 16px;">
+                            <i class="fas fa-filter"></i>
+                            Filtruj
+                        </button>
+                        <a th:href="@{/admin/audit}" class="vcc-btn--secondary" style="height:36px;padding:0 16px;">
+                            <i class="fas fa-times"></i>
+                            Resetuj
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Active filter indicators -->
+            <div th:if="${usernameFilter != null or ipAddressFilter != null}"
+                 class="vcc-filter-bar" style="margin-bottom:var(--sp-3);">
+                <span style="color:var(--text-muted);font-size:0.8rem;">Aktywne filtry:</span>
+                <span th:if="${usernameFilter != null}" class="vcc-filter-btn vcc-filter-btn--active">
+                    <i class="fas fa-user"></i>
+                    <span th:text="'Użytkownik: ' + ${usernameFilter}"></span>
+                </span>
+                <span th:if="${ipAddressFilter != null}" class="vcc-filter-btn vcc-filter-btn--active">
+                    <i class="fas fa-network-wired"></i>
+                    <span th:text="'IP: ' + ${ipAddressFilter}"></span>
+                </span>
+            </div>
+
+            <!-- Data card -->
+            <div class="vcc-data-card vcc-animate-fade-in">
+
+                <!-- Empty state -->
+                <div th:if="${#lists.isEmpty(auditPage.content)}" class="vcc-empty-state">
+                    <i class="fas fa-scroll vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title">Brak wpisów w dzienniku</p>
+                    <p class="vcc-empty-state__desc">Zmień filtry lub sprawdź ponownie później</p>
+                </div>
+
+                <!-- Table -->
+                <div th:unless="${#lists.isEmpty(auditPage.content)}" class="vcc-table-wrap">
+                    <table class="vcc-table" id="auditTable">
+                        <thead>
+                            <tr>
+                                <th>Data i czas</th>
+                                <th>Użytkownik</th>
+                                <th>Akcja</th>
+                                <th>Moduł</th>
+                                <th>ID obiektu</th>
+                                <th>Adres IP</th>
+                                <th style="text-align:right;">Szczegóły</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="log : ${auditPage.content}">
+                                <td>
+                                    <div style="display:flex;flex-direction:column;line-height:1.3;">
+                                        <span class="vcc-table__primary"
+                                              th:text="${#temporals.format(log.timestamp, 'dd.MM.yyyy')}">--</span>
+                                        <span class="vcc-table__muted"
+                                              th:text="${#temporals.format(log.timestamp, 'HH:mm:ss')}">--</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display:flex;flex-direction:column;line-height:1.3;">
+                                        <span class="vcc-table__primary" th:text="${log.username ?: '—'}">--</span>
+                                        <span class="vcc-table__muted"
+                                              style="font-size:0.72rem;"
+                                              th:if="${log.userId != null}"
+                                              th:text="'ID: ' + ${log.userId}">--</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="vcc-envers-badge"
+                                          th:classappend="${log.action == 'CREATE' ? 'vcc-envers-badge--add' :
+                                                           (log.action == 'DELETE' or log.action == 'SOFT_DELETE' ? 'vcc-envers-badge--del' :
+                                                           (log.action.startsWith('UPDATE') or log.action == 'TOGGLE_ENABLED' ? 'vcc-envers-badge--mod' : 'vcc-envers-badge--mod'))}"
+                                          th:text="${log.action}">
+                                        AKCJA
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__secondary"
+                                          style="text-transform:uppercase;font-size:0.78rem;"
+                                          th:text="${log.entityType}">---</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__mono" th:text="${log.entityId}">---</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__mono" style="font-size:0.78rem;"
+                                          th:text="${log.ipAddress ?: '—'}">---</span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <button type="button"
+                                            class="vcc-btn--table vcc-btn--table-primary"
+                                            th:attr="data-user=${log.username}, data-action=${log.action}, data-old=${log.oldValueJson != null ? log.oldValueJson : '{}'}, data-new=${log.newValueJson != null ? log.newValueJson : '{}'}"
+                                            onclick="showInspector(this)">
+                                        <i class="fas fa-search"></i>
+                                        Inspekcja
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${totalPages > 1}" class="vcc-data-card__footer"
+                     th:with="start=${T(java.lang.Math).max(0, T(java.lang.Math).min(currentPage - 2, totalPages - 5))},
+                              end=${T(java.lang.Math).min(totalPages - 1, T(java.lang.Math).max(currentPage + 2, 4))}">
+                    <div class="vcc-data-card__count">
+                        Strona <strong th:text="${currentPage + 1}">1</strong> z <strong th:text="${totalPages}">1</strong>
+                    </div>
+                    <ul class="vcc-pagination">
+                        <li th:classappend="${currentPage == 0} ? 'disabled'">
+                            <a th:href="@{/admin/audit(page=0, size=${pageSize}, username=${usernameFilter}, ipAddress=${ipAddressFilter})}"
+                               title="Pierwsza strona"><i class="fas fa-angle-double-left"></i></a>
+                        </li>
+                        <li th:classappend="${currentPage == 0} ? 'disabled'">
+                            <a th:href="@{/admin/audit(page=${currentPage - 1}, size=${pageSize}, username=${usernameFilter}, ipAddress=${ipAddressFilter})}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                        <li th:each="i : ${#numbers.sequence(start, end)}"
+                            th:classappend="${currentPage == i} ? 'active'">
+                            <a th:href="@{/admin/audit(page=${i}, size=${pageSize}, username=${usernameFilter}, ipAddress=${ipAddressFilter})}"
+                               th:text="${i + 1}">1</a>
+                        </li>
+                        <li th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                            <a th:href="@{/admin/audit(page=${currentPage + 1}, size=${pageSize}, username=${usernameFilter}, ipAddress=${ipAddressFilter})}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                            <a th:href="@{/admin/audit(page=${totalPages - 1}, size=${pageSize}, username=${usernameFilter}, ipAddress=${ipAddressFilter})}"
+                               title="Ostatnia strona"><i class="fas fa-angle-double-right"></i></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Footer count -->
+                <div th:unless="${#lists.isEmpty(auditPage.content)}" class="vcc-data-card__footer"
+                     th:if="${totalPages <= 1}">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge"
+                                       th:text="${auditPage.totalElements}">0</span> wpisów
+                    </div>
+                </div>
+                <div th:unless="${#lists.isEmpty(auditPage.content)}" class="vcc-data-card__footer"
+                     th:if="${totalPages > 1}">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge"
+                                       th:text="${auditPage.totalElements}">0</span> wpisów
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Modal: Inspekcja zdarzenia -->
+    <div class="vcc-modal-overlay" id="inspectorModal"
+         onclick="if(event.target===this)this.classList.remove('is-open')">
+        <div class="vcc-modal" style="max-width:720px;">
+            <h3 class="vcc-modal__title">
+                <i class="fas fa-search" style="color:var(--vcc-primary);margin-right:8px;"></i>
+                Inspekcja zdarzenia
+            </h3>
+            <div id="inspectorMeta"
+                 style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:var(--sp-3);">
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.05em;">
+                        Stan poprzedni
+                    </div>
+                    <pre id="preOld"
+                         style="background:#1e293b;color:#e2e8f0;padding:14px;border-radius:8px;font-family:'DM Mono',monospace;font-size:0.78rem;max-height:320px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;margin:0;"></pre>
+                </div>
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--vcc-primary);margin-bottom:6px;letter-spacing:0.05em;">
+                        Nowy stan
+                    </div>
+                    <pre id="preNew"
+                         style="background:#1e293b;color:#a5f3fc;padding:14px;border-radius:8px;font-family:'DM Mono',monospace;font-size:0.78rem;max-height:320px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;margin:0;border:1px solid rgba(102,126,234,0.3);"></pre>
+                </div>
+            </div>
+
+            <div class="vcc-modal__actions" style="margin-top:var(--sp-3);">
+                <button type="button" class="vcc-modal__btn-cancel"
+                        onclick="document.getElementById('inspectorModal').classList.remove('is-open')">
+                    Zamknij
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    // Client-side search
+    (function() {
+        var input = document.getElementById('auditSearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            var rows = document.querySelectorAll('#auditTable tbody tr');
+            rows.forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+
+    // Inspector modal
+    function cleanJson(str) {
+        if (!str || str === '{}') return '// Brak danych';
+        try { return JSON.stringify(JSON.parse(str), null, 2); }
+        catch (e) { return str; }
+    }
+
+    function showInspector(btn) {
+        var user = btn.getAttribute('data-user') || '—';
+        var action = btn.getAttribute('data-action') || '—';
+        var oldVal = btn.getAttribute('data-old') || '{}';
+        var newVal = btn.getAttribute('data-new') || '{}';
+
+        var metaEl = document.getElementById('inspectorMeta');
+        metaEl.innerHTML =
+            '<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-page);border:1px solid var(--border-subtle);border-radius:20px;padding:4px 12px;font-size:0.8rem;">'
+            + '<i class="fas fa-user" style="color:var(--vcc-primary);"></i><strong>' + user + '</strong></span>'
+            + '<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-page);border:1px solid var(--border-subtle);border-radius:20px;padding:4px 12px;font-size:0.8rem;">'
+            + '<i class="fas fa-bolt" style="color:var(--vcc-primary);"></i>' + action + '</span>';
+
+        document.getElementById('preOld').textContent = cleanJson(oldVal);
+        document.getElementById('preNew').textContent = cleanJson(newVal);
+        document.getElementById('inspectorModal').classList.add('is-open');
+    }
+    </script>
+
+</body>
+
+</html>

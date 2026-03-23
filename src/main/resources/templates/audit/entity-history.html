@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="'Historia zmian – ' + ${entityType} + ' #' + ${entityId}">Historia zmian</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+  <link rel="stylesheet" th:href="@{/css/modern-ui.css}">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box }
+
+    :root {
+      --g1: #667eea;
+      --g2: #764ba2;
+      --white: #fff;
+      --surface: #f7f8fc;
+      --border: #e8eaf0;
+      --tm: #1a1d2e;
+      --ts: #6b7080;
+      --sh: 0 20px 60px rgba(0,0,0,.18);
+      --shm: 0 8px 32px rgba(102,126,234,.15);
+      --r: 14px;
+      --rs: 8px
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(135deg, var(--g1), var(--g2));
+      min-height: 100vh;
+      padding: 24px 16px 40px;
+      color: var(--tm)
+    }
+
+    .page { max-width: 1000px; margin: 0 auto }
+
+    /* Hero card */
+    .hero-card {
+      background: var(--white);
+      border-radius: var(--r);
+      box-shadow: var(--sh);
+      padding: 32px 36px;
+      margin-bottom: 20px
+    }
+
+    .hero-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px
+    }
+
+    .hist-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--g1), var(--g2));
+      border-radius: var(--rs);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .hist-icon svg { width: 26px; height: 26px; color: #fff }
+
+    .hero-title-block { flex: 1 }
+
+    .hero-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--tm);
+      margin-bottom: 4px
+    }
+
+    .hero-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: .85rem;
+      color: var(--ts)
+    }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: var(--surface);
+      color: var(--ts);
+      text-decoration: none;
+      border-radius: var(--rs);
+      font-size: .82rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      transition: all .2s;
+      margin-left: auto;
+      align-self: flex-start
+    }
+
+    .btn-back:hover { background: var(--border); color: var(--tm) }
+
+    /* Section card */
+    .section-card {
+      background: var(--white);
+      border-radius: var(--r);
+      box-shadow: var(--shm);
+      padding: 28px 32px;
+      margin-bottom: 20px
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px
+    }
+
+    .section-title {
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--ts)
+    }
+
+    .rev-count {
+      font-family: 'DM Mono', monospace;
+      font-size: .78rem;
+      color: var(--ts)
+    }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse }
+
+    thead th {
+      padding: 10px 14px;
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--ts);
+      text-align: left;
+      border-bottom: 2px solid var(--border)
+    }
+
+    thead th.center { text-align: center }
+
+    tbody tr { border-bottom: 1px solid var(--border) }
+    tbody tr:last-child { border-bottom: none }
+    tbody tr:hover { background: var(--surface) }
+
+    td {
+      padding: 12px 14px;
+      font-size: .85rem;
+      color: var(--tm);
+      vertical-align: middle
+    }
+
+    td.center { text-align: center }
+
+    .rev-num {
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      color: var(--ts)
+    }
+
+    .ts-val {
+      font-family: 'DM Mono', monospace;
+      font-size: .82rem
+    }
+
+    .ip-val {
+      font-family: 'DM Mono', monospace;
+      font-size: .82rem;
+      color: var(--ts)
+    }
+
+    /* Revision type badges */
+    .rev-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .04em
+    }
+
+    .rev-badge.add { background: #d1fae5; color: #065f46 }
+    .rev-badge.mod { background: #fef3c7; color: #92400e }
+    .rev-badge.del { background: #fee2e2; color: #991b1b }
+
+    /* Empty state */
+    .empty-state {
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--ts);
+      font-size: .9rem;
+      background: var(--surface);
+      border-radius: var(--rs)
+    }
+
+    .empty-state svg {
+      width: 40px;
+      height: 40px;
+      color: var(--border);
+      margin-bottom: 12px
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+      font-size: .78rem;
+      color: var(--ts)
+    }
+
+    .legend-item { display: flex; align-items: center; gap: 6px }
+
+    /* Compliance note */
+    .compliance-note {
+      background: var(--surface);
+      border-radius: var(--rs);
+      padding: 12px 16px;
+      font-size: .78rem;
+      color: var(--ts);
+      margin-top: 20px;
+      border-left: 3px solid var(--g1)
+    }
+  </style>
+</head>
+
+<body>
+
+<div th:replace="~{fragments/modern-nav :: modern-nav('Historia zmian')}"></div>
+
+<div class="page">
+
+  <!-- Hero card -->
+  <div class="hero-card">
+    <div class="hero-header">
+      <div class="hist-icon">
+        <!-- Clock / history icon -->
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+
+      <div class="hero-title-block">
+        <div class="hero-title">Historia zmian encji</div>
+        <div class="hero-sub"
+             th:text="${entityType} + ' · ID #' + ${entityId}">Urządzenie · ID #0</div>
+      </div>
+
+      <a th:href="${backUrl}" class="btn-back">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Wróć
+      </a>
+    </div>
+  </div>
+
+  <!-- No revisions -->
+  <div th:if="${#lists.isEmpty(revisions)}" class="section-card">
+    <div class="empty-state">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <div>Brak zarejestrowanych zmian dla tej encji.</div>
+      <div style="margin-top:6px;font-size:.78rem;">
+        Rewizje są zapisywane od momentu aktywacji audytu Envers.
+      </div>
+    </div>
+  </div>
+
+  <!-- Revisions table -->
+  <div th:unless="${#lists.isEmpty(revisions)}" class="section-card">
+
+    <div class="section-header">
+      <span class="section-title">Zarejestrowane rewizje</span>
+      <span class="rev-count"
+            th:text="${#lists.size(revisions)} + ' wpisów · od najnowszej'">0 wpisów</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="center" style="width:70px;">Rev #</th>
+          <th class="center" style="width:90px;">Typ</th>
+          <th style="width:190px;">Data i godzina</th>
+          <th>Użytkownik</th>
+          <th>Imię i nazwisko</th>
+          <th>Adres IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="entry : ${revisions}">
+
+          <td class="center">
+            <span class="rev-num"
+                  th:text="${entry.revisionInfo.revisionNumber}">1</span>
+          </td>
+
+          <td class="center">
+            <span th:if="${entry.revisionInfo.revisionType == 'ADD'}"
+                  class="rev-badge add">DODANO</span>
+            <span th:if="${entry.revisionInfo.revisionType == 'MOD'}"
+                  class="rev-badge mod">ZMIANA</span>
+            <span th:if="${entry.revisionInfo.revisionType == 'DEL'}"
+                  class="rev-badge del">USUNIĘTO</span>
+          </td>
+
+          <td>
+            <span class="ts-val"
+                  th:text="${#temporals.format(entry.revisionInfo.timestamp, 'yyyy-MM-dd HH:mm:ss')}">
+              2026-01-01 00:00:00
+            </span>
+          </td>
+
+          <td th:text="${entry.revisionInfo.username ?: '—'}">admin</td>
+
+          <td th:text="${entry.revisionInfo.fullName ?: '—'}">Jan Kowalski</td>
+
+          <td><span class="ip-val"
+                    th:text="${entry.revisionInfo.ipAddress ?: '—'}">127.0.0.1</span></td>
+
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Legend -->
+    <div class="legend">
+      <span>Legenda:</span>
+      <span class="legend-item">
+        <span class="rev-badge add">DODANO</span> rekord utworzony
+      </span>
+      <span class="legend-item">
+        <span class="rev-badge mod">ZMIANA</span> rekord zmodyfikowany
+      </span>
+      <span class="legend-item">
+        <span class="rev-badge del">USUNIĘTO</span> rekord usunięty
+      </span>
+    </div>
+  </div>
+
+  <!-- Compliance note -->
+  <div class="compliance-note">
+    Historia zmian jest przechowywana zgodnie z wymaganiami <strong>GMP Annex 11 §10</strong>
+    i <strong>21 CFR Part 11 §11.10(e)</strong>.
+    Każda rewizja zawiera tożsamość użytkownika, znacznik czasu i adres IP.
+  </div>
+
+</div>
+
+</body>
+</html>

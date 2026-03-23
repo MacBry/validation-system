@@ -1,0 +1,178 @@
+package com.mac.bry.validationsystem.security.service;
+
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.BucketConfiguration;
+import io.github.bucket4j.Refill;
+import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisURI;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class RateLimiterService {
+
+    // GMP SECURITY: Redis-backed rate limiting for distributed environments
+    private RedisClient redisClient;
+    private LettuceBasedProxyManager proxyManager;
+
+    // Fallback to local cache if Redis unavailable
+    private final ConcurrentHashMap<String, Bucket> localCache = new ConcurrentHashMap<>();
+    private boolean redisAvailable = false;
+
+    @Value("${spring.redis.host:localhost}")
+    private String redisHost;
+
+    @Value("${spring.redis.port:6379}")
+    private int redisPort;
+
+    @Value("${spring.redis.password:}")
+    private String redisPassword;
+
+    @Value("${app.rate-limit.redis.enabled:true}")
+    private boolean redisEnabled;
+
+    @Value("${app.rate-limit.login.capacity:10}")
+    private int loginCapacity;
+
+    @Value("${app.rate-limit.login.refill-tokens:10}")
+    private int loginRefillTokens;
+
+    @Value("${app.rate-limit.login.refill-duration:60}")
+    private int loginRefillDurationSeconds;
+
+    @Value("${app.rate-limit.audit.capacity:100}")
+    private int auditCapacity;
+
+    @Value("${app.rate-limit.audit.refill-tokens:100}")
+    private int auditRefillTokens;
+
+    @Value("${app.rate-limit.audit.refill-duration:60}")
+    private int auditRefillDurationSeconds;
+
+    @PostConstruct
+    public void initializeRedis() {
+        if (!redisEnabled) {
+            log.warn("⚠️ Redis rate limiting disabled - using local fallback (not suitable for production)");
+            return;
+        }
+
+        try {
+            RedisURI.Builder redisUriBuilder = RedisURI.builder()
+                    .withHost(redisHost)
+                    .withPort(redisPort);
+
+            if (redisPassword != null && !redisPassword.trim().isEmpty()) {
+                redisUriBuilder.withPassword(redisPassword.toCharArray());
+            }
+
+            RedisURI redisUri = redisUriBuilder.build();
+            redisClient = RedisClient.create(redisUri);
+
+            // Test connection
+            redisClient.connect().sync().ping();
+
+            proxyManager = LettuceBasedProxyManager.builderFor(redisClient)
+                    .build();
+
+            redisAvailable = true;
+            log.info("✅ Redis rate limiting initialized: {}:{}", redisHost, redisPort);
+
+        } catch (Exception e) {
+            log.error("❌ Failed to initialize Redis for rate limiting: {}. Falling back to local cache.", e.getMessage());
+            redisAvailable = false;
+        }
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        if (redisClient != null) {
+            try {
+                redisClient.shutdown();
+                log.info("📝 Redis client shutdown completed");
+            } catch (Exception e) {
+                log.warn("Warning during Redis cleanup: {}", e.getMessage());
+            }
+        }
+    }
+
+    public boolean allowLoginAttempt(String ipAddress) {
+        String key = "rate_limit:login:" + ipAddress;
+        return tryConsume(key, loginCapacity, loginRefillTokens, Duration.ofSeconds(loginRefillDurationSeconds));
+    }
+
+    public boolean allowAuditLog(String ipAddress) {
+        String key = "rate_limit:audit:" + ipAddress;
+        return tryConsume(key, auditCapacity, auditRefillTokens, Duration.ofSeconds(auditRefillDurationSeconds));
+    }
+
+    public void resetLoginAttempts(String ipAddress) {
+        String key = "rate_limit:login:" + ipAddress;
+        if (redisAvailable && proxyManager != null) {
+            try {
+                // Remove bucket from Redis
+                proxyManager.removeProxy(key);
+                log.info("🔄 Reset login rate limit for IP: {} (Redis)", ipAddress);
+            } catch (Exception e) {
+                log.warn("Failed to reset rate limit in Redis for IP: {}, error: {}", ipAddress, e.getMessage());
+            }
+        } else {
+            localCache.remove(key);
+            log.info("🔄 Reset login rate limit for IP: {} (Local cache)", ipAddress);
+        }
+    }
+
+    private boolean tryConsume(String key, int capacity, int refillTokens, Duration refillPeriod) {
+        try {
+            Bucket bucket;
+
+            if (redisAvailable && proxyManager != null) {
+                // Use Redis-backed bucket
+                bucket = proxyManager.builder()
+                        .build(key, createBucketConfiguration(capacity, refillTokens, refillPeriod));
+
+                boolean allowed = bucket.tryConsume(1);
+                if (!allowed) {
+                    log.debug("🚫 Rate limit exceeded for key: {} (Redis)", key);
+                }
+                return allowed;
+
+            } else {
+                // Fallback to local cache
+                bucket = localCache.computeIfAbsent(key, k -> createBucket(capacity, refillTokens, refillPeriod));
+                boolean allowed = bucket.tryConsume(1);
+                if (!allowed) {
+                    log.debug("🚫 Rate limit exceeded for key: {} (Local)", key);
+                }
+                return allowed;
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Rate limiting error for key: {}, allowing request: {}", key, e.getMessage());
+            return true; // Fail-open for availability
+        }
+    }
+
+    private BucketConfiguration createBucketConfiguration(int capacity, int refillTokens, Duration refillPeriod) {
+        return BucketConfiguration.builder()
+                .addLimit(Bandwidth.classic(capacity, Refill.intervally(refillTokens, refillPeriod)))
+                .build();
+    }
+
+    private Bucket createBucket(int capacity, int refillTokens, Duration refillPeriod) {
+        return Bucket.builder()
+                .addLimit(Bandwidth.classic(capacity, Refill.intervally(refillTokens, refillPeriod)))
+                .build();
+    }
+}

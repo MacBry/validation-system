@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+
+<!--
+    Global Top Bar Fragment
+    Usage: <header th:replace="~{fragments/topbar :: topbar(activeItem='dashboard', welcome='Witaj ponownie', showSearch=true, searchId='mySearch')}"></header>
+-->
+<header th:fragment="topbar(activeItem, welcome, showSearch, searchId)" class="vcc-main-topbar">
+    <div class="vcc-main-topbar__left">
+        <!-- Mobile hamburger -->
+        <button class="vcc-sidebar-toggle" id="vccSidebarToggle"
+                type="button" aria-label="Menu">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <div class="vcc-main-topbar__welcome">
+            <th:block th:if="${activeItem == 'dashboard'}">
+                <span th:text="${welcome}">Witaj ponownie</span>, <strong sec:authentication="name">User</strong>!
+                <span> &mdash; Validation Cold Control</span>
+            </th:block>
+            <th:block th:unless="${activeItem == 'dashboard'}">
+                <i th:class="${(activeItem == 'devices' ? 'fas fa-cube' : 
+                               (activeItem == 'recorders' ? 'fas fa-thermometer-half' : 
+                               (activeItem == 'validations' ? 'fas fa-clipboard-check' : 
+                               (activeItem == 'wizard' || activeItem == 'wizard-step' ? 'fas fa-bolt' : 
+                               (activeItem == 'users' ? 'fas fa-users' : 
+                               (activeItem == 'audit' ? 'fas fa-scroll' : 
+                               (activeItem == 'measurements' ? 'fas fa-chart-line' : 
+                               (activeItem == 'materials' ? 'fas fa-boxes-stacked' : 'fas fa-chevron-right'))))))))}"
+                   style="color: var(--vcc-primary); margin-right: 6px;"></i>
+                <span th:text="${welcome}">Page Title</span>
+            </th:block>
+        </div>
+
+        <!-- Search -->
+        <div th:if="${showSearch}" class="vcc-search-bar">
+            <i class="fas fa-search vcc-search-bar__icon"></i>
+            <input type="text"
+                   class="vcc-search-bar__input"
+                   th:id="${searchId}"
+                   th:placeholder="${activeItem == 'dashboard' ? 'Szukaj urządzeń, walidacji...' : 'Szukaj...'}"
+                   aria-label="Wyszukiwanie" />
+        </div>
+    </div>
+
+    <div class="vcc-main-topbar__right">
+        <!-- Notifications Bell -->
+        <div class="vcc-notif-wrap" id="vccNotifWrap" style="position: relative;">
+            <button class="vcc-notif-btn" type="button" title="Powiadomienia"
+                    id="vccNotifBtn"
+                    aria-haspopup="true" aria-expanded="false"
+                    aria-label="Powiadomienia">
+                <i class="fas fa-bell"></i>
+                <span class="vcc-notif-badge" id="vccNotifBadge"
+                      style="display:none; position:absolute; top:-4px; right:-4px;
+                             background:#ef4444; color:#fff; border-radius:50%;
+                             font-size:0.65rem; font-weight:700; line-height:1;
+                             min-width:18px; height:18px; padding:0 4px;
+                             display:none; align-items:center; justify-content:center;
+                             pointer-events:none;">0</span>
+            </button>
+
+            <!-- Notification Dropdown -->
+            <div id="vccNotifDropdown"
+                 style="display:none; position:absolute; top:calc(100% + 10px); right:0;
+                        width:360px; max-height:480px; overflow-y:auto;
+                        background:var(--surface-card,#1a1f3a);
+                        border:1px solid rgba(102,126,234,0.2);
+                        border-radius:12px;
+                        box-shadow:0 16px 48px rgba(0,0,0,0.45);
+                        z-index:2000;"
+                 role="dialog" aria-label="Panel powiadomień">
+
+                <!-- Header -->
+                <div style="display:flex; justify-content:space-between; align-items:center;
+                            padding:1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.07);">
+                    <strong style="color:var(--text-primary,#e8eef5); font-size:0.9rem;">
+                        Powiadomienia
+                    </strong>
+                    <button type="button" id="vccNotifClose"
+                            style="background:none;border:none;cursor:pointer;
+                                   color:var(--text-secondary,#a4adc5); font-size:1rem;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Items container -->
+                <div id="vccNotifList" style="padding:0.5rem 0;">
+                    <div style="padding:2rem; text-align:center; opacity:0.5; font-size:0.85rem;">
+                        <i class="fas fa-circle-notch fa-spin"></i> Ładowanie...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User avatar -->
+        <a th:href="@{/profile/change-password}" class="vcc-main-topbar__avatar"
+           title="Profil">
+            <i class="fas fa-user" style="font-size:0.72rem;"></i>
+        </a>
+    </div>
+
+    <!-- Notification logic script - bundled with fragment for auto-load -->
+    <script>
+    (function () {
+        const btn    = document.getElementById('vccNotifBtn');
+        const badge  = document.getElementById('vccNotifBadge');
+        const panel  = document.getElementById('vccNotifDropdown');
+        const list   = document.getElementById('vccNotifList');
+        const closeBtn = document.getElementById('vccNotifClose');
+        const wrap   = document.getElementById('vccNotifWrap');
+
+        if (!btn || window._vccNotifInited) return;
+        window._vccNotifInited = true;
+
+        const ICONS = {
+            VALIDATION:      '<i class="fas fa-shield-alt" style="color:#667eea;"></i>',
+            CALIBRATION:     '<i class="fas fa-thermometer-half" style="color:#8b5cf6;"></i>',
+            PASSWORD:        '<i class="fas fa-key" style="color:#f59e0b;"></i>',
+            ADMIN_PASSWORD:  '<i class="fas fa-user-lock" style="color:#ef4444;"></i>'
+        };
+
+        function renderItem(n) {
+            const border = n.severity === 'danger' ? '#ef4444' : '#f59e0b';
+            const icon   = ICONS[n.type] || '<i class="fas fa-bell"></i>';
+            const href   = n.link ? `href="${n.link}"` : '';
+            const tag    = n.link ? 'a' : 'div';
+            return `
+              <${tag} ${href}
+                style="display:flex; gap:0.75rem; align-items:flex-start;
+                       padding:0.75rem 1.25rem;
+                       border-left:3px solid ${border};
+                       text-decoration:none; color:inherit;
+                       transition:background 0.15s;"
+                onmouseover="this.style.background='rgba(255,255,255,0.04)'"
+                onmouseout="this.style.background='transparent'">
+                <span style="margin-top:2px; flex-shrink:0;">${icon}</span>
+                <span style="flex:1; min-width:0;">
+                  <strong style="display:block; font-size:0.8rem;
+                                 color:var(--text-primary,#e8eef5);">${n.title}</strong>
+                  <span style="font-size:0.75rem; color:var(--text-secondary,#a4adc5);
+                               white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+                               display:block;">${n.message}</span>
+                </span>
+                <span style="flex-shrink:0; font-size:0.7rem; font-weight:700;
+                             color:${border}; margin-top:2px;">${n.daysLeft}d</span>
+              </${tag}>`;
+        }
+
+        function loadNotifications() {
+            fetch('/api/notifications')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        badge.style.display = 'none';
+                        list.innerHTML = `
+                          <div style="padding:2rem; text-align:center; opacity:0.5; font-size:0.85rem;">
+                            <i class="fas fa-check-circle" style="font-size:1.5rem; display:block; margin-bottom:8px;"></i>
+                            Brak powiadomień
+                          </div>`;
+                        return;
+                    }
+                    const dangerCount = data.filter(n => n.severity === 'danger').length;
+                    badge.textContent  = data.length;
+                    badge.style.display = 'flex';
+                    badge.style.background = dangerCount > 0 ? '#ef4444' : '#f59e0b';
+
+                    const labels = {
+                        VALIDATION:     'Walidacje urządzeń',
+                        CALIBRATION:    'Wzorcowania rejestratorów',
+                        PASSWORD:       'Twoje hasło',
+                        ADMIN_PASSWORD: 'Hasła użytkowników'
+                    };
+                    const groups = {};
+                    data.forEach(n => {
+                        if (!groups[n.type]) groups[n.type] = [];
+                        groups[n.type].push(n);
+                    });
+
+                    let html = '';
+                    for (const [type, items] of Object.entries(groups)) {
+                        html += `<div style="padding:0.35rem 1.25rem 0.15rem;
+                                             font-size:0.68rem; text-transform:uppercase;
+                                             letter-spacing:0.08em; opacity:0.45;
+                                             color:var(--text-secondary,#a4adc5);">
+                                   ${labels[type] || type}
+                                 </div>`;
+                        items.forEach(n => html += renderItem(n));
+                    }
+                    list.innerHTML = html;
+                })
+                .catch(() => {
+                    badge.style.display = 'none';
+                    list.innerHTML = '<div style="padding:1rem 1.25rem; opacity:0.5; font-size:0.8rem;">Nie można załadować powiadomień.</div>';
+                });
+        }
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const open = panel.style.display === 'block';
+            panel.style.display = open ? 'none' : 'block';
+            btn.setAttribute('aria-expanded', String(!open));
+        });
+
+        closeBtn.addEventListener('click', function () {
+            panel.style.display = 'none';
+            btn.setAttribute('aria-expanded', 'false');
+        });
+
+        document.addEventListener('click', function (e) {
+            if (wrap && !wrap.contains(e.target)) {
+                panel.style.display = 'none';
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        loadNotifications();
+        setInterval(loadNotifications, 5 * 60 * 1000);
+    })();
+    </script>
+</header>
+
+</body>
+</html>

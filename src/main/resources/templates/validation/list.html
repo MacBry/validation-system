@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walidacje - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('validations')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('validations', 'Walidacje', true, 'validationSearchInput')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Lista walidacji</h1>
+                <div class="vcc-page-header__actions">
+                    <a th:href="@{/wizard/new}" class="vcc-btn--action">
+                        <i class="fas fa-bolt"></i>
+                        Nowa kwalifikacja (Wizard)
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${error}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${error}"></span>
+            </div>
+
+            <!-- Status filters -->
+            <div class="vcc-filter-bar">
+                <a th:href="@{/validations}"
+                   th:class="${currentStatus == null ? 'vcc-filter-btn vcc-filter-btn--active' : 'vcc-filter-btn'}">
+                    <i class="fas fa-list"></i> Wszystkie
+                </a>
+                <a th:each="s : ${allStatuses}" th:href="@{/validations(status=${s})}"
+                   th:class="${currentStatus == s ? 'vcc-filter-btn vcc-filter-btn--active' : 'vcc-filter-btn'}"
+                   th:text="${s.displayName}">
+                    Status
+                </a>
+            </div>
+
+            <!-- Data card -->
+            <div class="vcc-data-card vcc-animate-fade-in">
+
+                <div th:if="${#lists.isEmpty(validations)}" class="vcc-empty-state">
+                    <i class="fas fa-clipboard-check vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title"
+                       th:text="${currentStatus != null ? 'Brak walidacji ze statusem: ' + currentStatus.displayName : 'Brak walidacji'}">
+                        Brak walidacji
+                    </p>
+                    <p class="vcc-empty-state__desc">Walidacje są tworzone z listy pomiarów lub za pomocą Wizarda</p>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(validations)}" class="vcc-table-wrap">
+                    <table class="vcc-table">
+                        <thead>
+                            <tr>
+                                <th style="width:80px">ID</th>
+                                <th>Data utworzenia</th>
+                                <th>Status</th>
+                                <th>Liczba serii</th>
+                                <th>Urządzenie</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="validation : ${validations}">
+                                <td>
+                                    <span class="vcc-table__mono" style="color: var(--vcc-primary);"
+                                          th:text="'#' + ${validation.id}">ID</span>
+                                </td>
+                                <td>
+                                    <div class="vcc-table__primary" th:text="${#temporals.format(validation.createdDate, 'dd.MM.yyyy')}">Data</div>
+                                    <div class="vcc-table__muted" th:text="${#temporals.format(validation.createdDate, 'HH:mm')}">Czas</div>
+                                </td>
+                                <td>
+                                    <span class="vcc-status"
+                                          th:classappend="${validation.status.name() == 'DRAFT' ? 'vcc-status--draft' :
+                                                         (validation.status.name() == 'APPROVED' ? 'vcc-status--valid' :
+                                                         (validation.status.name() == 'COMPLETED' ? 'vcc-status--completed' : 'vcc-status--invalid'))}"
+                                          th:text="${validation.status.displayName}">
+                                        Status
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__primary" th:text="${#lists.size(validation.measurementSeries)}">0</span>
+                                    <span class="vcc-table__muted"
+                                          th:text="${#lists.size(validation.measurementSeries) == 1 ? 'seria' :
+                                                   (#lists.size(validation.measurementSeries) < 5 ? 'serie' : 'serii')}">serii</span>
+                                </td>
+                                <td>
+                                    <div th:if="${!#lists.isEmpty(validation.measurementSeries) && validation.measurementSeries[0].coolingDevice != null}">
+                                        <div class="vcc-table__primary" th:text="${validation.measurementSeries[0].coolingDevice.name}">Urządzenie</div>
+                                        <div class="vcc-table__muted">
+                                            <span th:text="'Nr inw: ' + ${validation.measurementSeries[0].coolingDevice.inventoryNumber}">Nr</span>
+                                            <span style="margin:0 4px">&#183;</span>
+                                            <span th:if="${validation.measurementSeries[0].coolingDevice.laboratory != null}"
+                                                  th:text="${validation.measurementSeries[0].coolingDevice.laboratory.abbreviation}">Lab</span>
+                                            <span th:unless="${validation.measurementSeries[0].coolingDevice.laboratory != null}"
+                                                  style="font-style:italic">Brak pracowni</span>
+                                        </div>
+                                    </div>
+                                    <div th:if="${#lists.isEmpty(validation.measurementSeries) || validation.measurementSeries[0].coolingDevice == null}"
+                                         class="vcc-table__muted">
+                                        Brak informacji
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="vcc-table__actions">
+                                        <a th:href="@{/validations/{id}(id=${validation.id}, from=${currentStatus != null ? '/validations?status=' + currentStatus : '/validations'})}"
+                                           class="vcc-btn--table vcc-btn--table-primary">
+                                            <i class="fas fa-eye"></i> Szczegóły
+                                        </a>
+                                        <button th:data-url="@{/validations/{id}/package(id=${validation.id})}"
+                                                th:data-filename="|Walidacja_${validation.id}_${#temporals.format(validation.createdDate, 'yyyy-MM-dd')}.zip|"
+                                                onclick="downloadFile(this.getAttribute('data-url'), this.getAttribute('data-filename'))"
+                                                class="vcc-btn--table vcc-btn--table-success">
+                                            <i class="fas fa-file-archive"></i> ZIP
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(validations)}" class="vcc-data-card__footer">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge" th:text="${#lists.size(validations)}">0</span>
+                        <span th:text="${currentStatus != null ? 'walidacji ze statusem: ' + currentStatus.displayName : 'walidacji'}">walidacji</span>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    function downloadFile(url, filename) {
+        fetch(url, { credentials: 'same-origin' })
+            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.blob(); })
+            .then(function(blob) {
+                var u = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.style.display = 'none'; a.href = u; a.download = filename;
+                document.body.appendChild(a); a.click();
+                window.URL.revokeObjectURL(u); document.body.removeChild(a);
+            }).catch(function(e) { alert('Błąd pobierania: ' + e); });
+    }
+
+    (function() {
+        var input = document.getElementById('validationSearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            var rows = document.querySelectorAll('.vcc-table tbody tr');
+            rows.forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pracownie - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('laboratories')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+
+        <header th:replace="~{fragments/topbar :: topbar('laboratories', 'Pracownie', true, 'labSearchInput')}"></header>
+
+        <main class="vcc-page">
+
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Pracownie</h1>
+                <div class="vcc-page-header__actions">
+                    <a th:href="@{/laboratories/new}" class="vcc-btn--action"
+                       sec:authorize="hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_COMPANY_ADMIN')">
+                        <i class="fas fa-plus"></i> Dodaj pracownię
+                    </a>
+                </div>
+            </div>
+
+            <div class="vcc-data-card vcc-animate-fade-in">
+
+                <div th:if="${#lists.isEmpty(laboratories)}" class="vcc-empty-state">
+                    <i class="fas fa-flask vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title">Brak pracowni w systemie</p>
+                    <p class="vcc-empty-state__desc">Dodaj pierwszą pracownię laboratoryjną</p>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(laboratories)}" class="vcc-table-wrap">
+                    <table class="vcc-table">
+                        <thead>
+                            <tr>
+                                <th>Dział</th>
+                                <th>Pełna nazwa</th>
+                                <th>Skrót</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="lab : ${laboratories}">
+                                <td>
+                                    <span th:if="${lab.department != null}" class="vcc-table__label"
+                                          th:text="${lab.department.abbreviation}">--</span>
+                                    <span th:unless="${lab.department != null}" class="vcc-table__muted">--</span>
+                                </td>
+                                <td><span class="vcc-table__primary" th:text="${lab.fullName}">--</span></td>
+                                <td>
+                                    <span class="vcc-table__mono" style="color:var(--text-muted);"
+                                          th:text="${lab.abbreviation}">--</span>
+                                </td>
+                                <td>
+                                    <div class="vcc-table__actions">
+                                        <a th:href="@{/laboratories/{id}(id=${lab.id})}" class="vcc-btn--table vcc-btn--table-primary">
+                                            <i class="fas fa-eye"></i> Szczegóły
+                                        </a>
+                                        <a th:href="@{/laboratories/{id}/edit(id=${lab.id})}" class="vcc-btn--table vcc-btn--table-outline"
+                                           th:if="${#authorization.expression('hasRole(''ROLE_SUPER_ADMIN'')') or @securityService.hasAccessToLaboratory(lab.id)}">
+                                            <i class="fas fa-edit"></i> Edytuj
+                                        </a>
+                                        <form th:action="@{/laboratories/{id}/delete(id=${lab.id})}" method="post" style="display:inline"
+                                              th:if="${#authorization.expression('hasRole(''ROLE_SUPER_ADMIN'')') or (#authorization.expression('hasRole(''ROLE_COMPANY_ADMIN'')') and @securityService.hasAccessToLaboratory(lab.id))}"
+                                              onsubmit="return confirm('Usunąć tę pracownię?')">
+                                            <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
+                                                <i class="fas fa-trash-alt"></i> Usuń
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(laboratories)}" class="vcc-data-card__footer">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge" th:text="${#lists.size(laboratories)}">0</span> pracowni
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+    <script>
+    (function() {
+        var input = document.getElementById('labSearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            document.querySelectorAll('.vcc-table tbody tr').forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+    </script>
+</body>
+
+</html>

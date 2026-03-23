@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Kwalifikacji - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:replace="~{fragments/csrf-token :: csrf-meta}"></th:replace>
+    <style>
+        /* ---- Wizard list page ---- */
+        .wizard-draft-card {
+            background: var(--surface-card, #fff);
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-6, 1.5rem);
+            margin-bottom: var(--sp-4, 1rem);
+            transition: box-shadow var(--duration-fast, 0.15s) var(--ease-out, ease);
+        }
+        .wizard-draft-card:hover {
+            box-shadow: 0 4px 18px rgba(102,126,234,0.10);
+        }
+        .wizard-draft-card__top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--sp-4, 1rem);
+            margin-bottom: var(--sp-4, 1rem);
+        }
+        .wizard-draft-card__type {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .wizard-draft-card__type-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: rgba(102,126,234,0.10);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--vcc-primary, #667eea);
+            font-size: 0.9rem;
+        }
+        .wizard-draft-card__meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--sp-6, 1.5rem);
+            font-size: 0.82rem;
+            color: var(--text-secondary, #6b7280);
+            margin-bottom: var(--sp-4, 1rem);
+        }
+        .wizard-draft-card__meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .wizard-draft-card__meta-item i {
+            color: var(--text-muted, #9298ae);
+            width: 14px;
+            text-align: center;
+        }
+        .wizard-draft-card__meta-label {
+            font-weight: 600;
+            color: var(--text-primary, #1a1f3a);
+        }
+        .wizard-draft-card__progress {
+            margin-bottom: var(--sp-4, 1rem);
+        }
+        .wizard-draft-card__progress-bar-wrap {
+            height: 6px;
+            background: var(--border-default, #e5e7ef);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .wizard-draft-card__progress-bar {
+            height: 100%;
+            background: var(--vcc-primary, #667eea);
+            border-radius: 99px;
+            transition: width 0.3s ease;
+        }
+        .wizard-draft-card__progress-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+        .wizard-draft-card__progress-text {
+            color: var(--text-secondary, #6b7280);
+        }
+        .wizard-draft-card__progress-pct {
+            font-weight: 600;
+            color: var(--vcc-primary, #667eea);
+        }
+        .wizard-draft-card__actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Status badge */
+        .wizard-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 99px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+        .wizard-status--draft {
+            background: rgba(102,126,234,0.10);
+            color: var(--vcc-primary, #667eea);
+        }
+        .wizard-status--completed {
+            background: rgba(22,163,74,0.10);
+            color: #166534;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('wizard', 'Wizard kwalifikacji', false, null)}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Breadcrumb -->
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">Wizard kwalifikacji</span>
+            </nav>
+
+            <!-- Page header -->
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Wizard kwalifikacji</h1>
+                <div class="vcc-page-header__actions">
+                    <a th:href="@{/wizard/new}" class="vcc-btn--action">
+                        <i class="fas fa-plus"></i>
+                        Nowy wizard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Drafts list -->
+            <div th:if="${drafts != null && !drafts.isEmpty()}" class="vcc-animate-fade-in">
+
+                <div th:each="draft : ${drafts}" class="wizard-draft-card">
+
+                    <!-- Card top row: title + status -->
+                    <div class="wizard-draft-card__top">
+                        <div class="wizard-draft-card__type">
+                            <div class="wizard-draft-card__type-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <span th:text="${draft.procedureType.getDisplayName()}">OQ Kwalifikacja</span>
+                        </div>
+                        <span class="wizard-status wizard-status--draft">
+                            <i class="fas fa-circle" style="font-size:0.5rem;"></i>
+                            <span th:text="${draft.status.getDisplayName()}">W toku</span>
+                        </span>
+                    </div>
+
+                    <!-- Meta info -->
+                    <div class="wizard-draft-card__meta">
+                        <div class="wizard-draft-card__meta-item">
+                            <i class="fas fa-hashtag"></i>
+                            <span>ID: </span>
+                            <span class="wizard-draft-card__meta-label" th:text="${draft.id}"></span>
+                        </div>
+                        <div class="wizard-draft-card__meta-item" th:if="${draft.coolingDevice != null}">
+                            <i class="fas fa-cube"></i>
+                            <span>Urządzenie: </span>
+                            <span class="wizard-draft-card__meta-label" th:text="${draft.coolingDevice.name}"></span>
+                        </div>
+                        <div class="wizard-draft-card__meta-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Utworzono: </span>
+                            <span class="wizard-draft-card__meta-label"
+                                  th:text="${#temporals.format(draft.createdAt, 'dd.MM.yyyy HH:mm')}"></span>
+                        </div>
+                    </div>
+
+                    <!-- Step progress bar -->
+                    <div class="wizard-draft-card__progress">
+                        <div class="wizard-draft-card__progress-label">
+                            <span class="wizard-draft-card__progress-text">
+                                Krok <strong th:text="${draft.currentStep}">1</strong> z 9
+                            </span>
+                            <span class="wizard-draft-card__progress-pct"
+                                  th:text="${#numbers.formatInteger(draft.currentStep * 100 / 9, 1)} + '%'">11%</span>
+                        </div>
+                        <div class="wizard-draft-card__progress-bar-wrap">
+                            <div class="wizard-draft-card__progress-bar"
+                                 th:style="'width: ' + ${draft.currentStep * 100 / 9} + '%'"></div>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="wizard-draft-card__actions">
+                        <a th:href="@{/wizard/{id}/step/{step}(id=${draft.id}, step=${draft.currentStep})}"
+                           class="vcc-btn--table vcc-btn--table-primary">
+                            <i class="fas fa-play"></i>
+                            Kontynuuj (Krok <span th:text="${draft.currentStep}"></span>)
+                        </a>
+                        <form th:action="@{/wizard/{id}/abandon(id=${draft.id})}" method="post"
+                              style="display:inline;"
+                              onsubmit="return confirm('Czy na pewno porzucić ten szkic? Tej operacji nie można cofnąć.');">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <button type="submit" class="vcc-btn--table vcc-btn--table-outline">
+                                <i class="fas fa-trash-alt"></i>
+                                Porzuć
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Empty state -->
+            <div th:if="${drafts == null || drafts.isEmpty()}" class="vcc-empty-state vcc-animate-fade-in">
+                <div class="vcc-empty-state__icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <p class="vcc-empty-state__title">Brak aktywnych szkiców</p>
+                <p class="vcc-empty-state__desc">Utwórz nowy wizard kwalifikacji, aby rozpocząć tworzenie walidacji krok po kroku.</p>
+                <a th:href="@{/wizard/new}" class="vcc-btn--action" style="margin-top: var(--sp-4);">
+                    <i class="fas fa-plus"></i>
+                    Utwórz nowy wizard
+                </a>
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+
+</body>
+</html>

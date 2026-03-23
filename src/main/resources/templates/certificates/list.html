@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certyfikaty firmowe - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('certificates')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('certificates', 'Certyfikaty', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Page header -->
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Certyfikaty firmowe</h1>
+                <div class="vcc-page-header__actions">
+                    <span class="vcc-form-hint" style="align-self:center;">
+                        <i class="fas fa-shield-alt" style="color:var(--vcc-primary);"></i>
+                        FDA 21 CFR Part 11 / eIDAS
+                    </span>
+                </div>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Info panel -->
+            <div class="vcc-form-info" style="margin-bottom:var(--sp-3);">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Certyfikaty PKCS12 (.p12/.pfx)</strong> — każda firma może mieć jeden aktywny certyfikat używany do podpisywania walidacji.
+                    Jeśli firma nie ma własnego certyfikatu, używany jest globalny certyfikat systemu (fallback).
+                </div>
+            </div>
+
+            <!-- Empty state: no companies -->
+            <div th:if="${#lists.isEmpty(companies)}" class="vcc-data-card vcc-animate-fade-in">
+                <div class="vcc-empty-state">
+                    <i class="fas fa-building vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title">Brak firm w systemie</p>
+                    <p class="vcc-empty-state__desc">Najpierw dodaj firmy, aby zarządzać certyfikatami</p>
+                </div>
+            </div>
+
+            <!-- One card per company -->
+            <div th:each="company : ${companies}"
+                 class="vcc-data-card vcc-animate-fade-in"
+                 style="margin-bottom:var(--sp-4);">
+
+                <!-- Company header -->
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--sp-3) var(--sp-4);border-bottom:2px solid var(--border-subtle);background:var(--surface-page);border-radius:var(--radius-card) var(--radius-card) 0 0;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--vcc-primary),var(--vcc-secondary));display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="fas fa-building" style="color:#fff;font-size:0.8rem;"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:1rem;color:var(--text-main);"
+                                 th:text="${company.name}">Firma</div>
+                            <div class="vcc-table__muted" style="font-size:0.75rem;"
+                                 th:text="'ID: ' + ${company.id}">ID: --</div>
+                        </div>
+                    </div>
+                    <a th:href="@{/certificates/company/{id}/upload(id=${company.id})}"
+                       class="vcc-btn--action" style="padding:8px 16px;font-size:0.82rem;">
+                        <i class="fas fa-upload"></i>
+                        Wgraj certyfikat
+                    </a>
+                </div>
+
+                <!-- No certificate for this company -->
+                <div th:if="${activeCerts[company.id] == null}"
+                     style="padding:24px var(--sp-4);display:flex;align-items:center;gap:10px;color:var(--text-muted);">
+                    <i class="fas fa-exclamation-triangle" style="color:#f59e0b;font-size:1rem;"></i>
+                    <span style="font-size:0.88rem;">
+                        Brak certyfikatu firmowego — walidacje są podpisywane globalnym certyfikatem systemu (fallback)
+                    </span>
+                </div>
+
+                <!-- Certificate table -->
+                <div th:if="${activeCerts[company.id] != null}" class="vcc-table-wrap">
+                    <table class="vcc-table" th:with="cert=${activeCerts[company.id]}">
+                        <thead>
+                            <tr>
+                                <th>Podmiot (CN)</th>
+                                <th>Wystawca</th>
+                                <th>Ważny od</th>
+                                <th>Ważny do</th>
+                                <th>Odcisk SHA-256</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:with="cert=${activeCerts[company.id]}">
+                                <td>
+                                    <div class="dn-field" th:attr="data-dn=${cert.subject}"></div>
+                                </td>
+                                <td>
+                                    <div class="dn-field vcc-table__muted" style="font-size:0.8rem;"
+                                         th:attr="data-dn=${cert.issuer}"></div>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__secondary"
+                                          th:text="${cert.validFrom != null ? #temporals.format(cert.validFrom, 'dd.MM.yyyy') : '—'}">--</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__secondary"
+                                          th:text="${cert.validTo != null ? #temporals.format(cert.validTo, 'dd.MM.yyyy') : '—'}">--</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__mono" style="font-size:0.75rem;"
+                                          th:text="${cert.sha256Fingerprint != null ? cert.sha256Fingerprint.substring(0, 16) + '...' : '—'}">
+                                        --
+                                    </span>
+                                </td>
+                                <td>
+                                    <span th:if="${cert.expired}" class="vcc-status vcc-status--invalid">
+                                        <i class="fas fa-times-circle"></i> Wygasły
+                                    </span>
+                                    <span th:if="${!cert.expired and cert.expiringSoon}" class="vcc-status vcc-status--completed">
+                                        <i class="fas fa-exclamation-circle"></i> Wygasa wkrótce
+                                    </span>
+                                    <span th:if="${!cert.expired and !cert.expiringSoon}" class="vcc-status vcc-status--valid">
+                                        <i class="fas fa-check-circle"></i> Ważny
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div class="vcc-table__actions">
+                                        <button type="button"
+                                                class="vcc-btn--table vcc-btn--table-primary"
+                                                th:attr="data-subject=${cert.subject}, data-issuer=${cert.issuer}, data-from=${cert.validFrom != null ? #temporals.format(cert.validFrom, 'dd.MM.yyyy') : '—'}, data-to=${cert.validTo != null ? #temporals.format(cert.validTo, 'dd.MM.yyyy') : '—'}, data-serial=${cert.serialNumber}, data-fingerprint=${cert.sha256Fingerprint}"
+                                                onclick="showCertDetail(this)">
+                                            <i class="fas fa-eye"></i>
+                                            Szczegóły
+                                        </button>
+                                        <form th:action="@{/certificates/{certId}/deactivate(certId=${cert.id})}"
+                                              method="post" style="display:inline"
+                                              onsubmit="return confirm('Dezaktywować ten certyfikat?\nFirma wróci na globalny certyfikat systemu (fallback).')">
+                                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                            <input type="hidden" name="companyId" th:value="${company.id}">
+                                            <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
+                                                <i class="fas fa-ban"></i>
+                                                Dezaktywuj
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <!-- end th:each company -->
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Modal: Szczegoly certyfikatu -->
+    <div class="vcc-modal-overlay" id="certDetailModal"
+         onclick="if(event.target===this)this.classList.remove('is-open')">
+        <div class="vcc-modal" style="max-width:560px;">
+            <h3 class="vcc-modal__title">
+                <i class="fas fa-certificate" style="color:var(--vcc-primary);margin-right:8px;"></i>
+                Szczegóły certyfikatu
+            </h3>
+
+            <div style="display:flex;flex-direction:column;gap:0;">
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-subtle);">
+                    <span class="vcc-detail-key">Podmiot (Subject)</span>
+                    <span class="vcc-table__mono" style="font-size:0.8rem;max-width:320px;text-align:right;word-break:break-all;"
+                          id="certDetailSubject">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-subtle);">
+                    <span class="vcc-detail-key">Wystawca (Issuer)</span>
+                    <span class="vcc-table__mono" style="font-size:0.8rem;max-width:320px;text-align:right;word-break:break-all;"
+                          id="certDetailIssuer">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-subtle);">
+                    <span class="vcc-detail-key">Numer seryjny</span>
+                    <span class="vcc-table__mono" style="font-size:0.8rem;" id="certDetailSerial">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-subtle);">
+                    <span class="vcc-detail-key">Ważny od</span>
+                    <span class="vcc-table__secondary" id="certDetailFrom">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-subtle);">
+                    <span class="vcc-detail-key">Ważny do</span>
+                    <span class="vcc-table__secondary" id="certDetailTo">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;">
+                    <span class="vcc-detail-key">Odcisk SHA-256</span>
+                    <span class="vcc-table__mono" style="font-size:0.72rem;max-width:260px;text-align:right;word-break:break-all;"
+                          id="certDetailFingerprint">—</span>
+                </div>
+            </div>
+
+            <div class="vcc-modal__actions" style="margin-top:var(--sp-3);">
+                <button type="button" class="vcc-modal__btn-cancel"
+                        onclick="document.getElementById('certDetailModal').classList.remove('is-open')">
+                    Zamknij
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar JS -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <script>
+    // Parse DN fields (CN=foo, O=bar, C=PL)
+    document.querySelectorAll('.dn-field[data-dn]').forEach(function(el) {
+        var raw = el.getAttribute('data-dn') || '';
+        var parts = raw.split(/,(?![^=]+=)/).map(function(p) { return p.trim(); }).filter(Boolean);
+        if (parts.length === 1 && raw.indexOf(',') !== -1) {
+            parts = raw.split(',').map(function(p) { return p.trim(); }).filter(Boolean);
+        }
+        parts.forEach(function(part) {
+            var eq = part.indexOf('=');
+            var span = document.createElement('span');
+            span.style.cssText = 'display:block;font-family:\'DM Mono\',monospace;font-size:0.78rem;';
+            if (eq !== -1) {
+                var key = part.substring(0, eq);
+                var val = part.substring(eq + 1);
+                span.innerHTML = '<span style="color:var(--text-muted);">' + key + '=</span>' + val;
+            } else {
+                span.textContent = part;
+            }
+            el.appendChild(span);
+        });
+    });
+
+    // Certificate detail modal
+    function showCertDetail(btn) {
+        document.getElementById('certDetailSubject').textContent = btn.getAttribute('data-subject') || '—';
+        document.getElementById('certDetailIssuer').textContent = btn.getAttribute('data-issuer') || '—';
+        document.getElementById('certDetailSerial').textContent = btn.getAttribute('data-serial') || '—';
+        document.getElementById('certDetailFrom').textContent = btn.getAttribute('data-from') || '—';
+        document.getElementById('certDetailTo').textContent = btn.getAttribute('data-to') || '—';
+        document.getElementById('certDetailFingerprint').textContent = btn.getAttribute('data-fingerprint') || '—';
+        document.getElementById('certDetailModal').classList.add('is-open');
+    }
+    </script>
+
+</body>
+
+</html>

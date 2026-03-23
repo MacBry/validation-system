@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urządzenia chłodnicze - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('devices')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('devices', 'Urządzenia chłodnicze', true, 'deviceSearchInput')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Page header -->
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Urządzenia chłodnicze</h1>
+                <div class="vcc-page-header__actions">
+                    <a th:href="@{/devices/new}" class="vcc-btn--action">
+                        <i class="fas fa-plus"></i>
+                        Dodaj urządzenie
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Data card -->
+            <div class="vcc-data-card vcc-animate-fade-in">
+
+                <!-- Empty state -->
+                <div th:if="${#lists.isEmpty(devices)}" class="vcc-empty-state">
+                    <i class="fas fa-cube vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title">Brak urządzeń w systemie</p>
+                    <p class="vcc-empty-state__desc">Dodaj pierwsze urządzenie chłodnicze</p>
+                </div>
+
+                <!-- Table -->
+                <div th:unless="${#lists.isEmpty(devices)}" class="vcc-table-wrap">
+                    <table class="vcc-table">
+                        <thead>
+                            <tr>
+                                <th>Nr inwentarzowy</th>
+                                <th>Nazwa urządzenia</th>
+                                <th>Pracownia</th>
+                                <th>Typ komory</th>
+                                <th>Materiał</th>
+                                <th>Status walidacji</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="device : ${devices}">
+                                <td>
+                                    <span class="vcc-table__mono" th:text="${device.inventoryNumber}">--</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__primary" th:text="${device.name}">--</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__label"
+                                          th:text="${device.laboratory != null ? device.laboratory.abbreviation : device.department.abbreviation}">--</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__secondary" th:text="${device.chamberType.displayName}">--</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-table__secondary" th:text="${device.materialName}">--</span>
+                                </td>
+                                <td>
+                                    <span class="vcc-status" th:with="status=${validationStatuses.get(device.id)}"
+                                          th:classappend="${status != null && status.hasValidValidation ? 'vcc-status--valid' :
+                                            (status != null && 'COMPLETED' == status.invalidReason ? 'vcc-status--completed' :
+                                            (status != null && status.latestValidationDate != null ? 'vcc-status--invalid' : 'vcc-status--none'))}">
+                                        <span th:if="${status != null && status.hasValidValidation}">
+                                            <i class="fas fa-check-circle"></i> Ważna
+                                        </span>
+                                        <span th:if="${status != null && 'COMPLETED' == status.invalidReason}">
+                                            <i class="fas fa-check"></i> Zakończona
+                                        </span>
+                                        <span th:if="${status != null && !status.hasValidValidation && status.invalidReason != null && 'COMPLETED' != status.invalidReason}">
+                                            <i class="fas fa-times-circle"></i> Nieważna
+                                            <span class="vcc-table__muted" th:text="'(' + ${status.invalidReasonDisplay} + ')'"></span>
+                                        </span>
+                                        <span th:if="${status == null || (status.latestValidationDate == null && status.invalidReason == null)}">
+                                            <i class="fas fa-minus-circle"></i> Brak
+                                        </span>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="vcc-table__actions">
+                                        <a th:href="@{/devices/{id}(id=${device.id})}" class="vcc-btn--table vcc-btn--table-primary">
+                                            <i class="fas fa-eye"></i> Szczegóły
+                                        </a>
+                                        <a th:href="@{/devices/{id}/validations(id=${device.id})}" class="vcc-btn--table vcc-btn--table-purple">
+                                            <i class="fas fa-clipboard-check"></i> Walidacje
+                                        </a>
+                                        <a th:href="@{/devices/{id}/edit(id=${device.id})}" class="vcc-btn--table vcc-btn--table-outline">
+                                            <i class="fas fa-edit"></i> Edytuj
+                                        </a>
+                                        <form th:action="@{/devices/{id}/delete(id=${device.id})}" method="post"
+                                              style="display:inline"
+                                              onsubmit="return confirm('Usunąć to urządzenie?')">
+                                            <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
+                                                <i class="fas fa-trash-alt"></i> Usuń
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${totalPages > 1}" class="vcc-data-card__footer"
+                     th:with="start=${T(java.lang.Math).max(0, T(java.lang.Math).min(currentPage - 2, totalPages - 5))},
+                              end=${T(java.lang.Math).min(totalPages - 1, T(java.lang.Math).max(currentPage + 2, 4))}">
+                    <div class="vcc-data-card__count">
+                        Strona <strong th:text="${currentPage + 1}">1</strong> z <strong th:text="${totalPages}">1</strong>
+                    </div>
+                    <ul class="vcc-pagination">
+                        <li th:classappend="${currentPage == 0} ? 'disabled'">
+                            <a th:href="@{/devices(page=0)}" title="Pierwsza strona"><i class="fas fa-angle-double-left"></i></a>
+                        </li>
+                        <li th:classappend="${currentPage == 0} ? 'disabled'">
+                            <a th:href="@{/devices(page=${currentPage - 1})}"><i class="fas fa-angle-left"></i></a>
+                        </li>
+                        <li th:each="i : ${#numbers.sequence(start, end)}" th:classappend="${currentPage == i} ? 'active'">
+                            <a th:href="@{/devices(page=${i})}" th:text="${i + 1}">1</a>
+                        </li>
+                        <li th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                            <a th:href="@{/devices(page=${currentPage + 1})}"><i class="fas fa-angle-right"></i></a>
+                        </li>
+                        <li th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                            <a th:href="@{/devices(page=${totalPages - 1})}" title="Ostatnia strona"><i class="fas fa-angle-double-right"></i></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Footer -->
+                <div th:unless="${#lists.isEmpty(devices)}" class="vcc-data-card__footer"
+                     th:if="${totalPages <= 1}">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge" th:text="${devicePage.totalElements}">0</span> urządzeń
+                    </div>
+                </div>
+                <div th:unless="${#lists.isEmpty(devices)}" class="vcc-data-card__footer"
+                     th:if="${totalPages > 1}">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge" th:text="${devicePage.totalElements}">0</span> urządzeń
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <!-- Sidebar toggle script -->
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+
+    <!-- Client-side table search -->
+    <script>
+    (function() {
+        var input = document.getElementById('deviceSearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            var rows = document.querySelectorAll('.vcc-table tbody tr');
+            rows.forEach(function(row) {
+                var text = row.textContent.toLowerCase();
+                row.style.display = text.indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+    </script>
+
+</body>
+
+</html>

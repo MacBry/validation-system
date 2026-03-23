@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Seria pomiarowa — ' + ${series.originalFilename}">Szczegóły serii pomiarowej</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <style>
+        /* Stat tiles grid — 4 columns on desktop, 2 on tablet */
+        .meas-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        @media (max-width: 992px) {
+            .meas-stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .meas-stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .meas-stat-tile {
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            transition: transform 0.2s;
+        }
+        .meas-stat-tile:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Themed modifiers matching validation sections A-D */
+        .meas-stat-tile--blue { background: #f4f6fb; border-color: #dbeafe; }
+        .meas-stat-tile--blue .meas-stat-tile__label { color: #4a6cf7; }
+        .meas-stat-tile--blue .meas-stat-tile__val { color: #4a6cf7; }
+
+        .meas-stat-tile--red { background: #fef5f5; border-color: #fce0e0; }
+        .meas-stat-tile--red .meas-stat-tile__label { color: #b85c5c; }
+        .meas-stat-tile--red .meas-stat-tile__val { color: #d97070; }
+
+        .meas-stat-tile--green { background: #f0f7f4; border-color: #d0eede; }
+        .meas-stat-tile--green .meas-stat-tile__label { color: #5aa888; }
+        .meas-stat-tile--green .meas-stat-tile__val { color: #3d8a6e; }
+
+        .meas-stat-tile--purple { background: #f6f4fb; border-color: #e8e0f8; }
+        .meas-stat-tile--purple .meas-stat-tile__label { color: #8070a8; }
+        .meas-stat-tile--purple .meas-stat-tile__val { color: #9580c7; }
+
+        .meas-stat-tile--gold { background: #fdf8f2; border-color: #f5dfc0; border-width: 2px; }
+        .meas-stat-tile--gold .meas-stat-tile__label { color: #a07848; font-weight: 700; }
+        .meas-stat-tile--gold .meas-stat-tile__val { color: #c08850; font-weight: 800; }
+
+        .meas-stat-tile--gray { background: #f8f9fb; border-color: #e2e8f0; }
+        .meas-stat-tile--gray .meas-stat-tile__label { color: #7a8598; }
+        .meas-stat-tile--gray .meas-stat-tile__val { color: #8b95a8; }
+
+        .meas-stat-tile__label {
+            font-size: .7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 7px;
+        }
+        .meas-stat-tile__val {
+            font-size: 1.65rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+        .meas-stat-tile__sub {
+            font-size: .72rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        /* Alarm limits boxes */
+        .meas-limit-box {
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .meas-limit-box--lower {
+            background: #eff6ff;
+            border: 1.5px solid #93c5fd;
+        }
+        .meas-limit-box--upper {
+            background: #fff5f5;
+            border: 1.5px solid #feb2b2;
+        }
+        .meas-limit-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .meas-limit-dot--blue { background: #3b82f6; }
+        .meas-limit-dot--red  { background: #ef4444; }
+        .meas-limit-label {
+            font-size: .8rem;
+            color: var(--text-muted);
+        }
+        .meas-limit-val {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        /* Uncertainty budget components */
+        .ub-component {
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            text-align: center;
+        }
+        .ub-component__type {
+            font-size: .68rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .ub-component__val {
+            font-size: 1.35rem;
+            font-weight: 600;
+            font-family: 'DM Mono', monospace;
+        }
+        .ub-component__sub {
+            font-size: .68rem;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('measurements')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <!-- Main Content -->
+    <div class="vcc-main">
+
+        <!-- Top Bar -->
+        <header th:replace="~{fragments/topbar :: topbar('measurements', 'Szczegóły serii pomiarowej', false, '')}"></header>
+
+        <!-- Page body -->
+        <main class="vcc-page">
+
+            <!-- Breadcrumb -->
+            <nav class="vcc-breadcrumb" aria-label="Breadcrumb">
+                <a th:href="@{/}">Dashboard</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <a th:href="@{/measurements}">Serie pomiarowe</a>
+                <span class="vcc-breadcrumb__sep"><i class="fas fa-chevron-right"></i></span>
+                <span class="vcc-breadcrumb__current" th:text="${series.id}">ID</span>
+            </nav>
+
+            <!-- Detail header -->
+            <div class="vcc-detail-header vcc-animate-fade-in">
+                <div class="vcc-detail-header__info">
+                    <div class="vcc-detail-header__icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="vcc-detail-header__text">
+                        <h1 class="vcc-detail-header__title vcc-detail-value--mono"
+                            th:text="${series.originalFilename}">nazwa_pliku.vi2</h1>
+                        <div class="vcc-detail-header__subtitle"
+                             th:if="${series.recorderSerialNumber != null}">
+                            <i class="fas fa-thermometer-half"></i>
+                            Rejestrator #<span th:text="${series.recorderSerialNumber}">00000000</span>
+                        </div>
+                        <div class="vcc-detail-meta">
+                            <span class="vcc-detail-meta__item">
+                                <i class="fas fa-ruler"></i>
+                                <span th:text="${series.measurementCount + ' punktów'}">0 punktów</span>
+                            </span>
+                            <span class="vcc-detail-meta__item" th:if="${series.recorderPosition != null}">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span th:text="${series.recorderPosition.displayName}">Pozycja</span>
+                            </span>
+                            <span class="vcc-detail-meta__item">
+                                <i class="fas fa-calendar"></i>
+                                <span th:text="${series.formattedUploadDate}">Data</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vcc-button-group">
+                    <a th:href="@{/measurements/{id}/chart(id=${series.id})}"
+                       class="vcc-btn--detail-primary">
+                        <i class="fas fa-chart-area"></i>
+                        Wykres
+                    </a>
+                    <a th:href="@{/measurements}" class="vcc-btn--detail-outline">
+                        <i class="fas fa-arrow-left"></i>
+                        Powrót
+                    </a>
+                </div>
+            </div>
+
+            <!-- Section 1: Informacje o serii -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-info-circle"></i>
+                        Informacje o serii
+                    </h2>
+                </div>
+                <div class="vcc-detail-grid">
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Pierwszy pomiar</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono"
+                              th:text="${series.formattedFirstMeasurementTime}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Ostatni pomiar</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono"
+                              th:text="${series.formattedLastMeasurementTime}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Czas trwania</span>
+                        <span class="vcc-detail-value" th:text="${series.duration}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Liczba pomiarów</span>
+                        <span class="vcc-detail-value">
+                            <span class="vcc-detail-badge" th:text="${series.measurementCount}">0</span>
+                        </span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Data przesłania</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono"
+                              th:text="${series.formattedUploadDate}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Zakres temperatur</span>
+                        <span class="vcc-detail-value" th:text="${series.temperatureRange}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell" th:if="${series.recorderPosition != null}">
+                        <span class="vcc-detail-key">Pozycja rejestratora</span>
+                        <span class="vcc-detail-value" th:text="${series.recorderPosition.displayName}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell" th:if="${series.recorderSerialNumber != null}">
+                        <span class="vcc-detail-key">Nr seryjny rejestratora</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono"
+                              th:text="${series.recorderSerialNumber}">–</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Parametry statystyczne -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-calculator"></i>
+                        Parametry statystyczne
+                    </h2>
+                </div>
+
+                <!-- Main temp stats -->
+                <div class="meas-stats-grid" style="margin-bottom: 12px;">
+                    <div class="meas-stat-tile meas-stat-tile--blue">
+                        <div class="meas-stat-tile__label">Temp. minimalna</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${#numbers.formatDecimal(series.minTemperature, 1, 1)} + '°C'">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--blue">
+                        <div class="meas-stat-tile__label">Temp. średnia</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${#numbers.formatDecimal(series.avgTemperature, 1, 1)} + '°C'">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--red">
+                        <div class="meas-stat-tile__label">Temp. maksymalna</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${#numbers.formatDecimal(series.maxTemperature, 1, 1)} + '°C'">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--purple">
+                        <div class="meas-stat-tile__label">Zakres</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${#numbers.formatDecimal(series.maxTemperature - series.minTemperature, 1, 1)} + '°C'">–</div>
+                    </div>
+                    <!-- Row 2 -->
+                    <div class="meas-stat-tile meas-stat-tile--green">
+                        <div class="meas-stat-tile__label">MKT</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${series.mktTemperature != null ? #numbers.formatDecimal(series.mktTemperature, 1, 1) + '°C' : '–'}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--purple">
+                        <div class="meas-stat-tile__label">Odchyl. stand.</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${series.stdDeviation != null ? #numbers.formatDecimal(series.stdDeviation, 1, 2) + '°C' : '–'}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--gold">
+                        <div class="meas-stat-tile__label">Wariancja</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${series.variance != null ? #numbers.formatDecimal(series.variance, 1, 2) : '–'}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--gray">
+                        <div class="meas-stat-tile__label">CV%</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${series.cvPercentage != null ? #numbers.formatDecimal(series.cvPercentage, 1, 2) + '%' : '–'}">–</div>
+                    </div>
+                    <!-- Row 3 -->
+                    <div class="meas-stat-tile meas-stat-tile--blue">
+                        <div class="meas-stat-tile__label">Mediana</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${series.medianTemperature != null ? #numbers.formatDecimal(series.medianTemperature, 1, 1) + '°C' : '–'}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--gold">
+                        <div class="meas-stat-tile__label" title="Niepewność rozszerzona U = k × σ (k=2, 95%)">U (k=2)</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${series.expandedUncertainty != null ? '±' + #numbers.formatDecimal(series.expandedUncertainty, 1, 2) + '°C' : '–'}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--green">
+                        <div class="meas-stat-tile__label">P5</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${series.percentile5 != null ? #numbers.formatDecimal(series.percentile5, 1, 1) + '°C' : '–'}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--red">
+                        <div class="meas-stat-tile__label">P95</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${series.percentile95 != null ? #numbers.formatDecimal(series.percentile95, 1, 1) + '°C' : '–'}">–</div>
+                    </div>
+                    <!-- Row 4 -->
+                    <div class="meas-stat-tile meas-stat-tile--red">
+                        <div class="meas-stat-tile__label">Czas poza zakr.</div>
+                        <div class="meas-stat-tile__val" th:text="${series.formattedOutOfRangeTime}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--red">
+                        <div class="meas-stat-tile__label">% poza zakr.</div>
+                        <div class="meas-stat-tile__val" th:text="${series.outOfRangePercentage}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--green">
+                        <div class="meas-stat-tile__label">Czas w zakr.</div>
+                        <div class="meas-stat-tile__val" th:text="${series.formattedInRangeTime}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--green">
+                        <div class="meas-stat-tile__label">% w zakr.</div>
+                        <div class="meas-stat-tile__val" th:text="${series.inRangePercentage}">–</div>
+                    </div>
+                    <!-- Row 5 -->
+                    <div class="meas-stat-tile meas-stat-tile--red">
+                        <div class="meas-stat-tile__label">Ilość przekroczeń</div>
+                        <div class="meas-stat-tile__val"
+                             th:text="${series.violationCount != null ? series.violationCount : '–'}">–</div>
+                    </div>
+                    <div class="meas-stat-tile meas-stat-tile--red">
+                        <div class="meas-stat-tile__label">Max czas powrotu</div>
+                        <div class="meas-stat-tile__val" th:text="${series.formattedMaxViolationDuration}">–</div>
+                    </div>
+                    <!-- Row 6: Stabilność and Drift -->
+                    <div class="meas-stat-tile"
+                         th:classappend="${series.trendCoefficient != null and T(java.lang.Math).abs(series.trendCoefficient * 24.0) < 0.1} ? 'meas-stat-tile--green' : 'meas-stat-tile--red'">
+                        <div class="meas-stat-tile__label">Stabilność</div>
+                        <div class="meas-stat-tile__val" th:text="${series.stabilityStatus}">–</div>
+                        <div class="meas-stat-tile__sub" th:text="${series.formattedTrend}"></div>
+                    </div>
+                    <div class="meas-stat-tile" 
+                         th:classappend="${series.driftClassification == 'STABLE'} ? 'meas-stat-tile--green' : 
+                                        (${series.driftClassification == 'DRIFT'} ? 'meas-stat-tile--gold' : 
+                                        (${series.driftClassification == 'SPIKE'} ? 'meas-stat-tile--red' : 'meas-stat-tile--purple'))">
+                        <div class="meas-stat-tile__label" title="Analiza diagnostyczna Metodą A+ (MAD)">Drift vs Spike</div>
+                        <div class="meas-stat-tile__val" th:text="${series.driftClassificationLabel}">–</div>
+                        <div class="meas-stat-tile__sub">
+                            <span th:text="'Spike\'ów: ' + ${series.spikeCount} + ' (MAD)'"></span>
+                            <span th:if="${series.driftClassification == 'SPIKE' or series.driftClassification == 'MIXED'}"
+                                  th:text="' | Skoryg.: ' + ${series.formattedAdjustedTrend}"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Granice alarmowe -->
+            <section th:if="${series.lowerLimit != null and series.upperLimit != null}"
+                     class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Granice alarmowe
+                    </h2>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="meas-limit-box meas-limit-box--lower">
+                        <div class="meas-limit-dot meas-limit-dot--blue"></div>
+                        <div>
+                            <div class="meas-limit-label">Granica dolna</div>
+                            <div class="meas-limit-val"
+                                 th:text="${#numbers.formatDecimal(series.lowerLimit, 1, 1)} + '°C'">–</div>
+                        </div>
+                    </div>
+                    <div class="meas-limit-box meas-limit-box--upper">
+                        <div class="meas-limit-dot meas-limit-dot--red"></div>
+                        <div>
+                            <div class="meas-limit-label">Granica górna</div>
+                            <div class="meas-limit-val"
+                                 th:text="${#numbers.formatDecimal(series.upperLimit, 1, 1)} + '°C'">–</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Urządzenie chłodnicze -->
+            <section th:if="${series.coolingDeviceId != null}"
+                     class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-cube"></i>
+                        Urządzenie chłodnicze
+                    </h2>
+                    <div class="vcc-detail-section__actions">
+                        <a th:href="@{/devices/{id}(id=${series.coolingDeviceId})}"
+                           class="vcc-link-internal">
+                            <i class="fas fa-external-link-alt"></i> Otwórz urządzenie
+                        </a>
+                    </div>
+                </div>
+                <div class="vcc-detail-grid">
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Nazwa</span>
+                        <span class="vcc-detail-value" th:text="${series.deviceName}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Nr inwentarzowy</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono"
+                              th:text="${series.deviceInventoryNumber}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Pracownia</span>
+                        <span class="vcc-detail-value">
+                            <span th:text="${series.deviceLaboratoryName}">–</span>
+                            <span class="vcc-detail-badge"
+                                  th:text="${series.deviceLaboratoryAbbreviation}">–</span>
+                        </span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Typ komory</span>
+                        <span class="vcc-detail-value" th:text="${series.deviceChamberType}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Materiał przechowywany</span>
+                        <span class="vcc-detail-value" th:text="${series.deviceStoredMaterial}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell" th:if="${series.deviceRpwNumber != null}">
+                        <span class="vcc-detail-key">Numer RPW</span>
+                        <span class="vcc-detail-value vcc-detail-value--accent"
+                              th:text="${series.deviceRpwNumber}">–</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Rejestrator TESTO -->
+            <section th:if="${series.thermoRecorderId != null}"
+                     class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-thermometer-half"></i>
+                        Rejestrator temperatury TESTO
+                    </h2>
+                    <div class="vcc-detail-section__actions">
+                        <a th:href="@{/recorders/{id}(id=${series.thermoRecorderId})}"
+                           class="vcc-link-internal">
+                            <i class="fas fa-external-link-alt"></i> Otwórz rejestrator
+                        </a>
+                    </div>
+                </div>
+                <div class="vcc-detail-grid">
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Numer seryjny</span>
+                        <span class="vcc-detail-value vcc-detail-value--mono"
+                              th:text="${series.recorderSerialNumber}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Model</span>
+                        <span class="vcc-detail-value" th:text="${series.recorderModel}">–</span>
+                    </div>
+                    <div class="vcc-detail-cell">
+                        <span class="vcc-detail-key">Status rejestratora</span>
+                        <span class="vcc-detail-value">
+                            <span class="vcc-status vcc-status--valid"
+                                  th:if="${series.recorderStatus == 'Aktywny'}"
+                                  th:text="${series.recorderStatus}">–</span>
+                            <span class="vcc-status vcc-status--invalid"
+                                  th:if="${series.recorderStatus == 'Nieaktywny'}"
+                                  th:text="${series.recorderStatus}">–</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Ostatnie wzorcowanie -->
+                <div th:if="${series.calibrationDate != null}"
+                     style="margin-top: 20px; padding-top: 20px; border-top: 1.5px solid var(--border-default);">
+                    <p class="vcc-form-label" style="margin-bottom: 12px;">
+                        <i class="fas fa-certificate" style="margin-right:4px; color: var(--vcc-primary);"></i>
+                        Ostatnie wzorcowanie
+                    </p>
+                    <div class="vcc-detail-grid">
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Data wzorcowania</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono"
+                                  th:text="${series.formattedCalibrationDate}">–</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Numer świadectwa</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono"
+                                  th:text="${series.calibrationCertificateNumber}">–</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Ważność do</span>
+                            <span class="vcc-detail-value vcc-detail-value--mono"
+                                  th:text="${series.formattedCalibrationValidUntil}">–</span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Status wzorcowania</span>
+                            <span class="vcc-detail-value">
+                                <span class="vcc-status vcc-status--valid"
+                                      th:if="${series.calibrationIsValid}">Ważne</span>
+                                <span class="vcc-status vcc-status--invalid"
+                                      th:if="${!series.calibrationIsValid}">Wygasłe</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Budżet Niepewności (GUM-Compliant) -->
+            <section th:if="${seriesEntity != null and seriesEntity.uncertaintyBudget != null}"
+                     class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-balance-scale"></i>
+                        Budżet Niepewności Pomiaru
+                    </h2>
+                    <span class="vcc-detail-section__header" style="font-size:.75rem; color: var(--text-muted); font-weight:400;">
+                        GUM (JCGM 100:2008) &bull; ISO/IEC 17025
+                    </span>
+                </div>
+
+                <th:block th:with="budget=${seriesEntity.uncertaintyBudget}">
+                    <!-- Niepewność rozszerzona — główne informacje -->
+                    <div style="background: rgba(139,92,246,.07); border-left: 3px solid #8b5cf6; padding: 18px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                            <span style="font-size: .9rem; font-weight: 600; color: var(--text-primary);">Niepewność Rozszerzona (U)</span>
+                            <span style="font-size: .75rem; color: var(--text-muted);">
+                                k = <span th:text="${budget.coverageFactor}">2.0</span>
+                                &bull; <span th:text="${budget.confidenceLevel}">95.45</span>%
+                            </span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center;">
+                            <div>
+                                <div style="font-size: 2rem; font-weight: 700; color: #8b5cf6; font-family: 'DM Mono', monospace;">
+                                    ±<span th:text="${#numbers.formatDecimal(budget.expandedUncertainty, 1, 3)}">0.150</span>°C
+                                </div>
+                                <div style="font-size: .75rem; color: var(--text-muted); margin-top: 2px;">U = k × u<sub>c</sub></div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: .7rem; color: var(--text-muted); margin-bottom: 2px;">Kombinowana</div>
+                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--text-primary); font-family: 'DM Mono', monospace;">
+                                    <span th:text="${#numbers.formatDecimal(budget.combinedUncertainty, 1, 3)}">0.075</span>°C
+                                </div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: .7rem; color: var(--text-muted); margin-bottom: 2px;">St. swobody</div>
+                                <div style="font-size: 1.2rem; font-weight: 600; color: var(--text-primary); font-family: 'DM Mono', monospace;">
+                                    <span th:text="${budget.degreesOfFreedom ?: '∞'}">∞</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Komponenty niepewności -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                        <div class="ub-component" style="background: #f0f9ff; border: 1px solid #bae6fd;">
+                            <div class="ub-component__type" style="color: #0891b2;">TYP A &bull; STATYSTYCZNE</div>
+                            <div class="ub-component__val" style="color: #0891b2;">
+                                <span th:text="${#numbers.formatDecimal(budget.statisticalUncertainty, 1, 4)}">0.0245</span>°C
+                            </div>
+                            <div class="ub-component__sub" style="color: #0891b2;">σ / √n</div>
+                        </div>
+                        <div class="ub-component" style="background: #fef3c7; border: 1px solid #fcd34d;">
+                            <div class="ub-component__type" style="color: #d97706;">KALIBRACJA</div>
+                            <div class="ub-component__val" style="color: #d97706;">
+                                <span th:text="${#numbers.formatDecimal(budget.calibrationUncertainty, 1, 4)}">0.0500</span>°C
+                            </div>
+                            <div class="ub-component__sub" style="color: #d97706;">Z certyfikatu</div>
+                        </div>
+                        <div class="ub-component" style="background: #ecfdf5; border: 1px solid #a7f3d0;">
+                            <div class="ub-component__type" style="color: #059669;">ROZDZIELCZOŚĆ</div>
+                            <div class="ub-component__val" style="color: #059669;">
+                                <span th:text="${#numbers.formatDecimal(budget.resolutionUncertainty, 1, 4)}">0.0289</span>°C
+                            </div>
+                            <div class="ub-component__sub" style="color: #059669;">δ/(2√3)</div>
+                        </div>
+                        <div class="ub-component" style="background: #fef2f2; border: 1px solid #fecaca;">
+                            <div class="ub-component__type" style="color: #dc2626;">SYSTEMATYCZNA</div>
+                            <div class="ub-component__val" style="color: #dc2626;">
+                                <span th:text="${#numbers.formatDecimal(budget.systematicUncertainty, 1, 4)}">0.0141</span>°C
+                            </div>
+                            <div class="ub-component__sub" style="color: #dc2626;">Bias korekcji</div>
+                        </div>
+                        <div class="ub-component" style="background: #f3e8ff; border: 1px solid #ddd6fe;">
+                            <div class="ub-component__type" style="color: #9333ea;">STABILNOŚĆ</div>
+                            <div class="ub-component__val" style="color: #9333ea;">
+                                <span th:text="${#numbers.formatDecimal(budget.stabilityUncertainty, 1, 4)}">0.0100</span>°C
+                            </div>
+                            <div class="ub-component__sub" style="color: #9333ea;">Drift długoterm.</div>
+                        </div>
+                    </div>
+
+                    <!-- Dominujące źródło -->
+                    <div class="vcc-detail-grid">
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Dominujące źródło</span>
+                            <span class="vcc-detail-value"
+                                  style="color: #059669; font-weight: 600;"
+                                  th:text="${budget.dominantUncertaintySource ?: 'Kalibracja'}">Kalibracja</span>
+                            <span class="vcc-form-hint"
+                                  th:text="${budget.calculationNotes ?: 'Komponent dominuje w budżecie'}"></span>
+                        </div>
+                        <div class="vcc-detail-cell">
+                            <span class="vcc-detail-key">Typ budżetu</span>
+                            <span class="vcc-detail-value vcc-detail-value--purple"
+                                  th:text="${budget.budgetType ?: 'SERIES'}">SERIES</span>
+                            <span class="vcc-form-hint">Poziom pojedynczej serii</span>
+                        </div>
+                    </div>
+                </th:block>
+            </section>
+
+            <!-- Section 7: Akcje -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-cogs"></i>
+                        Zarządzanie serią
+                    </h2>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <a th:href="@{/measurements/{id}/chart(id=${series.id})}"
+                       class="vcc-btn--detail-primary">
+                        <i class="fas fa-chart-area"></i>
+                        Otwórz wykres interaktywny
+                    </a>
+                    <form th:action="@{/measurements/{id}/delete(id=${series.id})}" method="post"
+                          onsubmit="return confirm('Czy na pewno chcesz usunąć tę serię pomiarową? Operacja jest nieodwracalna!');"
+                          style="margin: 0;">
+                        <div th:replace="~{fragments/csrf-token :: csrf-input}"></div>
+                        <button type="submit" class="vcc-btn--detail-danger">
+                            <i class="fas fa-trash-alt"></i>
+                            Usuń serię pomiarową
+                        </button>
+                    </form>
+                    <span class="vcc-form-hint" style="font-size: .78rem;">
+                        Interaktywny wykres <span th:text="${pointsCount}">0</span> punktów pomiarowych &bull; Usunięcie jest nieodwracalne
+                    </span>
+                </div>
+            </section>
+
+            <!-- Section 8: Historia zmian (Audit Trail) -->
+            <section class="vcc-detail-section vcc-animate-fade-in">
+                <div class="vcc-detail-section__header">
+                    <h2 class="vcc-detail-section__title">
+                        <i class="fas fa-history"></i>
+                        Historia zmian
+                    </h2>
+                </div>
+                <div th:replace="~{fragments/audit-history :: auditTimeline(${auditLogs})}"></div>
+            </section>
+
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+</body>
+
+</html>

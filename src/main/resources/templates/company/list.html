@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firmy - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+</head>
+
+<body>
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('companies')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+
+        <header th:replace="~{fragments/topbar :: topbar('companies', 'Firmy', true, 'companySearchInput')}"></header>
+
+        <main class="vcc-page">
+
+            <div class="vcc-page-header">
+                <h1 class="vcc-page-header__title">Firmy i organizacje</h1>
+                <div class="vcc-page-header__actions">
+                    <a th:href="@{/companies/new}" class="vcc-btn--action"
+                       sec:authorize="hasRole('ROLE_SUPER_ADMIN')">
+                        <i class="fas fa-plus"></i> Dodaj firmę
+                    </a>
+                </div>
+            </div>
+
+            <div th:if="${successMessage}" class="vcc-flash vcc-flash--success">
+                <i class="fas fa-check-circle"></i> <span th:text="${successMessage}"></span>
+            </div>
+            <div th:if="${errorMessage}" class="vcc-flash vcc-flash--error">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${errorMessage}"></span>
+            </div>
+
+            <div class="vcc-data-card vcc-animate-fade-in">
+
+                <div th:if="${#lists.isEmpty(companies)}" class="vcc-empty-state">
+                    <i class="fas fa-building vcc-empty-state__icon"></i>
+                    <p class="vcc-empty-state__title">Brak firm w systemie</p>
+                    <p class="vcc-empty-state__desc">Dodaj pierwszą firmę lub organizację</p>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(companies)}" class="vcc-table-wrap">
+                    <table class="vcc-table">
+                        <thead>
+                            <tr>
+                                <th>Nazwa firmy</th>
+                                <th>Adres</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="company : ${companies}">
+                                <td><span class="vcc-table__primary" th:text="${company.name}">--</span></td>
+                                <td><span class="vcc-table__muted" th:text="${company.address != null ? company.address : '—'}">--</span></td>
+                                <td>
+                                    <div class="vcc-table__actions">
+                                        <a th:href="@{/companies/{id}(id=${company.id})}" class="vcc-btn--table vcc-btn--table-primary">
+                                            <i class="fas fa-eye"></i> Podgląd
+                                        </a>
+                                        <a th:href="@{/companies/{id}/edit(id=${company.id})}" class="vcc-btn--table vcc-btn--table-outline"
+                                           th:if="${#authorization.expression('hasRole(''ROLE_SUPER_ADMIN'')') or @securityService.hasAccessToCompany(company.id)}">
+                                            <i class="fas fa-edit"></i> Edytuj
+                                        </a>
+                                        <form th:action="@{/companies/{id}/delete(id=${company.id})}" method="post" style="display:inline"
+                                              sec:authorize="hasRole('ROLE_SUPER_ADMIN')"
+                                              onsubmit="return confirm('Czy na pewno chcesz usunąć tę firmę?\n\nUWAGA: To usunie również wszystkie powiązane działy, pracownie, urządzenia i dane!')">
+                                            <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
+                                                <i class="fas fa-trash-alt"></i> Usuń
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(companies)}" class="vcc-data-card__footer">
+                    <div class="vcc-data-card__count">
+                        Łącznie: <span class="vcc-data-card__count-badge" th:text="${#lists.size(companies)}">0</span> firm
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!-- Global Footer -->
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+    <script>
+    (function() {
+        var input = document.getElementById('companySearchInput');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            document.querySelectorAll('.vcc-table tbody tr').forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+            });
+        });
+    })();
+    </script>
+</body>
+
+</html>

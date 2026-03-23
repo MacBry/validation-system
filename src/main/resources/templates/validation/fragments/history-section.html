@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<body>
+<th:block th:fragment="section(validation)">
+
+        <!-- Historia zmian (Envers) — interaktywna -->
+        <div style="background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-md);
+                    padding:28px 32px;margin-bottom:20px;" id="enversSection">
+            <div style="padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px;">
+                <div style="font-weight:600;font-size:.95rem;color:var(--text-main);">Historia zmian pól (Envers)</div>
+                <div style="font-size:.8rem;color:var(--text-muted);margin-top:2px;">Szczegółowy rejestr zmian — GMP
+                    Annex 11 §10</div>
+            </div>
+            <!-- Lista rewizji -->
+            <div id="enversRevList" style="display:flex;flex-direction:column;gap:8px;">
+                <div style="color:var(--text-muted);font-size:.85rem;">Ładowanie historii…</div>
+            </div>
+            <!-- Tabela diff -->
+            <div id="enversDiffArea" style="display:none;margin-top:16px;">
+                <div style="font-size:.85rem;font-weight:600;color:var(--text-main);margin-bottom:8px;"
+                    id="enversDiffTitle"></div>
+                <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+                    <thead>
+                        <tr style="background:var(--surface);">
+                            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);">Pole
+                            </th>
+                            <th
+                                style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:#e53e3e;">
+                                Przed</th>
+                            <th
+                                style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:#38a169;">
+                                Po</th>
+                        </tr>
+                    </thead>
+                    <tbody id="enversDiffBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <script th:inline="javascript">
+            (function () {
+                const validationId = /*[[${validation.id}]]*/ 0;
+
+                function badge(type) {
+                    const colors = { ADD: '#38a169', MOD: '#3182ce', DEL: '#e53e3e' };
+                    const labels = { ADD: 'DODANIE', MOD: 'ZMIANA', DEL: 'USUNIĘCIE' };
+                    return `<span style="font-size:.7rem;padding:2px 7px;border-radius:4px;background:${colors[type] || '#888'};color:#fff;">${labels[type] || type}</span>`;
+                }
+
+                function loadRevisions() {
+                    fetch(`/validations/${validationId}/history`)
+                        .then(r => r.json())
+                        .then(revs => {
+                            const el = document.getElementById('enversRevList');
+                            if (!revs || revs.length === 0) {
+                                el.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;">Brak rewizji w historii Envers.</div>';
+                                return;
+                            }
+                            el.innerHTML = revs.map(r => `
+              <button onclick="loadDiff(${r.revisionNumber}, '${r.timestamp}', '${r.username}', '${r.revisionType}')"
+                style="display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);
+                       border-radius:var(--radius-sm);padding:10px 14px;cursor:pointer;text-align:left;width:100%;font-family:inherit;">
+                <span style="font-size:.75rem;color:var(--text-muted);min-width:145px;">${r.timestamp || ''}</span>
+                ${badge(r.revisionType)}
+                <span style="font-size:.85rem;color:var(--text-main);font-weight:500;">${r.username || ''}</span>
+                ${r.fullName ? `<span style="font-size:.8rem;color:var(--text-muted);">(${r.fullName})</span>` : ''}
+                ${r.ipAddress ? `<span style="margin-left:auto;font-size:.75rem;color:var(--text-muted);">${r.ipAddress}</span>` : ''}
+              </button>`).join('');
+                        })
+                        .catch(() => {
+                            document.getElementById('enversRevList').innerHTML = '<div style="color:#e53e3e;font-size:.85rem;">Błąd ładowania historii.</div>';
+                        });
+                }
+
+                let _openRevNum = null;
+
+                window.loadDiff = function (revNum, ts, user, type) {
+                    const area = document.getElementById('enversDiffArea');
+                    const title = document.getElementById('enversDiffTitle');
+                    const body = document.getElementById('enversDiffBody');
+
+                    if (_openRevNum === revNum) {
+                        area.style.display = 'none';
+                        _openRevNum = null;
+                        return;
+                    }
+                    _openRevNum = revNum;
+
+                    area.style.display = 'block';
+                    title.textContent = `Rewizja #${revNum} — ${ts} — ${user}`;
+                    body.innerHTML = '<tr><td colspan="3" style="padding:8px 12px;color:var(--text-muted);">Ładowanie...</td></tr>';
+
+                    fetch(`/validations/${validationId}/history/${revNum}`)
+                        .then(r => r.json())
+                        .then(diffs => {
+                            const rows = diffs
+                                .filter(d => d.changed)
+                                .map(d => `
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:8px 12px;font-weight:500;">${d.displayName}</td>
+                  <td style="padding:8px 12px;color:#e53e3e;text-decoration:line-through;">${d.oldValue ?? '—'}</td>
+                  <td style="padding:8px 12px;color:#38a169;">${d.newValue ?? '—'}</td>
+                </tr>`).join('');
+                            body.innerHTML = rows || '<tr><td colspan="3" style="padding:8px 12px;color:var(--text-muted);">Brak zmian pól (pierwsza rewizja).</td></tr>';
+                        })
+                        .catch(() => { body.innerHTML = '<tr><td colspan="3" style="color:#e53e3e;padding:8px;">Błąd.</td></tr>'; });
+                };
+
+                loadRevisions();
+            })();
+        </script>
+
+</th:block>
+</body>
+</html>

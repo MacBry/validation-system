@@ -92,13 +92,12 @@
                     </a>
                     <button type="button" th:data-url="@{/validations/{id}/package(id=${validation.id})}"
                             th:data-filename="'Walidacja_' + ${validation.id} + '_' + ${#temporals.format(validation.createdDate, 'yyyy-MM-dd')} + '.zip'"
-                            onclick="downloadFile(this.getAttribute('data-url'), this.getAttribute('data-filename'))"
-                            class="vcc-btn--detail-primary" style="border:none;cursor:pointer;font-family:inherit;">
+                            class="vcc-btn--detail-primary download-btn" style="border:none;cursor:pointer;font-family:inherit;">
                         <i class="fas fa-file-archive"></i>
                         Paczka ZIP
                     </button>
                     <button th:if="${signature == null and validation.status.name() != 'COMPLETED'}"
-                            type="button" onclick="document.getElementById('signOverlay').style.display='flex'"
+                            type="button" id="signBtn"
                             class="vcc-btn--detail-outline" style="border:none;cursor:pointer;font-family:inherit;">
                         <i class="fas fa-signature"></i>
                         Podpisz
@@ -300,8 +299,7 @@
                             <option th:each="s : ${allStatuses}" th:if="${s.name() != 'COMPLETED'}" th:value="${s}"
                                     th:text="${s.displayName}" th:selected="${s == validation.status}">Status</option>
                         </select>
-                        <button type="button" class="vcc-btn--detail-primary"
-                                onclick="document.getElementById('statusPasswordOverlay').style.display='flex'"
+                        <button type="button" class="vcc-btn--detail-primary" id="updateStatusBtn"
                                 style="border:none;cursor:pointer;font-family:inherit;">
                             <i class="fas fa-check"></i>
                             Aktualizuj
@@ -351,8 +349,7 @@
     </div>
 
     <!-- Modal: Password confirm for status change -->
-    <div id="statusPasswordOverlay" class="vcc-modal-overlay"
-         onclick="if(event.target===this){this.style.display='none';this.classList.remove('is-open');}">
+    <div id="statusPasswordOverlay" class="vcc-modal-overlay modal-closable">
         <div class="vcc-modal">
             <h3 class="vcc-modal__title">Potwierdz zmiane statusu</h3>
             <p class="vcc-modal__subtitle">
@@ -362,15 +359,13 @@
                 <label class="vcc-modal__label">Haslo</label>
                 <input type="password" id="statusPasswordInput" autocomplete="current-password"
                        placeholder="Wprowadz haslo..."
-                       class="vcc-modal__input"
-                       onkeydown="if(event.key==='Enter'){confirmStatusChange();}" />
+                       class="vcc-modal__input" />
             </div>
             <div class="vcc-modal__actions">
-                <button type="button" class="vcc-modal__btn-cancel"
-                        onclick="document.getElementById('statusPasswordOverlay').style.display='none';document.getElementById('statusPasswordInput').value='';">
+                <button type="button" class="vcc-modal__btn-cancel" id="statusPasswordCancel">
                     Anuluj
                 </button>
-                <button type="button" class="vcc-modal__btn-submit" onclick="confirmStatusChange()">
+                <button type="button" class="vcc-modal__btn-submit" id="statusPasswordConfirm">
                     Potwierdz
                 </button>
             </div>
@@ -378,14 +373,13 @@
     </div>
 
     <!-- Modal: Electronic signing -->
-    <div id="signOverlay" class="vcc-modal-overlay"
-         onclick="if(event.target===this)this.style.display='none'">
+    <div id="signOverlay" class="vcc-modal-overlay modal-closable">
         <div class="vcc-modal">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
                 <h3 class="vcc-modal__title" style="margin-bottom:0;">
                     Podpisz walidacje elektronicznie
                 </h3>
-                <button type="button" onclick="document.getElementById('signOverlay').style.display='none'"
+                <button type="button" id="signOverlayClose"
                         style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.4rem;line-height:1;"
                         aria-label="Zamknij">&times;</button>
             </div>
@@ -417,8 +411,7 @@
                 </p>
 
                 <div class="vcc-modal__actions">
-                    <button type="button" class="vcc-modal__btn-cancel"
-                            onclick="document.getElementById('signOverlay').style.display='none'">
+                    <button type="button" class="vcc-modal__btn-cancel" id="signOverlayCancel">
                         Anuluj
                     </button>
                     <button type="submit" class="vcc-modal__btn-submit">
@@ -432,7 +425,7 @@
     <!-- Sidebar JS -->
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
+    <script th:nonce="${cspNonce}">
         function toggleSection(contentId, iconId) {
             var content = document.getElementById(contentId);
             var icon = document.getElementById(iconId);
@@ -441,6 +434,7 @@
             content.style.display = isHidden ? 'block' : 'none';
             if (icon) {
                 icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-180deg)';
+                icon.classList.toggle('is-rotated', !isHidden);
             }
         }
 
@@ -462,8 +456,144 @@
                     a.style.display = 'none'; a.href = u; a.download = filename;
                     document.body.appendChild(a); a.click();
                     window.URL.revokeObjectURL(u); document.body.removeChild(a);
-                }).catch(function (e) { alert('Blad pobierania: ' + e); });
+                }).catch(function (e) { alert('Błąd pobierania: ' + e); });
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Download buttons
+            document.querySelectorAll('.download-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    downloadFile(this.getAttribute('data-url'), this.getAttribute('data-filename'));
+                });
+            });
+
+            // Status Update Modal
+            var updateStatusBtn = document.getElementById('updateStatusBtn');
+            if (updateStatusBtn) {
+                updateStatusBtn.addEventListener('click', function() {
+                    document.getElementById('statusPasswordOverlay').style.display = 'flex';
+                });
+            }
+
+            var statusPasswordConfirm = document.getElementById('statusPasswordConfirm');
+            if (statusPasswordConfirm) {
+                statusPasswordConfirm.addEventListener('click', confirmStatusChange);
+            }
+
+            var statusPasswordInput = document.getElementById('statusPasswordInput');
+            if (statusPasswordInput) {
+                statusPasswordInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') confirmStatusChange();
+                });
+            }
+
+            var statusPasswordCancel = document.getElementById('statusPasswordCancel');
+            if (statusPasswordCancel) {
+                statusPasswordCancel.addEventListener('click', function() {
+                    document.getElementById('statusPasswordOverlay').style.display = 'none';
+                    document.getElementById('statusPasswordInput').value = '';
+                });
+            }
+
+            // Signing Modal
+            var signBtn = document.getElementById('signBtn');
+            if (signBtn) {
+                signBtn.addEventListener('click', function() {
+                    document.getElementById('signOverlay').style.display = 'flex';
+                });
+            }
+
+            var signOverlayClose = document.getElementById('signOverlayClose');
+            if (signOverlayClose) {
+                signOverlayClose.addEventListener('click', function() {
+                    document.getElementById('signOverlay').style.display = 'none';
+                });
+            }
+
+            var signOverlayCancel = document.getElementById('signOverlayCancel');
+            if (signOverlayCancel) {
+                signOverlayCancel.addEventListener('click', function() {
+                    document.getElementById('signOverlay').style.display = 'none';
+                });
+            }
+
+            // Close modals on overlay click
+            document.querySelectorAll('.modal-closable').forEach(function(overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.style.display = 'none';
+                        this.classList.remove('is-open'); // for some modals that use both
+                    }
+                });
+            });
+
+            // Handle toggle buttons in fragments
+            document.querySelectorAll('.vcc-section-toggle').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var contentId = this.getAttribute('data-content-id');
+                    var iconId = this.getAttribute('data-icon-id');
+                    toggleSection(contentId, iconId);
+                });
+            });
+
+            // Deviation Analysis Toggles
+            document.querySelectorAll('.edit-deviation-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var devId = this.getAttribute('data-dev-id');
+                    var form = document.getElementById('analysis-form-' + devId);
+                    var saved = document.getElementById('analysis-saved-' + devId);
+                    if (form.style.display === 'none') {
+                        form.style.display = '';
+                        if (saved) saved.style.display = 'none';
+                    } else {
+                        form.style.display = 'none';
+                        if (saved) saved.style.display = '';
+                    }
+                });
+            });
+
+            // Save Deviation Analysis
+            document.querySelectorAll('.save-deviation-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var validationId = this.getAttribute('data-vid');
+                    var devId = this.getAttribute('data-did');
+                    
+                    var rootCause = document.getElementById('rootCause-' + devId).value;
+                    var productImpact = document.getElementById('productImpact-' + devId).value;
+                    var correctiveAction = document.getElementById('correctiveAction-' + devId).value;
+                    var statusEl = document.getElementById('analysis-status-' + devId);
+
+                    statusEl.textContent = 'Zapisywanie...';
+                    statusEl.style.color = '#6b7080';
+
+                    var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                    var csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+                    var params = new URLSearchParams();
+                    params.append('rootCause', rootCause);
+                    params.append('productImpact', productImpact);
+                    params.append('correctiveAction', correctiveAction);
+
+                    fetch('/validations/' + validationId + '/deviations/' + devId + '/analysis', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            [csrfHeader]: csrfToken
+                        },
+                        body: params.toString()
+                    })
+                        .then(function (response) { return response.json(); })
+                        .then(function (data) {
+                            statusEl.textContent = '✓ Zapisano (' + data.analyzedBy + ')';
+                            statusEl.style.color = '#5aa888';
+                        })
+                        .catch(function (err) {
+                            statusEl.textContent = '✖ Błąd zapisu: ' + err.message;
+                            statusEl.style.color = '#c06060';
+                        });
+                });
+            });
+        });
     </script>
 
 </body>

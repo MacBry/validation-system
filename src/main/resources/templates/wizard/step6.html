@@ -179,13 +179,13 @@
                                         <input class="vcc-form-check-input" type="checkbox" name="isReferenceRecorder" id="isRef">
                                         <label class="vcc-form-label" for="isRef" style="font-size:0.78rem; margin:0;">Referencyjny</label>
                                     </div>
-                                    <button type="button" class="btn-upload" id="uploadBtn" onclick="uploadFiles()">
+                                    <button type="button" class="btn-upload" id="uploadBtn">
                                         <i class="fas fa-upload"></i> Wgraj
                                     </button>
                                 </div>
                             </div>
                             <div style="margin-top:10px;">
-                                <button type="button" class="wizard-btn-back" style="font-size:0.78rem; padding:6px 12px;" onclick="toggleUpload()">
+                                <button type="button" class="wizard-btn-back toggle-upload-btn" style="font-size:0.78rem; padding:6px 12px;">
                                     Anuluj
                                 </button>
                             </div>
@@ -195,7 +195,7 @@
                     <!-- Toolbar -->
                     <div class="series-toolbar">
                         <span class="series-toolbar__title">Dostępne serie pomiarowe</span>
-                        <button class="btn-toggle-upload" onclick="toggleUpload()">
+                        <button class="btn-toggle-upload toggle-upload-btn">
                             <i class="fas fa-plus"></i> Dodaj pliki .vi2
                         </button>
                     </div>
@@ -259,7 +259,7 @@
                         <a th:href="@{/wizard/{id}/back/5(id=${draft.id})}" class="wizard-btn-back">
                             <i class="fas fa-arrow-left"></i> Poprzedni krok
                         </a>
-                        <button type="button" class="wizard-btn-next" onclick="submitStep6()">
+                        <button type="button" class="wizard-btn-next" id="nextBtn">
                             Zapisz i kontynuuj <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
@@ -273,7 +273,7 @@
 
     <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
     <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:nonce="${cspNonce}">
         /*<![CDATA[*/
         let selectedSeriesIds = /*[[${draft.selectedSeriesIds}]]*/ [];
         if (!selectedSeriesIds) selectedSeriesIds = [];
@@ -281,8 +281,10 @@
 
         function toggleUpload() {
             const section = document.getElementById('upload-section');
-            section.classList.toggle('is-open');
-            section.classList.toggle('is-closed');
+            if (section) {
+                section.classList.toggle('is-open');
+                section.classList.toggle('is-closed');
+            }
         }
 
         function getCookie(name) {
@@ -294,7 +296,9 @@
         async function uploadFiles() {
             const form = document.getElementById('upload-form');
             const formData = new FormData(form);
-            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const container = document.querySelector('[data-draft-id]');
+            if (!container) return;
+            const draftId = container.getAttribute('data-draft-id');
 
             const btn = document.getElementById('uploadBtn');
             btn.disabled = true;
@@ -388,7 +392,9 @@
                 if (!confirm('Nie wybrano żadnej serii pomiarowej. Czy na pewno chcesz kontynuować?')) return;
             }
 
-            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const container = document.querySelector('[data-draft-id]');
+            if (!container) return;
+            const draftId = container.getAttribute('data-draft-id');
             const csrfMeta = document.querySelector('meta[name="_csrf"]');
             let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
             let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
@@ -416,6 +422,22 @@
                 alert('Błąd zapisu kroku 6: ' + err.message);
             });
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.toggle-upload-btn').forEach(btn => {
+                btn.addEventListener('click', toggleUpload);
+            });
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            if (uploadBtn) {
+                uploadBtn.addEventListener('click', uploadFiles);
+            }
+
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', submitStep6);
+            }
+        });
     </script>
 </body>
 </html>

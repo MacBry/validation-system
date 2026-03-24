@@ -644,8 +644,7 @@
                         <i class="fas fa-chart-area"></i>
                         Otwórz wykres interaktywny
                     </a>
-                    <form th:action="@{/measurements/{id}/delete(id=${series.id})}" method="post"
-                          onsubmit="return confirm('Czy na pewno chcesz usunąć tę serię pomiarową? Operacja jest nieodwracalna!');"
+                    <form id="deleteSeriesForm" th:action="@{/measurements/{id}/delete(id=${series.id})}" method="post"
                           style="margin: 0;">
                         <div th:replace="~{fragments/csrf-token :: csrf-input}"></div>
                         <button type="submit" class="vcc-btn--detail-danger">
@@ -676,6 +675,18 @@
     </div>
 
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+    <script th:nonce="${cspNonce}">
+        document.addEventListener('DOMContentLoaded', function() {
+            var deleteForm = document.getElementById('deleteSeriesForm');
+            if (deleteForm) {
+                deleteForm.addEventListener('submit', function(e) {
+                    if (!confirm('Czy na pewno chcesz usunąć tę serię pomiarową? Operacja jest nieodwracalna!')) {
+                        e.preventDefault();
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

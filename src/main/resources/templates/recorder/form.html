@@ -96,8 +96,7 @@
                                 <select class="vcc-form-select"
                                         th:classappend="${#fields.hasErrors('departmentId')} ? 'is-error'"
                                         th:field="*{departmentId}"
-                                        id="departmentId"
-                                        onchange="loadLaboratories()">
+                                        id="departmentId">
                                     <option value="">-- Wybierz dział --</option>
                                     <option th:each="dept : ${departments}"
                                             th:value="${dept.id}"
@@ -174,13 +173,16 @@
     <!-- Sidebar JS -->
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
+    <script th:nonce="${cspNonce}">
     function loadLaboratories() {
         var departmentSelect = document.getElementById('departmentId');
         var laboratoryGroup = document.getElementById('laboratoryGroup');
         var laboratorySelect = document.getElementById('laboratoryId');
 
+        if (!departmentSelect) return;
         var selectedOption = departmentSelect.options[departmentSelect.selectedIndex];
+        if (!selectedOption) return;
+
         var departmentId = selectedOption.value;
         var hasLaboratories = selectedOption.getAttribute('data-has-laboratories') === 'true';
 
@@ -222,8 +224,11 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         var departmentSelect = document.getElementById('departmentId');
-        if (departmentSelect && departmentSelect.value) {
-            loadLaboratories();
+        if (departmentSelect) {
+            departmentSelect.addEventListener('change', loadLaboratories);
+            if (departmentSelect.value) {
+                loadLaboratories();
+            }
         }
     });
     </script>

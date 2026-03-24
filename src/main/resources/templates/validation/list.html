@@ -134,8 +134,7 @@
                                         </a>
                                         <button th:data-url="@{/validations/{id}/package(id=${validation.id})}"
                                                 th:data-filename="|Walidacja_${validation.id}_${#temporals.format(validation.createdDate, 'yyyy-MM-dd')}.zip|"
-                                                onclick="downloadFile(this.getAttribute('data-url'), this.getAttribute('data-filename'))"
-                                                class="vcc-btn--table vcc-btn--table-success">
+                                                class="vcc-btn--table vcc-btn--table-success download-btn">
                                             <i class="fas fa-file-archive"></i> ZIP
                                         </button>
                                     </div>
@@ -160,7 +159,7 @@
 
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
+    <script th:nonce="${cspNonce}">
     function downloadFile(url, filename) {
         fetch(url, { credentials: 'same-origin' })
             .then(function(r) { if (!r.ok) throw new Error(r.status); return r.blob(); })
@@ -175,12 +174,20 @@
 
     (function() {
         var input = document.getElementById('validationSearchInput');
-        if (!input) return;
-        input.addEventListener('input', function() {
-            var filter = this.value.toLowerCase();
-            var rows = document.querySelectorAll('.vcc-table tbody tr');
-            rows.forEach(function(row) {
-                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+        if (input) {
+            input.addEventListener('input', function() {
+                var filter = this.value.toLowerCase();
+                var rows = document.querySelectorAll('.vcc-table tbody tr');
+                rows.forEach(function(row) {
+                    row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+                });
+            });
+        }
+
+        // Download listeners
+        document.querySelectorAll('.download-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                downloadFile(this.getAttribute('data-url'), this.getAttribute('data-filename'));
             });
         });
     })();

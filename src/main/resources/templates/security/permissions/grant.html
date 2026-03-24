@@ -225,7 +225,7 @@
     <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
     <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
 
-    <script>
+    <script th:nonce="${cspNonce}">
         // --- Tile selection logic ---
         function selectType(val) {
             document.querySelectorAll('.grant-tile').forEach(tile => {

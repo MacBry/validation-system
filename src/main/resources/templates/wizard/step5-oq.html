@@ -147,13 +147,13 @@
                             Test zaniku zasilania
                         </div>
                         <div class="oq-test-block__fields">
-                            <select id="powerFailure" onchange="submitStep5Oq()">
+                            <select id="powerFailure">
                                 <option value="">— Status —</option>
                                 <option value="true"  th:selected="${oqResult.powerFailureTestPassed == true}">POZYTYWNY</option>
                                 <option value="false" th:selected="${oqResult.powerFailureTestPassed == false}">NEGATYWNY</option>
                             </select>
                             <input type="text" id="powerNotes" placeholder="Uwagi do testu..."
-                                   th:value="${oqResult.powerFailureNotes}" onblur="submitStep5Oq()">
+                                   th:value="${oqResult.powerFailureNotes}">
                         </div>
                     </div>
 
@@ -164,13 +164,13 @@
                             Test alarmu (otwarte drzwi / temperatura)
                         </div>
                         <div class="oq-test-block__fields">
-                            <select id="alarmTest" onchange="submitStep5Oq()">
+                            <select id="alarmTest">
                                 <option value="">— Status —</option>
                                 <option value="true"  th:selected="${oqResult.alarmTestPassed == true}">POZYTYWNY</option>
                                 <option value="false" th:selected="${oqResult.alarmTestPassed == false}">NEGATYWNY</option>
                             </select>
                             <input type="text" id="alarmNotes" placeholder="Uwagi do testu..."
-                                   th:value="${oqResult.alarmTestNotes}" onblur="submitStep5Oq()">
+                                   th:value="${oqResult.alarmTestNotes}">
                         </div>
                     </div>
 
@@ -181,13 +181,13 @@
                             Test uszczelki / domykania drzwi
                         </div>
                         <div class="oq-test-block__fields">
-                            <select id="doorTest" onchange="submitStep5Oq()">
+                            <select id="doorTest">
                                 <option value="">— Status —</option>
                                 <option value="true"  th:selected="${oqResult.doorTestPassed == true}">POZYTYWNY</option>
                                 <option value="false" th:selected="${oqResult.doorTestPassed == false}">NEGATYWNY</option>
                             </select>
                             <input type="text" id="doorNotes" placeholder="Uwagi do testu..."
-                                   th:value="${oqResult.doorTestNotes}" onblur="submitStep5Oq()">
+                                   th:value="${oqResult.doorTestNotes}">
                         </div>
                     </div>
 
@@ -209,7 +209,7 @@
 
     <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
     <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:nonce="${cspNonce}">
         function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -217,7 +217,9 @@
         }
 
         function submitStep5Oq() {
-            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const container = document.querySelector('[data-draft-id]');
+            if (!container) return;
+            const draftId = container.getAttribute('data-draft-id');
             const powerFailure = document.getElementById('powerFailure').value;
             const powerNotes = document.getElementById('powerNotes').value;
             const alarmTest = document.getElementById('alarmTest').value;
@@ -257,6 +259,17 @@
                 console.error('Autosave error:', e);
             });
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = ['powerFailure', 'powerNotes', 'alarmTest', 'alarmNotes', 'doorTest', 'doorNotes'];
+            inputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const event = el.tagName === 'SELECT' ? 'change' : 'blur';
+                    el.addEventListener(event, submitStep5Oq);
+                }
+            });
+        });
     </script>
 </body>
 </html>

@@ -288,7 +288,7 @@
                                             </a>
                                             <form th:action="@{/measurements/{id}/delete(id=${series.id})}" method="post"
                                                   style="display:inline"
-                                                  onsubmit="return confirm('Usunąć tę serię pomiarową?')">
+                                                  class="delete-series-form">
                                                 <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
                                                     <i class="fas fa-trash-alt"></i> Usuń
                                                 </button>
@@ -316,40 +316,55 @@
 
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
-    // Select all checkboxes
-    document.getElementById('selectAll')?.addEventListener('change', function(e) {
-        document.querySelectorAll('.series-checkbox').forEach(function(cb) { cb.checked = e.target.checked; });
-    });
-    document.querySelectorAll('.series-checkbox').forEach(function(cb) {
-        cb.addEventListener('change', function() {
-            var all = document.querySelectorAll('.series-checkbox');
-            var checked = document.querySelectorAll('.series-checkbox:checked');
-            document.getElementById('selectAll').checked = (all.length === checked.length && all.length > 0);
+    <script th:nonce="${cspNonce}">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select all checkboxes
+        document.getElementById('selectAll')?.addEventListener('change', function(e) {
+            document.querySelectorAll('.series-checkbox').forEach(function(cb) { cb.checked = e.target.checked; });
         });
-    });
-
-    // Control sensor grid toggle
-    document.querySelectorAll('.lvl-radio').forEach(function(r) {
-        r.addEventListener('change', function() {
-            document.querySelectorAll('.csp-grid').forEach(function(g) { g.style.display = 'none'; });
-            document.getElementById('csp-hint').style.display = 'none';
-            document.getElementById('grid-' + this.value).style.display = 'block';
-            document.querySelectorAll('.csp-radio').forEach(function(cr) { cr.checked = false; });
-        });
-    });
-
-    // Table search
-    (function() {
-        var input = document.getElementById('measurementSearchInput');
-        if (!input) return;
-        input.addEventListener('input', function() {
-            var filter = this.value.toLowerCase();
-            document.querySelectorAll('.vcc-table tbody tr').forEach(function(row) {
-                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+        document.querySelectorAll('.series-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var all = document.querySelectorAll('.series-checkbox');
+                var checked = document.querySelectorAll('.series-checkbox:checked');
+                var selectAll = document.getElementById('selectAll');
+                if (selectAll) {
+                    selectAll.checked = (all.length === checked.length && all.length > 0);
+                }
             });
         });
-    })();
+
+        // Control sensor grid toggle
+        document.querySelectorAll('.lvl-radio').forEach(function(r) {
+            r.addEventListener('change', function() {
+                document.querySelectorAll('.csp-grid').forEach(function(g) { g.style.display = 'none'; });
+                var hint = document.getElementById('csp-hint');
+                if (hint) hint.style.display = 'none';
+                var grid = document.getElementById('grid-' + this.value);
+                if (grid) grid.style.display = 'block';
+                document.querySelectorAll('.csp-radio').forEach(function(cr) { cr.checked = false; });
+            });
+        });
+
+        // Table search
+        var input = document.getElementById('measurementSearchInput');
+        if (input) {
+            input.addEventListener('input', function() {
+                var filter = this.value.toLowerCase();
+                document.querySelectorAll('.vcc-table tbody tr').forEach(function(row) {
+                    row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+                });
+            });
+        }
+
+        // Delete confirmation event delegation
+        document.addEventListener('submit', function(e) {
+            if (e.target && e.target.classList.contains('delete-series-form')) {
+                if (!confirm('Usunąć tę serię pomiarową?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    });
     </script>
 
 </body>

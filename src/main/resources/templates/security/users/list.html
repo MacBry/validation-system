@@ -55,16 +55,16 @@
 
             <!-- Role filter pills -->
             <div class="vcc-filter-bar">
-                <span class="vcc-filter-btn vcc-filter-btn--active" id="filterAll" onclick="filterUsers('all', this)">
+                <span class="vcc-filter-btn vcc-filter-btn--active user-filter-btn" data-status="all">
                     <i class="fas fa-list"></i> Wszyscy
                 </span>
-                <span class="vcc-filter-btn" id="filterActive" onclick="filterUsers('active', this)">
+                <span class="vcc-filter-btn user-filter-btn" data-status="active">
                     <i class="fas fa-check-circle"></i> Aktywni
                 </span>
-                <span class="vcc-filter-btn" id="filterLocked" onclick="filterUsers('locked', this)">
+                <span class="vcc-filter-btn user-filter-btn" data-status="locked">
                     <i class="fas fa-lock"></i> Zablokowani
                 </span>
-                <span class="vcc-filter-btn" id="filterInactive" onclick="filterUsers('inactive', this)">
+                <span class="vcc-filter-btn user-filter-btn" data-status="inactive">
                     <i class="fas fa-minus-circle"></i> Nieaktywni
                 </span>
             </div>
@@ -192,10 +192,9 @@
                                         </form>
                                         <!-- Reset hasla (modal) -->
                                         <button type="button"
-                                                class="vcc-btn--table vcc-btn--table-outline"
+                                                class="vcc-btn--table vcc-btn--table-outline btn-reset-pw"
                                                 th:data-userid="${user.id}"
                                                 th:data-username="${user.username}"
-                                                onclick="openResetModal(this)"
                                                 title="Zresetuj hasło">
                                             <i class="fas fa-key"></i>
                                         </button>
@@ -221,8 +220,7 @@
     </div>
 
     <!-- Modal: Reset hasla -->
-    <div class="vcc-modal-overlay" id="resetPasswordModal"
-         onclick="if(event.target===this)this.classList.remove('is-open')">
+    <div class="vcc-modal-overlay" id="resetPasswordModal">
         <div class="vcc-modal">
             <h3 class="vcc-modal__title">
                 <i class="fas fa-key" style="color:var(--vcc-primary);margin-right:8px;"></i>
@@ -238,8 +236,7 @@
                            id="resetPasswordInput">
                 </div>
                 <div class="vcc-modal__actions">
-                    <button type="button" class="vcc-modal__btn-cancel"
-                            onclick="document.getElementById('resetPasswordModal').classList.remove('is-open')">
+                    <button type="button" class="vcc-modal__btn-cancel" id="btnCancelReset">
                         Anuluj
                     </button>
                     <button type="submit" class="vcc-modal__btn-submit">
@@ -253,48 +250,70 @@
     <!-- Sidebar JS -->
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
-    // Client-side search
-    (function() {
+    <script th:nonce="${cspNonce}">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Client-side search
         var input = document.getElementById('userSearchInput');
-        if (!input) return;
-        input.addEventListener('input', function() {
-            var filter = this.value.toLowerCase();
-            var rows = document.querySelectorAll('#usersTable tbody tr');
-            rows.forEach(function(row) {
-                var text = row.textContent.toLowerCase();
-                row.style.display = text.indexOf(filter) > -1 ? '' : 'none';
+        if (input) {
+            input.addEventListener('input', function() {
+                var filter = this.value.toLowerCase();
+                var rows = document.querySelectorAll('#usersTable tbody tr');
+                rows.forEach(function(row) {
+                    var text = row.textContent.toLowerCase();
+                    row.style.display = text.indexOf(filter) > -1 ? '' : 'none';
+                });
+            });
+        }
+
+        // Status filter
+        document.querySelectorAll('.user-filter-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var status = this.getAttribute('data-status');
+                document.querySelectorAll('.user-filter-btn').forEach(function(b) {
+                    b.classList.remove('vcc-filter-btn--active');
+                });
+                this.classList.add('vcc-filter-btn--active');
+                var rows = document.querySelectorAll('#usersTable tbody tr');
+                rows.forEach(function(row) {
+                    if (status === 'all') {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = row.getAttribute('data-status') === status ? '' : 'none';
+                    }
+                });
             });
         });
-    })();
 
-    // Status filter
-    var _currentFilter = 'all';
-    function filterUsers(status, btn) {
-        _currentFilter = status;
-        document.querySelectorAll('.vcc-filter-btn').forEach(function(b) {
-            b.classList.remove('vcc-filter-btn--active');
-        });
-        btn.classList.add('vcc-filter-btn--active');
-        var rows = document.querySelectorAll('#usersTable tbody tr');
-        rows.forEach(function(row) {
-            if (status === 'all') {
-                row.style.display = '';
-            } else {
-                row.style.display = row.getAttribute('data-status') === status ? '' : 'none';
+        // Reset password modal
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-reset-pw');
+            if (btn) {
+                var userId = btn.getAttribute('data-userid');
+                var username = btn.getAttribute('data-username');
+                var subtitle = document.getElementById('resetModalSubtitle');
+                var form = document.getElementById('resetPasswordForm');
+                var input = document.getElementById('resetPasswordInput');
+                if (subtitle) subtitle.textContent = 'Ustaw nowe hasło dla: ' + username;
+                if (form) form.action = '/users/' + userId + '/reset-password';
+                if (input) input.value = '';
+                document.getElementById('resetPasswordModal').classList.add('is-open');
             }
         });
-    }
 
-    // Reset password modal
-    function openResetModal(btn) {
-        var userId = btn.getAttribute('data-userid');
-        var username = btn.getAttribute('data-username');
-        document.getElementById('resetModalSubtitle').textContent = 'Ustaw nowe hasło dla: ' + username;
-        document.getElementById('resetPasswordForm').action = '/users/' + userId + '/reset-password';
-        document.getElementById('resetPasswordInput').value = '';
-        document.getElementById('resetPasswordModal').classList.add('is-open');
-    }
+        // Modal closers
+        document.getElementById('btnCancelReset')?.addEventListener('click', function() {
+            document.getElementById('resetPasswordModal').classList.remove('is-open');
+        });
+
+        // Backdrop clicks
+        document.querySelectorAll('.vcc-modal-overlay').forEach(function(overlay) {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('is-open');
+                }
+            });
+        });
+    });
     </script>
 
 </body>

@@ -140,23 +140,21 @@
                             <div class="pq-item__code" th:text="${item.itemCode}">PQ-001</div>
                             <div class="pq-item__desc" th:text="${item.itemDescription}">Opis wymagania...</div>
                         </div>
-                        <select class="status-select"
-                                th:attr="onchange='performSave(' + ${item.id} + ')'">
+                        <select class="status-select">
                             <option value="">—</option>
                             <option value="true"  th:selected="${item.passed == true}">TAK</option>
                             <option value="false" th:selected="${item.passed == false}">NIE</option>
                         </select>
                         <input type="text" class="comment-input"
                                th:value="${item.comment}"
-                               placeholder="Komentarz..."
-                               th:attr="onblur='performSave(' + ${item.id} + ')'">
+                               placeholder="Komentarz...">
                     </div>
 
                     <div class="wizard-actions" style="margin-top: var(--sp-6, 1.5rem);">
                         <a th:href="@{/wizard/{id}/back/4(id=${draft.id})}" class="wizard-btn-back">
                             <i class="fas fa-arrow-left"></i> Poprzedni krok
                         </a>
-                        <button type="button" class="wizard-btn-next" onclick="navigateToStep6()">
+                        <button type="button" class="wizard-btn-next" id="nextBtn">
                             Dalej <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
@@ -170,7 +168,7 @@
 
     <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
     <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:nonce="${cspNonce}">
         function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -178,7 +176,9 @@
         }
 
         function performSave(itemId) {
-            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const container = document.querySelector('[data-draft-id]');
+            if (!container) return;
+            const draftId = container.getAttribute('data-draft-id');
             const row = document.querySelector(`[data-item-id="${itemId}"]`);
             const passed = row.querySelector('.status-select').value;
             const comment = row.querySelector('.comment-input').value;
@@ -216,9 +216,31 @@
         }
 
         function navigateToStep6() {
-            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const container = document.querySelector('[data-draft-id]');
+            if (!container) return;
+            const draftId = container.getAttribute('data-draft-id');
             window.location.href = '/wizard/' + draftId + '/step/6';
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.pq-item').forEach(row => {
+                const itemId = row.getAttribute('data-item-id');
+                const statusSelect = row.querySelector('.status-select');
+                const commentInput = row.querySelector('.comment-input');
+
+                if (statusSelect) {
+                    statusSelect.addEventListener('change', () => performSave(itemId));
+                }
+                if (commentInput) {
+                    commentInput.addEventListener('blur', () => performSave(itemId));
+                }
+            });
+
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', navigateToStep6);
+            }
+        });
     </script>
 </body>
 </html>

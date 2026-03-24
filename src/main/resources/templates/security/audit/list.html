@@ -154,9 +154,8 @@
                                 </td>
                                 <td style="text-align:right;">
                                     <button type="button"
-                                            class="vcc-btn--table vcc-btn--table-primary"
-                                            th:attr="data-user=${log.username}, data-action=${log.action}, data-old=${log.oldValueJson != null ? log.oldValueJson : '{}'}, data-new=${log.newValueJson != null ? log.newValueJson : '{}'}"
-                                            onclick="showInspector(this)">
+                                            class="vcc-btn--table vcc-btn--table-primary btn-inspector"
+                                            th:attr="data-user=${log.username}, data-action=${log.action}, data-old=${log.oldValueJson != null ? log.oldValueJson : '{}'}, data-new=${log.newValueJson != null ? log.newValueJson : '{}'}">
                                         <i class="fas fa-search"></i>
                                         Inspekcja
                                     </button>
@@ -224,8 +223,7 @@
     </div>
 
     <!-- Modal: Inspekcja zdarzenia -->
-    <div class="vcc-modal-overlay" id="inspectorModal"
-         onclick="if(event.target===this)this.classList.remove('is-open')">
+    <div class="vcc-modal-overlay" id="inspectorModal">
         <div class="vcc-modal" style="max-width:720px;">
             <h3 class="vcc-modal__title">
                 <i class="fas fa-search" style="color:var(--vcc-primary);margin-right:8px;"></i>
@@ -253,8 +251,7 @@
             </div>
 
             <div class="vcc-modal__actions" style="margin-top:var(--sp-3);">
-                <button type="button" class="vcc-modal__btn-cancel"
-                        onclick="document.getElementById('inspectorModal').classList.remove('is-open')">
+                <button type="button" class="vcc-modal__btn-cancel" id="btnInspectorClose">
                     Zamknij
                 </button>
             </div>
@@ -264,44 +261,67 @@
     <!-- Sidebar JS -->
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
-    // Client-side search
-    (function() {
-        var input = document.getElementById('auditSearchInput');
-        if (!input) return;
-        input.addEventListener('input', function() {
-            var filter = this.value.toLowerCase();
-            var rows = document.querySelectorAll('#auditTable tbody tr');
-            rows.forEach(function(row) {
-                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+    <script th:nonce="${cspNonce}">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Client-side search
+        (function() {
+            var input = document.getElementById('auditSearchInput');
+            if (!input) return;
+            input.addEventListener('input', function() {
+                var filter = this.value.toLowerCase();
+                var rows = document.querySelectorAll('#auditTable tbody tr');
+                rows.forEach(function(row) {
+                    row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+                });
             });
+        })();
+
+        // Inspector modal logic
+        function cleanJson(str) {
+            if (!str || str === '{}') return '// Brak danych';
+            try { return JSON.stringify(JSON.parse(str), null, 2); }
+            catch (e) { return str; }
+        }
+
+        function showInspector(btn) {
+            var user = btn.getAttribute('data-user') || '—';
+            var action = btn.getAttribute('data-action') || '—';
+            var oldVal = btn.getAttribute('data-old') || '{}';
+            var newVal = btn.getAttribute('data-new') || '{}';
+
+            var metaEl = document.getElementById('inspectorMeta');
+            if (metaEl) {
+                metaEl.innerHTML =
+                    '<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-page);border:1px solid var(--border-subtle);border-radius:20px;padding:4px 12px;font-size:0.8rem;">'
+                    + '<i class="fas fa-user" style="color:var(--vcc-primary);"></i><strong>' + user + '</strong></span>'
+                    + '<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-page);border:1px solid var(--border-subtle);border-radius:20px;padding:4px 12px;font-size:0.8rem;">'
+                    + '<i class="fas fa-bolt" style="color:var(--vcc-primary);"></i>' + action + '</span>';
+            }
+
+            var preOld = document.getElementById('preOld');
+            var preNew = document.getElementById('preNew');
+            if (preOld) preOld.textContent = cleanJson(oldVal);
+            if (preNew) preNew.textContent = cleanJson(newVal);
+            document.getElementById('inspectorModal')?.classList.add('is-open');
+        }
+
+        function closeInspector() {
+            document.getElementById('inspectorModal')?.classList.remove('is-open');
+        }
+
+        // Global click listener for delegation and modal closing
+        document.addEventListener('click', function(e) {
+            var inspectorBtn = e.target.closest('.btn-inspector');
+            if (inspectorBtn) {
+                showInspector(inspectorBtn);
+                return;
+            }
+
+            if (e.target.id === 'btnInspectorClose' || e.target.id === 'inspectorModal') {
+                closeInspector();
+            }
         });
-    })();
-
-    // Inspector modal
-    function cleanJson(str) {
-        if (!str || str === '{}') return '// Brak danych';
-        try { return JSON.stringify(JSON.parse(str), null, 2); }
-        catch (e) { return str; }
-    }
-
-    function showInspector(btn) {
-        var user = btn.getAttribute('data-user') || '—';
-        var action = btn.getAttribute('data-action') || '—';
-        var oldVal = btn.getAttribute('data-old') || '{}';
-        var newVal = btn.getAttribute('data-new') || '{}';
-
-        var metaEl = document.getElementById('inspectorMeta');
-        metaEl.innerHTML =
-            '<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-page);border:1px solid var(--border-subtle);border-radius:20px;padding:4px 12px;font-size:0.8rem;">'
-            + '<i class="fas fa-user" style="color:var(--vcc-primary);"></i><strong>' + user + '</strong></span>'
-            + '<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-page);border:1px solid var(--border-subtle);border-radius:20px;padding:4px 12px;font-size:0.8rem;">'
-            + '<i class="fas fa-bolt" style="color:var(--vcc-primary);"></i>' + action + '</span>';
-
-        document.getElementById('preOld').textContent = cleanJson(oldVal);
-        document.getElementById('preNew').textContent = cleanJson(newVal);
-        document.getElementById('inspectorModal').classList.add('is-open');
-    }
+    });
     </script>
 
 </body>

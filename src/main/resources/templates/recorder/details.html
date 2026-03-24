@@ -146,7 +146,7 @@
                     </h2>
                     <div class="vcc-detail-section__actions">
                         <button class="vcc-btn--detail-primary"
-                                onclick="document.getElementById('addCalModal').classList.add('is-open')"
+                                id="addCalibrationBtn"
                                 style="border:none;cursor:pointer;font-family:inherit;">
                             <i class="fas fa-plus"></i>
                             Dodaj wzorcowanie
@@ -202,11 +202,10 @@
                             </td>
                             <td style="text-align:right">
                                 <div style="display:flex;gap:5px;justify-content:flex-end;">
-                                    <button type="button" class="vcc-btn--table vcc-btn--table-primary"
-                                            th:data-calid="${cal.id}"
-                                            onclick="openEditModal(this.getAttribute('data-calid'))">Edytuj</button>
+                                    <button type="button" class="vcc-btn--table vcc-btn--table-primary edit-cal-btn"
+                                            th:data-calid="${cal.id}">Edytuj</button>
                                     <form th:action="@{/recorders/{rId}/calibrations/{cId}/delete(rId=${recorder.id},cId=${cal.id})}"
-                                          method="post" style="display:inline" onsubmit="return confirm('Usunac to wzorcowanie?')">
+                                          method="post" style="display:inline" class="delete-cal-form">
                                         <button type="submit" class="vcc-btn--table vcc-btn--table-danger">Usun</button>
                                     </form>
                                 </div>
@@ -253,8 +252,7 @@
     </div>
 
     <!-- Modal: Add Calibration -->
-    <div class="vcc-modal-overlay" id="addCalModal"
-         onclick="if(event.target===this)this.classList.remove('is-open')">
+    <div class="vcc-modal-overlay modal-closable" id="addCalModal">
         <div class="vcc-modal">
             <div class="vcc-modal__title">Dodaj wzorcowanie</div>
             <form th:action="@{/recorders/{id}/calibrations(id=${recorder.id})}" method="post" enctype="multipart/form-data">
@@ -286,14 +284,13 @@
                         <tbody id="addPointsBody"></tbody>
                     </table>
                     <button type="button" class="vcc-btn--detail-outline"
-                            style="width:100%;justify-content:center;border:none;cursor:pointer;font-family:inherit;margin-top:6px;"
-                            onclick="addPointRow('addPointsBody')">
+                            id="addPointRowBtn"
+                            style="width:100%;justify-content:center;border:none;cursor:pointer;font-family:inherit;margin-top:6px;">
                         <i class="fas fa-plus"></i> Dodaj punkt wzorcowania
                     </button>
                 </div>
                 <div class="vcc-modal__actions">
-                    <button type="button" class="vcc-modal__btn-cancel"
-                            onclick="document.getElementById('addCalModal').classList.remove('is-open')">Anuluj</button>
+                    <button type="button" class="vcc-modal__btn-cancel btn-close-modal">Anuluj</button>
                     <button type="submit" class="vcc-modal__btn-submit">Dodaj wzorcowanie</button>
                 </div>
             </form>
@@ -302,8 +299,7 @@
 
     <!-- Modals: Edit Calibration (one per calibration) -->
     <div th:each="cal : ${recorder.calibrations}">
-        <div class="vcc-modal-overlay" th:id="'editCalModal' + ${cal.id}"
-             onclick="if(event.target===this)this.classList.remove('is-open')">
+        <div class="vcc-modal-overlay modal-closable" th:id="'editCalModal' + ${cal.id}">
             <div class="vcc-modal">
                 <div class="vcc-modal__title">Edytuj wzorcowanie</div>
                 <form th:action="@{/recorders/{rId}/calibrations/{cId}/update(rId=${recorder.id},cId=${cal.id})}" method="post"
@@ -348,20 +344,18 @@
                                     <td><input type="number" step="0.0001" name="uncertainties" th:value="${p.uncertainty}" required
                                                class="vcc-modal__input" style="width:100%"></td>
                                     <td style="text-align:center"><span style="color:var(--color-danger);cursor:pointer;font-size:1.2rem;font-weight:bold;"
-                                            onclick="this.closest('tr').remove()">&times;</span></td>
+                                            class="remove-point-btn">&times;</span></td>
                                 </tr>
                             </tbody>
                         </table>
-                        <button type="button" class="vcc-btn--detail-outline"
+                        <button type="button" class="vcc-btn--detail-outline add-point-row-edit-btn"
                                 style="width:100%;justify-content:center;border:none;cursor:pointer;font-family:inherit;margin-top:6px;"
-                                th:data-target="|editPointsBody${cal.id}|"
-                                onclick="addPointRow(this.getAttribute('data-target'))">
+                                th:data-target="|editPointsBody${cal.id}|">
                             <i class="fas fa-plus"></i> Dodaj punkt wzorcowania
                         </button>
                     </div>
                     <div class="vcc-modal__actions">
-                        <button type="button" class="vcc-modal__btn-cancel"
-                                th:onclick="'document.getElementById(\'editCalModal' + ${cal.id} + '\').classList.remove(\'is-open\')'">Anuluj</button>
+                        <button type="button" class="vcc-modal__btn-cancel btn-close-modal">Anuluj</button>
                         <button type="submit" class="vcc-modal__btn-submit">Zapisz zmiany</button>
                     </div>
                 </form>
@@ -372,7 +366,7 @@
     <!-- Sidebar JS -->
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
+    <script th:nonce="${cspNonce}">
         function openEditModal(id) {
             document.getElementById('editCalModal' + id).classList.add('is-open');
         }
@@ -384,13 +378,75 @@
                 '<td><input type="number" step="0.0001" name="temperatures" required placeholder="0.0" class="vcc-modal__input" style="width:100%"></td>' +
                 '<td><input type="number" step="0.0001" name="errors" required placeholder="0.0" class="vcc-modal__input" style="width:100%"></td>' +
                 '<td><input type="number" step="0.0001" name="uncertainties" required placeholder="0.0" class="vcc-modal__input" style="width:100%"></td>' +
-                '<td style="text-align:center"><span style="color:var(--color-danger);cursor:pointer;font-size:1.2rem;font-weight:bold;" onclick="this.closest(\'tr\').remove()">&times;</span></td>';
+                '<td style="text-align:center"><span style="color:var(--color-danger);cursor:pointer;font-size:1.2rem;font-weight:bold;" class="remove-point-btn">&times;</span></td>';
+            
+            // Attach event listener to new remove button
+            tr.querySelector('.remove-point-btn').addEventListener('click', function() {
+                this.closest('tr').remove();
+            });
+            
             tbody.appendChild(tr);
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add Calibration Modal toggle
+            var addCalBtn = document.getElementById('addCalibrationBtn');
+            if (addCalBtn) {
+                addCalBtn.addEventListener('click', function() {
+                    document.getElementById('addCalModal').classList.add('is-open');
+                });
+            }
+
+            // Edit Calibration Modal toggles
+            document.querySelectorAll('.edit-cal-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    openEditModal(this.getAttribute('data-calid'));
+                });
+            });
+
+            // Close modals on cancel or overlay click
+            document.querySelectorAll('.btn-close-modal').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    this.closest('.vcc-modal-overlay').classList.remove('is-open');
+                });
+            });
+            document.querySelectorAll('.modal-closable').forEach(function(overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === this) this.classList.remove('is-open');
+                });
+            });
+
+            // Delete confirmations
+            document.querySelectorAll('.delete-cal-form').forEach(function(form) {
+                form.addEventListener('submit', function(e) {
+                    if (!confirm('Usunac to wzorcowanie?')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+
+            // Point rows
+            var addPointBtn = document.getElementById('addPointRowBtn');
+            if (addPointBtn) {
+                addPointBtn.addEventListener('click', function() {
+                    addPointRow('addPointsBody');
+                });
+            }
+            document.querySelectorAll('.add-point-row-edit-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    addPointRow(this.getAttribute('data-target'));
+                });
+            });
+            document.querySelectorAll('.remove-point-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    this.closest('tr').remove();
+                });
+            });
+        });
     </script>
 
     <!-- Envers script -->
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:nonce="${cspNonce}">
     (function () {
         var recorderId = /*[[${recorder.id}]]*/ 0;
 
@@ -413,7 +469,7 @@
                         return;
                     }
                     el.innerHTML = revs.map(function(r) {
-                        return '<button class="vcc-envers-revision" onclick="loadDiff(' + r.revisionNumber + ',\'' + (r.timestamp||'') + '\',\'' + (r.username||'') + '\',\'' + (r.revisionType||'') + '\')">'
+                        return '<button class="vcc-envers-revision" data-rev="' + r.revisionNumber + '" data-ts="' + (r.timestamp||'') + '" data-user="' + (r.username||'') + '">'
                             + '<span style="font-size:.75rem;color:var(--text-muted);min-width:145px;">' + (r.timestamp || '') + '</span>'
                             + '<span class="vcc-envers-badge ' + badgeClass(r.revisionType) + '">' + badgeLabel(r.revisionType) + '</span>'
                             + '<span style="font-weight:500;">' + (r.username || '') + '</span>'
@@ -421,6 +477,13 @@
                             + (r.ipAddress ? '<span style="margin-left:auto;font-size:.75rem;color:var(--text-muted);">' + r.ipAddress + '</span>' : '')
                             + '</button>';
                     }).join('');
+
+                    // Add click listeners to revision buttons
+                    el.querySelectorAll('.vcc-envers-revision').forEach(function(btn) {
+                        btn.addEventListener('click', function() {
+                            loadDiff(this.getAttribute('data-rev'), this.getAttribute('data-ts'), this.getAttribute('data-user'));
+                        });
+                    });
                 })
                 .catch(function() {
                     document.getElementById('enversRevList').innerHTML =
@@ -430,7 +493,7 @@
 
         var _openRevNum = null;
 
-        window.loadDiff = function (revNum, ts, user, type) {
+        window.loadDiff = function (revNum, ts, user) {
             var area = document.getElementById('enversDiffArea');
             var title = document.getElementById('enversDiffTitle');
             var body = document.getElementById('enversDiffBody');

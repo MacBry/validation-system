@@ -10,7 +10,7 @@
             style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(102,126,234,.08);padding:28px 32px;margin-bottom:20px;">
             <!-- Nagłówek -->
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:0;cursor:pointer;user-select:none;"
-                onclick="toggleSection('sectionGContent', 'iconG')">
+                class="vcc-section-toggle" data-content-id="sectionGContent" data-icon-id="iconG">
                 <div
                     style="width:36px;height:36px;background:linear-gradient(135deg,#d08888,#c07070);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     <svg fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24" style="width:18px;height:18px">
@@ -177,8 +177,9 @@
                                                 style="white-space:pre-line;">-</div>
                                         </div>
                                     </div>
-                                    <button type="button" th:data-dev-id="${dev.id}" onclick="toggleDeviationForm(this.dataset.devId)"
-                                        style="margin-top:8px;font-size:.75rem;color:#667eea;background:none;border:none;cursor:pointer;text-decoration:underline;">
+                                    <button type="button" class="vcc-link-internal edit-deviation-btn"
+                                        th:data-dev-id="${dev.id}"
+                                        style="margin-top:8px;font-size:.75rem;background:none;border:none;cursor:pointer;text-decoration:underline;">
                                         Edytuj analizę
                                     </button>
                                 </div>
@@ -218,8 +219,8 @@
                                         </div>
                                     </div>
                                     <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
-                                        <button type="button"
-                                            th:data-vid="${validation.id}" th:data-did="${dev.id}" onclick="saveDeviationAnalysis(this.dataset.vid, this.dataset.did)"
+                                        <button type="button" class="vcc-btn-primary save-deviation-btn"
+                                            th:data-vid="${validation.id}" th:data-did="${dev.id}"
                                             style="padding:8px 20px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">
                                             Zapisz analizę
                                         </button>
@@ -234,56 +235,6 @@
             </div>
         </div>
 
-        <!-- Tabela G — JavaScript AJAX -->
-        <script th:inline="javascript">
-            function toggleDeviationForm(devId) {
-                var form = document.getElementById('analysis-form-' + devId);
-                var saved = document.getElementById('analysis-saved-' + devId);
-                if (form.style.display === 'none') {
-                    form.style.display = '';
-                    if (saved) saved.style.display = 'none';
-                } else {
-                    form.style.display = 'none';
-                    if (saved) saved.style.display = '';
-                }
-            }
-
-            function saveDeviationAnalysis(validationId, devId) {
-                var rootCause = document.getElementById('rootCause-' + devId).value;
-                var productImpact = document.getElementById('productImpact-' + devId).value;
-                var correctiveAction = document.getElementById('correctiveAction-' + devId).value;
-                var statusEl = document.getElementById('analysis-status-' + devId);
-
-                statusEl.textContent = 'Zapisywanie...';
-                statusEl.style.color = '#6b7080';
-
-                var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
-                var csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
-
-                var params = new URLSearchParams();
-                params.append('rootCause', rootCause);
-                params.append('productImpact', productImpact);
-                params.append('correctiveAction', correctiveAction);
-
-                fetch('/validations/' + validationId + '/deviations/' + devId + '/analysis', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        [csrfHeader]: csrfToken
-                    },
-                    body: params.toString()
-                })
-                    .then(function (response) { return response.json(); })
-                    .then(function (data) {
-                        statusEl.textContent = '✓ Zapisano (' + data.analyzedBy + ')';
-                        statusEl.style.color = '#5aa888';
-                    })
-                    .catch(function (err) {
-                        statusEl.textContent = '✖ Błąd zapisu: ' + err.message;
-                        statusEl.style.color = '#c06060';
-                    });
-            }
-        </script>
 
 </th:block>
 </body>

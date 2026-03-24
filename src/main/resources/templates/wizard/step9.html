@@ -199,7 +199,6 @@
                                                required
                                                placeholder="Wprowadź hasło">
                                         <button type="button" class="btn-eye" id="eyeBtn"
-                                                onclick="togglePassword()"
                                                 aria-label="Pokaż/ukryj hasło">
                                             <i class="fas fa-eye" id="eyeIcon"></i>
                                         </button>
@@ -255,7 +254,7 @@
 
     <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
     <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
-    <script>
+    <script th:nonce="${cspNonce}">
         function togglePassword() {
             const input = document.getElementById('password');
             const icon = document.getElementById('eyeIcon');
@@ -267,6 +266,13 @@
                 icon.classList.replace('fa-eye-slash', 'fa-eye');
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const eyeBtn = document.getElementById('eyeBtn');
+            if (eyeBtn) {
+                eyeBtn.addEventListener('click', togglePassword);
+            }
+        });
     </script>
 </body>
 </html>

@@ -84,7 +84,7 @@
                                         </a>
                                         <form th:action="@{/recorders/{id}/delete(id=${recorder.id})}" method="post"
                                               style="display:inline"
-                                              onsubmit="return confirm('Usunąć ten rejestrator?')">
+                                              class="delete-recorder-form">
                                             <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
                                                 <i class="fas fa-trash-alt"></i> Usuń
                                             </button>
@@ -136,15 +136,25 @@
 
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
+    <script th:nonce="${cspNonce}">
     (function() {
         var input = document.getElementById('recorderSearchInput');
-        if (!input) return;
-        input.addEventListener('input', function() {
-            var filter = this.value.toLowerCase();
-            var rows = document.querySelectorAll('.vcc-table tbody tr');
-            rows.forEach(function(row) {
-                row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+        if (input) {
+            input.addEventListener('input', function() {
+                var filter = this.value.toLowerCase();
+                var rows = document.querySelectorAll('.vcc-table tbody tr');
+                rows.forEach(function(row) {
+                    row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+                });
+            });
+        }
+
+        // Delete confirmation
+        document.querySelectorAll('.delete-recorder-form').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                if (!confirm('Usunąć ten rejestrator?')) {
+                    e.preventDefault();
+                }
             });
         });
     })();

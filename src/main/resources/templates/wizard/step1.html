@@ -227,13 +227,13 @@
                     </div>
 
                     <!-- Procedure cards -->
-                    <form id="step1Form" onsubmit="return false;">
+                    <form id="step1Form">
                         <div class="procedure-grid">
 
                             <!-- OQ -->
                             <label class="procedure-option">
                                 <input type="radio" name="procedureType" value="OQ" required
-                                       onchange="updateSelection()"
+                                       class="procedure-radio"
                                        th:checked="${draft.procedureType?.name() == 'OQ'}">
                                 <div class="procedure-card">
                                     <div class="procedure-card__icon">
@@ -289,8 +289,7 @@
                                 <i class="fas fa-times"></i> Anuluj
                             </a>
                             <button type="button" class="wizard-btn-next" id="nextBtn"
-                                    th:disabled="${draft.procedureType == null}"
-                                    onclick="submitForm()">
+                                    th:disabled="${draft.procedureType == null}">
                                 Dalej <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
@@ -308,10 +307,11 @@
     <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
     <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
 
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:nonce="${cspNonce}">
         function updateSelection() {
             const selected = document.querySelector('input[name="procedureType"]:checked');
-            document.getElementById('nextBtn').disabled = !selected;
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) nextBtn.disabled = !selected;
         }
 
         function getCookie(name) {
@@ -377,7 +377,26 @@
             });
         }
 
-        window.addEventListener('load', () => { updateSelection(); });
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSelection();
+            
+            // Radio button change listeners
+            document.querySelectorAll('.procedure-radio').forEach(radio => {
+                radio.addEventListener('change', updateSelection);
+            });
+
+            // Form submit listener (prevent default)
+            const form = document.getElementById('step1Form');
+            if (form) {
+                form.addEventListener('submit', (e) => e.preventDefault());
+            }
+
+            // Next button click listener
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', submitForm);
+            }
+        });
     </script>
 </body>
 </html>

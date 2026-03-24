@@ -123,7 +123,7 @@
                                         </a>
                                         <form th:action="@{/devices/{id}/delete(id=${device.id})}" method="post"
                                               style="display:inline"
-                                              onsubmit="return confirm('Usunąć to urządzenie?')">
+                                              class="delete-device-form">
                                             <button type="submit" class="vcc-btn--table vcc-btn--table-danger">
                                                 <i class="fas fa-trash-alt"></i> Usuń
                                             </button>
@@ -186,19 +186,29 @@
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
     <!-- Client-side table search -->
-    <script>
-    (function() {
+    <script th:nonce="${cspNonce}">
+    document.addEventListener('DOMContentLoaded', function() {
         var input = document.getElementById('deviceSearchInput');
-        if (!input) return;
-        input.addEventListener('input', function() {
-            var filter = this.value.toLowerCase();
-            var rows = document.querySelectorAll('.vcc-table tbody tr');
-            rows.forEach(function(row) {
-                var text = row.textContent.toLowerCase();
-                row.style.display = text.indexOf(filter) > -1 ? '' : 'none';
+        if (input) {
+            input.addEventListener('input', function() {
+                var filter = this.value.toLowerCase();
+                var rows = document.querySelectorAll('.vcc-table tbody tr');
+                rows.forEach(function(row) {
+                    var text = row.textContent.toLowerCase();
+                    row.style.display = text.indexOf(filter) > -1 ? '' : 'none';
+                });
             });
+        }
+
+        // Delete confirmation event delegation
+        document.addEventListener('submit', function(e) {
+            if (e.target && e.target.classList.contains('delete-device-form')) {
+                if (!confirm('Usunąć to urządzenie?')) {
+                    e.preventDefault();
+                }
+            }
         });
-    })();
+    });
     </script>
 
 </body>

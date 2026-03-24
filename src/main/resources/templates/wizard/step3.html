@@ -187,13 +187,13 @@
                             <input type="number" step="0.1" class="limit-value vcc-form-input--mono"
                                    th:value="${c.limitValue}" placeholder="0.0">
                             <button type="button" class="btn-remove-criterion"
-                                    onclick="this.parentElement.remove()" title="Usuń kryterium">
+                                    title="Usuń kryterium">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                     </div>
 
-                    <button type="button" class="btn-add-criterion" onclick="addCriterion()">
+                    <button type="button" class="btn-add-criterion" id="addCriterionBtn">
                         <i class="fas fa-plus"></i> Dodaj kryterium
                     </button>
 
@@ -201,7 +201,7 @@
                         <a th:href="@{/wizard/{id}/back/2(id=${draft.id})}" class="wizard-btn-back">
                             <i class="fas fa-arrow-left"></i> Poprzedni krok
                         </a>
-                        <button type="button" class="wizard-btn-next" id="nextBtn" onclick="saveCriteria()">
+                        <button type="button" class="wizard-btn-next" id="nextBtn">
                             Dalej <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
@@ -215,7 +215,7 @@
 
     <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
     <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:nonce="${cspNonce}">
         function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -251,10 +251,16 @@
                     <option value="EQ">=</option>
                 </select>
                 <input type="number" step="0.1" class="limit-value vcc-form-input--mono" placeholder="0.0">
-                <button type="button" class="btn-remove-criterion" onclick="this.parentElement.remove()" title="Usuń">
+                <button type="button" class="btn-remove-criterion" title="Usuń">
                     <i class="fas fa-times"></i>
                 </button>
             `;
+            
+            // Add remove listener
+            row.querySelector('.btn-remove-criterion').addEventListener('click', function() {
+                this.parentElement.remove();
+            });
+
             container.appendChild(row);
         }
 
@@ -306,6 +312,25 @@
                 btn.innerHTML = 'Dalej <i class="fas fa-arrow-right"></i>';
             });
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const addBtn = document.getElementById('addCriterionBtn');
+            if (addBtn) {
+                addBtn.addEventListener('click', addCriterion);
+            }
+
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', saveCriteria);
+            }
+
+            // Existing remove buttons
+            document.querySelectorAll('.btn-remove-criterion').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.parentElement.remove();
+                });
+            });
+        });
     </script>
 </body>
 </html>

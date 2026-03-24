@@ -101,7 +101,7 @@
                         <a th:href="@{/wizard/{id}/back/1(id=${draft.id})}" class="wizard-btn-back">
                             <i class="fas fa-arrow-left"></i> Poprzedni krok
                         </a>
-                        <button type="button" class="wizard-btn-next" id="nextBtn" onclick="submitStep2()">
+                        <button type="button" class="wizard-btn-next" id="nextBtn">
                             Dalej <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
@@ -115,7 +115,7 @@
 
     <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
     <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:nonce="${cspNonce}">
         function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -163,6 +163,13 @@
                 btn.innerHTML = 'Dalej <i class="fas fa-arrow-right"></i>';
             });
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', submitStep2);
+            }
+        });
     </script>
 </body>
 </html>

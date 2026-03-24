@@ -112,7 +112,7 @@
                                        aria-label="Hasło" />
                                 <button type="button"
                                         class="vcc-password-toggle"
-                                        onclick="togglePassword()"
+                                        id="btnTogglePassword"
                                         aria-label="Pokaż/ukryj hasło"
                                         tabindex="-1">
                                     <i id="toggleIcon" class="fas fa-eye"></i>
@@ -148,20 +148,27 @@
 
     </div>
 
-    <script>
-        function togglePassword() {
-            var pwd = document.getElementById('password');
-            var icon = document.getElementById('toggleIcon');
-            if (pwd.type === 'password') {
-                pwd.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                pwd.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+    <script th:nonce="${cspNonce}">
+        document.addEventListener('DOMContentLoaded', function() {
+            var btnToggle = document.getElementById('btnTogglePassword');
+            if (btnToggle) {
+                btnToggle.addEventListener('click', function() {
+                    var pwd = document.getElementById('password');
+                    var icon = document.getElementById('toggleIcon');
+                    if (pwd && icon) {
+                        if (pwd.type === 'password') {
+                            pwd.type = 'text';
+                            icon.classList.remove('fa-eye');
+                            icon.classList.add('fa-eye-slash');
+                        } else {
+                            pwd.type = 'password';
+                            icon.classList.remove('fa-eye-slash');
+                            icon.classList.add('fa-eye');
+                        }
+                    }
+                });
             }
-        }
+        });
     </script>
 
 </body>

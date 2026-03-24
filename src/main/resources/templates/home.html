@@ -297,14 +297,14 @@
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
     <!-- Inject series data from Thymeleaf AFTER Chart.js — th:inline properly serializes Java List<Map> to JS -->
-    <script th:if="${lastValidationSummary != null}" th:inline="javascript">
+    <script th:if="${lastValidationSummary != null}" th:inline="javascript" th:nonce="${cspNonce}">
     /*<![CDATA[*/
     window._vccSeries = /*[[${lastValidationSummary.series}]]*/ [];
     /*]]>*/
     </script>
 
     <!-- Dashboard: Last Validation Chart + 3D Map (runs after Chart.js is loaded) -->
-    <script>
+    <script th:nonce="${cspNonce}">
     (function () {
         var seriesData = window._vccSeries || [];
         if (!seriesData.length) return;
@@ -440,7 +440,7 @@
 
 
     <!-- Dashboard Search Script -->
-    <script>
+    <script th:nonce="${cspNonce}">
     (function() {
         const searchInput = document.querySelector('.vcc-search-bar__input');
         const defaultContent = document.getElementById('vccDashboardDefault');
@@ -449,6 +449,8 @@
         const clearBtn = document.getElementById('vccClearSearch');
         
         let searchTimeout = null;
+
+        if (!searchInput) return;
 
         function performSearch(query) {
             if (!query || query.trim().length < 2) {
@@ -475,13 +477,13 @@
         }
 
         function showSearch() {
-            defaultContent.style.display = 'none';
-            searchOverlay.style.display = 'block';
+            if (defaultContent) defaultContent.style.display = 'none';
+            if (searchOverlay) searchOverlay.style.display = 'block';
         }
 
         function hideSearch() {
-            defaultContent.style.display = 'block';
-            searchOverlay.style.display = 'none';
+            if (defaultContent) defaultContent.style.display = 'block';
+            if (searchOverlay) searchOverlay.style.display = 'none';
             searchInput.value = '';
         }
 
@@ -491,7 +493,7 @@
             searchTimeout = setTimeout(() => performSearch(query), 400);
         });
 
-        clearBtn.addEventListener('click', hideSearch);
+        if (clearBtn) clearBtn.addEventListener('click', hideSearch);
     })();
     </script>
 

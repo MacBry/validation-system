@@ -19,7 +19,7 @@ Zgodny z FDA 21 CFR Part 11 §11.10(d) - kontrola dostępu z zabezpieczeniami pr
 </div>
 
 <!-- Fragment dla AJAX setup - automatycznie konfiguruje CSRF headers -->
-<script th:fragment="csrf-ajax-setup">
+<script th:fragment="csrf-ajax-setup" th:nonce="${cspNonce}">
     // Automatyczna konfiguracja CSRF dla wszystkich AJAX requests
     (function() {
         'use strict';

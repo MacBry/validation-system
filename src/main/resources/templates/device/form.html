@@ -91,8 +91,7 @@
                                 <select class="vcc-form-select"
                                         th:classappend="${#fields.hasErrors('departmentId')} ? 'is-error'"
                                         th:field="*{departmentId}"
-                                        id="departmentId"
-                                        onchange="loadLaboratories()">
+                                        id="departmentId">
                                     <option value="">-- Wybierz dział --</option>
                                     <option th:each="dept : ${departments}"
                                             th:value="${dept.id}"
@@ -209,8 +208,7 @@
                                        th:classappend="${#fields.hasErrors('volume')} ? 'is-error'"
                                        id="volume"
                                        th:field="*{volume}"
-                                       placeholder="np. 1.5"
-                                       onchange="updateVolumeCategory()">
+                                       placeholder="np. 1.5">
                                 <div class="vcc-form-error" th:if="${#fields.hasErrors('volume')}" th:errors="*{volume}"></div>
                                 <span class="vcc-form-hint">Objętość wewnętrzna urządzenia w metrach sześciennych</span>
                             </div>
@@ -285,12 +283,14 @@
     <!-- Sidebar JS -->
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
+    <script th:nonce="${cspNonce}">
     // Funkcja do ładowania pracowni dla wybranego działu
     function loadLaboratories() {
         const departmentSelect = document.getElementById('departmentId');
         const laboratoryGroup = document.getElementById('laboratoryGroup');
         const laboratorySelect = document.getElementById('laboratoryId');
+
+        if (!departmentSelect || !laboratoryGroup || !laboratorySelect) return;
 
         const selectedOption = departmentSelect.options[departmentSelect.selectedIndex];
         const departmentId = selectedOption.value;
@@ -316,11 +316,13 @@
         fetch('/devices/api/departments/' + departmentId + '/laboratories')
             .then(function(response) { return response.json(); })
             .then(function(laboratories) {
+                const currentLabId = laboratorySelect.value;
                 laboratorySelect.innerHTML = '<option value="">-- Wybierz pracownię (opcjonalne) --</option>';
                 laboratories.forEach(function(lab) {
                     var option = document.createElement('option');
                     option.value = lab.id;
                     option.textContent = lab.name;
+                    if (lab.id == currentLabId) option.selected = true;
                     laboratorySelect.appendChild(option);
                 });
                 laboratorySelect.parentElement.classList.remove('vcc-form-loading');
@@ -334,7 +336,7 @@
 
     // Automatyczne ustawienie klasy kubatury na podstawie objętości
     function updateVolumeCategory() {
-        var volumeInput = document.querySelector('input[name="volume"]');
+        var volumeInput = document.getElementById('volume');
         var categorySelect = document.getElementById('volumeCategory');
         if (!volumeInput || !categorySelect) return;
 
@@ -356,12 +358,18 @@
     // Wywołaj przy załadowaniu strony (dla edycji)
     document.addEventListener('DOMContentLoaded', function() {
         var departmentSelect = document.getElementById('departmentId');
-        if (departmentSelect && departmentSelect.value) {
-            loadLaboratories();
+        if (departmentSelect) {
+            departmentSelect.addEventListener('change', loadLaboratories);
+            if (departmentSelect.value) {
+                loadLaboratories();
+            }
         }
-        var volumeInput = document.querySelector('input[name="volume"]');
-        if (volumeInput && volumeInput.value) {
-            updateVolumeCategory();
+        var volumeInput = document.getElementById('volume');
+        if (volumeInput) {
+            volumeInput.addEventListener('change', updateVolumeCategory);
+            if (volumeInput.value) {
+                updateVolumeCategory();
+            }
         }
     });
     </script>

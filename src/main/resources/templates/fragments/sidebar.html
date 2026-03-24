@@ -173,11 +173,10 @@
     </aside>
 
     <!-- Sidebar overlay (mobile) -->
-    <div th:fragment="sidebar-overlay" class="vcc-sidebar-overlay" id="vccSidebarOverlay"
-         onclick="closeSidebar()"></div>
+    <div th:fragment="sidebar-overlay" class="vcc-sidebar-overlay" id="vccSidebarOverlay"></div>
 
     <!-- Sidebar toggle JS (inline, no external deps) -->
-    <script th:fragment="sidebar-js">
+    <script th:fragment="sidebar-js" th:nonce="${cspNonce}">
     (function() {
         var sidebar = document.getElementById('vccSidebar');
         var overlay = document.getElementById('vccSidebarOverlay');
@@ -212,6 +211,12 @@
                 } else {
                     openSidebar();
                 }
+            });
+        }
+
+        if (overlay) {
+            overlay.addEventListener('click', function() {
+                closeSidebar();
             });
         }
 

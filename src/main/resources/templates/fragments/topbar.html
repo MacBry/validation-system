@@ -103,7 +103,21 @@
     </div>
 
     <!-- Notification logic script - bundled with fragment for auto-load -->
-    <script>
+    <style th:nonce="${cspNonce}">
+        .vcc-notif-item {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            padding: 0.75rem 1.25rem;
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.15s;
+        }
+        .vcc-notif-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+    </style>
+    <script th:nonce="${cspNonce}">
     (function () {
         const btn    = document.getElementById('vccNotifBtn');
         const badge  = document.getElementById('vccNotifBadge');
@@ -128,14 +142,8 @@
             const href   = n.link ? `href="${n.link}"` : '';
             const tag    = n.link ? 'a' : 'div';
             return `
-              <${tag} ${href}
-                style="display:flex; gap:0.75rem; align-items:flex-start;
-                       padding:0.75rem 1.25rem;
-                       border-left:3px solid ${border};
-                       text-decoration:none; color:inherit;
-                       transition:background 0.15s;"
-                onmouseover="this.style.background='rgba(255,255,255,0.04)'"
-                onmouseout="this.style.background='transparent'">
+              <${tag} ${href} class="vcc-notif-item"
+                style="border-left:3px solid ${border};">
                 <span style="margin-top:2px; flex-shrink:0;">${icon}</span>
                 <span style="flex:1; min-width:0;">
                   <strong style="display:block; font-size:0.8rem;

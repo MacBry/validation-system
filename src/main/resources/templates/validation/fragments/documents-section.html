@@ -104,10 +104,10 @@
                 </a>
                 <p style="margin:0 0 8px 0;font-size:.82rem;color:#8b95a8;">Zestawienie rejestratorów: kalibracja, położenie, temperatury</p>
 
-                <button th:data-url="@{/validations/{id}/package(id=${validation.id})}"
+                <button type="button" class="vcc-btn--detail-primary download-btn"
+                    th:data-url="@{/validations/{id}/package(id=${validation.id})}"
                     th:data-filename="'Walidacja_' + ${validation.id} + '_' + ${#temporals.format(validation.createdDate, 'yyyy-MM-dd')} + '.zip'"
-                    onclick="downloadFile(this.getAttribute('data-url'), this.getAttribute('data-filename'))"
-                    class="vcc-btn--detail-primary" style="border:none;cursor:pointer;font-family:inherit;width:fit-content;display:inline-flex;gap:8px;align-items:center;">
+                    style="border:none;cursor:pointer;font-family:inherit;width:fit-content;display:inline-flex;gap:8px;align-items:center;">
                     <i class="fas fa-file-archive" style="font-size:.85rem;"></i>
                     Pobierz paczkę ZIP
                 </button>

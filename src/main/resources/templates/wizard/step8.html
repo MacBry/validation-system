@@ -158,7 +158,7 @@
                         <a th:href="@{/wizard/{id}/back/7(id=${draft.id})}" class="wizard-btn-back">
                             <i class="fas fa-arrow-left"></i> Poprzedni krok
                         </a>
-                        <button type="button" class="wizard-btn-next" onclick="navigateToStep9()">
+                        <button type="button" class="wizard-btn-next" id="nextBtn">
                             Przejdź do finalizacji <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
@@ -172,11 +172,20 @@
 
     <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
     <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:nonce="${cspNonce}">
         function navigateToStep9() {
-            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const container = document.querySelector('[data-draft-id]');
+            if (!container) return;
+            const draftId = container.getAttribute('data-draft-id');
             window.location.href = '/wizard/' + draftId + '/step/9';
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', navigateToStep9);
+            }
+        });
     </script>
 </body>
 </html>

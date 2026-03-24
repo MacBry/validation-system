@@ -82,8 +82,7 @@
                         <i class="fas fa-pen"></i>
                         Edytuj
                     </a>
-                    <button class="vcc-btn--detail-outline"
-                            onclick="document.getElementById('resetPasswordModal').classList.add('is-open')">
+                    <button class="vcc-btn--detail-outline" id="btnOpenReset">
                         <i class="fas fa-key"></i>
                         Reset hasła
                     </button>
@@ -233,7 +232,7 @@
                             <td style="text-align:right;">
                                 <form th:action="@{/permissions/{id}/revoke(id=${perm.permissionId})}"
                                       method="post" style="display:inline"
-                                      onsubmit="return confirm('Cofnąć to uprawnienie?')">
+                                      class="revoke-permission-form">
                                     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                     <input type="hidden" name="userId" th:value="${user.id}">
                                     <button type="submit" class="vcc-btn--detail-danger"
@@ -293,11 +292,10 @@
                             <td><span class="vcc-table__muted" th:text="${log.ipAddress ?: '—'}">---</span></td>
                             <td style="text-align:right;">
                                 <button type="button"
-                                        class="vcc-btn--detail-outline"
+                                        class="vcc-btn--detail-outline btn-audit-detail"
                                         style="padding:4px 10px;font-size:0.75rem;"
                                         th:if="${log.newValueJson != null}"
-                                        th:attr="data-json=${log.newValueJson}"
-                                        onclick="showAuditDetail(this)">
+                                        th:attr="data-json=${log.newValueJson}">
                                     Detale
                                 </button>
                             </td>
@@ -350,8 +348,7 @@
     </div>
 
     <!-- Modal: Reset hasla -->
-    <div class="vcc-modal-overlay" id="resetPasswordModal"
-         onclick="if(event.target===this)this.classList.remove('is-open')">
+    <div class="vcc-modal-overlay" id="resetPasswordModal">
         <div class="vcc-modal">
             <h3 class="vcc-modal__title">
                 <i class="fas fa-key" style="color:var(--vcc-primary);margin-right:8px;"></i>
@@ -369,8 +366,7 @@
                            placeholder="Min. 8 znaków" required minlength="8">
                 </div>
                 <div class="vcc-modal__actions">
-                    <button type="button" class="vcc-modal__btn-cancel"
-                            onclick="document.getElementById('resetPasswordModal').classList.remove('is-open')">
+                    <button type="button" class="vcc-modal__btn-cancel" id="btnCancelReset">
                         Anuluj
                     </button>
                     <button type="submit" class="vcc-modal__btn-submit">
@@ -382,16 +378,14 @@
     </div>
 
     <!-- Modal: Audit detail JSON -->
-    <div class="vcc-modal-overlay" id="auditDetailModal"
-         onclick="if(event.target===this)this.classList.remove('is-open')">
+    <div class="vcc-modal-overlay" id="auditDetailModal">
         <div class="vcc-modal" style="max-width:640px;">
             <h3 class="vcc-modal__title">Szczegóły operacji</h3>
             <p class="vcc-modal__subtitle">Dane po zmianie (JSON)</p>
             <pre id="auditDetailContent"
                  style="background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;font-family:'DM Mono',monospace;font-size:0.8rem;max-height:400px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"></pre>
             <div class="vcc-modal__actions">
-                <button type="button" class="vcc-modal__btn-cancel"
-                        onclick="document.getElementById('auditDetailModal').classList.remove('is-open')">
+                <button type="button" class="vcc-modal__btn-cancel" id="btnCloseAudit">
                     Zamknij
                 </button>
             </div>
@@ -401,17 +395,56 @@
     <!-- Sidebar JS -->
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
 
-    <script>
-    function showAuditDetail(btn) {
-        var raw = btn.getAttribute('data-json') || '{}';
-        var content = document.getElementById('auditDetailContent');
-        try {
-            content.textContent = JSON.stringify(JSON.parse(raw), null, 2);
-        } catch (e) {
-            content.textContent = raw;
-        }
-        document.getElementById('auditDetailModal').classList.add('is-open');
-    }
+    <script th:nonce="${cspNonce}">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Audit details event delegation
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-audit-detail');
+            if (btn) {
+                var raw = btn.getAttribute('data-json') || '{}';
+                var content = document.getElementById('auditDetailContent');
+                if (content) {
+                    try {
+                        content.textContent = JSON.stringify(JSON.parse(raw), null, 2);
+                    } catch (ex) {
+                        content.textContent = raw;
+                    }
+                }
+                document.getElementById('auditDetailModal').classList.add('is-open');
+            }
+        });
+
+        // Modal openers
+        document.getElementById('btnOpenReset')?.addEventListener('click', function() {
+            document.getElementById('resetPasswordModal').classList.add('is-open');
+        });
+
+        // Modal closers
+        document.getElementById('btnCancelReset')?.addEventListener('click', function() {
+            document.getElementById('resetPasswordModal').classList.remove('is-open');
+        });
+        document.getElementById('btnCloseAudit')?.addEventListener('click', function() {
+            document.getElementById('auditDetailModal').classList.remove('is-open');
+        });
+
+        // Backdrop clicks
+        document.querySelectorAll('.vcc-modal-overlay').forEach(function(overlay) {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('is-open');
+                }
+            });
+        });
+
+        // Revoke confirmation
+        document.addEventListener('submit', function(e) {
+            if (e.target && e.target.classList.contains('revoke-permission-form')) {
+                if (!confirm('Cofnąć to uprawnienie?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    });
     </script>
 
 </body>

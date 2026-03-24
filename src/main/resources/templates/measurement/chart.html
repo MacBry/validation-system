@@ -289,11 +289,11 @@
         </div>
 
         <div class="controls">
-            <button onclick="changeChartType('line')" class="active" id="btnLine">📈 Liniowy</button>
-            <button onclick="changeChartType('bar')" id="btnBar">📊 Słupkowy</button>
-            <button onclick="toggleMovingAverage()" id="btnAvg">📉 Średnia krocząca</button>
-            <button onclick="exportChart()">💾 Zapisz PNG</button>
-            <button onclick="window.print()">🖨️ Drukuj</button>
+            <button type="button" class="active" id="btnLine">📈 Liniowy</button>
+            <button type="button" id="btnBar">📊 Słupkowy</button>
+            <button type="button" id="btnAvg">📉 Średnia krocząca</button>
+            <button type="button" id="btnExport">💾 Zapisz PNG</button>
+            <button type="button" id="btnPrint">🖨️ Drukuj</button>
         </div>
 
         <div class="chart-container">
@@ -367,7 +367,7 @@
         </div>
     </div>
 
-    <script th:inline="javascript">
+    <script th:inline="javascript" th:nonce="${cspNonce}">
         /*<![CDATA[*/
         // Dane z Thymeleaf
         const testoData = {
@@ -391,6 +391,13 @@
         // Inicjalizacja
         document.addEventListener('DOMContentLoaded', function () {
             createChart();
+
+            // Event Listeners for Controls
+            document.getElementById('btnLine').addEventListener('click', function() { changeChartType('line'); });
+            document.getElementById('btnBar').addEventListener('click', function() { changeChartType('bar'); });
+            document.getElementById('btnAvg').addEventListener('click', toggleMovingAverage);
+            document.getElementById('btnExport').addEventListener('click', exportChart);
+            document.getElementById('btnPrint').addEventListener('click', function() { window.print(); });
         });
 
         function calculateMovingAverage(data, windowSize = 5) {

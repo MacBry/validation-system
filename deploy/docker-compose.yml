@@ -43,13 +43,13 @@ services:
       # Redis -- prod properties use ${REDIS_HOST:localhost} etc.
       - REDIS_HOST=vcc-redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=${DB_PASSWORD}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - SPRING_REDIS_HOST=vcc-redis
       - SPRING_REDIS_PORT=6379
-      - SPRING_REDIS_PASSWORD=${DB_PASSWORD}
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
       - SPRING_DATA_REDIS_HOST=vcc-redis
       - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_DATA_REDIS_PASSWORD=${DB_PASSWORD}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       # Mail (disabled for demo)
       - SPRING_MAIL_HOST=localhost
       - SPRING_MAIL_PORT=25
@@ -61,7 +61,7 @@ services:
       - APP_TSA_FALLBACK_ENABLED=true
       - APP_TSA_TIMEOUT=15000
       # Security -- remember-me key must be 32+ chars
-      - APP_SECURITY_REMEMBER_ME_KEY=Vcc2026ProdRememberMeSecretKey!@42Chars
+      - APP_SECURITY_REMEMBER_ME_KEY=${REMEMBER_ME_KEY}
       # Password policy (relaxed for demo)
       - APP_SECURITY_PASSWORD_MIN_LENGTH=8
       # Thymeleaf -- debug to see template errors during initial deploy
@@ -109,7 +109,7 @@ services:
     restart: always
     environment:
       - MYSQL_DATABASE=validation_db
-      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_USER=validationuser
       - MYSQL_PASSWORD=${DB_PASSWORD}
     command: >
@@ -122,7 +122,7 @@ services:
     volumes:
       - vcc-db-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 10s
       retries: 10

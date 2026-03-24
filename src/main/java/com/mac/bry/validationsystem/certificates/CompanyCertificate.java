@@ -3,6 +3,7 @@ package com.mac.bry.validationsystem.certificates;
 import com.mac.bry.validationsystem.company.Company;
 import jakarta.persistence.*;
 import lombok.*;
+import com.mac.bry.validationsystem.security.converter.AttributeEncryptionConverter;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 
@@ -50,6 +51,7 @@ public class CompanyCertificate {
     private byte[] keystoreData;
 
     @NotAudited
+    @Convert(converter = AttributeEncryptionConverter.class)
     @Column(name = "keystore_password", nullable = false)
     private String keystorePassword;
 

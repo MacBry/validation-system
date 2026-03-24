@@ -7,6 +7,14 @@ import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.events.Event;
+import com.itextpdf.kernel.events.IEventHandler;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
+import com.itextpdf.kernel.geom.Rectangle;
+import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
+import com.itextpdf.layout.Canvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
@@ -67,8 +75,9 @@ public class ChartPdfService {
         PdfDocument pdfDoc = new PdfDocument(writer);
         
         // Dodaj event handler dla numeracji stron
-        pdfDoc.addEventHandler(com.itextpdf.kernel.events.PdfDocumentEvent.END_PAGE, 
-            new PageNumberEventHandler());
+        PdfFont pageFont = PdfFontFactory.createFont(StandardFonts.HELVETICA, "Cp1250", PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
+        PageNumberEventHandler pageHandler = new PageNumberEventHandler(pageFont);
+        pdfDoc.addEventHandler(com.itextpdf.kernel.events.PdfDocumentEvent.END_PAGE, pageHandler);
         
         Document document = new Document(pdfDoc, PageSize.A4.rotate()); // Landscape
         
@@ -130,8 +139,8 @@ public class ChartPdfService {
         chartImage.setMarginBottom(20);
         document.add(chartImage);
         
-        // NOWA STRONA - Tabela z danymi pomiarowymi (PORTRAIT)
-        document.add(new com.itextpdf.layout.element.AreaBreak(PageSize.A4));
+        // NOWA STRONA - Tabela z danymi pomiarowymi (LANDSCAPE)
+        document.add(new com.itextpdf.layout.element.AreaBreak(PageSize.A4.rotate()));
         
         // Nagłówek drugiej strony
         Paragraph dataTitle = new Paragraph("Dane Pomiarowe - " + deviceName + " numer inwentarzowy: " + inventoryNumber)
@@ -175,34 +184,64 @@ public class ChartPdfService {
         return baos.toByteArray();
     }
     
-    /**
-     * Event handler dla numeracji stron
-     */
-    private static class PageNumberEventHandler implements com.itextpdf.kernel.events.IEventHandler {
+    private static class PageNumberEventHandler implements IEventHandler {
+        private final PdfFont font;
+        private final PdfFormXObject placeholder;
+
+        public PageNumberEventHandler(PdfFont font) {
+            this.font = font;
+            this.placeholder = new PdfFormXObject(new Rectangle(0, 0, 30, 10));
+        }
+
         @Override
-        public void handleEvent(com.itextpdf.kernel.events.Event event) {
-            com.itextpdf.kernel.events.PdfDocumentEvent docEvent = (com.itextpdf.kernel.events.PdfDocumentEvent) event;
+        public void handleEvent(Event event) {
+            PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
             PdfDocument pdfDoc = docEvent.getDocument();
-            com.itextpdf.kernel.pdf.PdfPage page = docEvent.getPage();
-            
+            PdfPage page = docEvent.getPage();
+            PdfCanvas canvas = new PdfCanvas(page);
+
             int pageNumber = pdfDoc.getPageNumber(page);
-            int totalPages = pdfDoc.getNumberOfPages();
+
+            // Pozycja w stopce dla strony Landscape (wyśrodkowanie)
+            float x = (page.getPageSize().getLeft() + page.getPageSize().getRight()) / 2;
+            float y = 20;
+
+            String prefix = "Strona " + pageNumber + " z ";
+            float prefixWidth = font.getWidth(prefix, 8);
+            float startX = x - 45; // Przesunięcie nieco bardziej w lewo dla lepszego wyśrodkowania całości
+
+            canvas.beginText()
+                  .setFontAndSize(font, 8)
+                  .setColor(ColorConstants.GRAY, false)
+                  .moveText(startX, y)
+                  .showText(prefix)
+                  .endText();
+
+            canvas.addXObjectAt(placeholder, startX + prefixWidth, y);
             
-            try {
-                PdfFont font = PdfFontFactory.createFont(StandardFonts.HELVETICA, "Cp1250", PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
-                
-                com.itextpdf.kernel.pdf.canvas.PdfCanvas canvas = 
-                    new com.itextpdf.kernel.pdf.canvas.PdfCanvas(page);
-                
-                canvas.beginText()
-                    .setFontAndSize(font, 9)
-                    .moveText(page.getPageSize().getWidth() / 2 - 30, 20)
-                    .showText(String.format("Strona %d z %d", pageNumber, totalPages))
-                    .endText();
-                    
-            } catch (IOException e) {
-                // Ignore
-            }
+            // Aktualizuj całkowitą liczbę stron w szablonie (na bieżąco dla każdej strony)
+            // Dzięki temu, że używamy jednego obiektu placeholder, wszystkie strony (nawet już przetworzone)
+            // będą pokazywać ostateczną, poprawną wartość po zakończeniu generowania.
+            writeTotalPages(pdfDoc);
+            
+            canvas.release();
+        }
+
+        private void writeTotalPages(PdfDocument pdfDoc) {
+            int totalPages = pdfDoc.getNumberOfPages();
+            String totalPagesText = String.valueOf(totalPages);
+
+            // WYCZYŚĆ poprzednie dane w strumieniu placeholder-a, aby uniknąć nakładania się tekstu
+            placeholder.getPdfObject().setData(new byte[0]);
+
+            PdfCanvas canvas = new PdfCanvas(placeholder, pdfDoc);
+            canvas.beginText()
+                  .setFontAndSize(font, 8)
+                  .setColor(ColorConstants.GRAY, false)
+                  .moveText(0, 0)
+                  .showText(totalPagesText)
+                  .endText();
+            canvas.release();
         }
     }
     

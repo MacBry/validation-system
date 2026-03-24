@@ -8,9 +8,9 @@
 
 set -e  # Exit on error
 
-MYSQL_USER="root"
-MYSQL_PASS="admin"
-MYSQL_HOST="localhost"
+MYSQL_USER="${DB_USERNAME:-root}"
+MYSQL_PASS="${DB_PASSWORD:?ERROR: DB_PASSWORD environment variable must be set}"
+MYSQL_HOST="${DB_HOST:-localhost}"
 DB_NAME="validation_system"
 MYSQL_BIN="/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe"
 

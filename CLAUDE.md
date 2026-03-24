@@ -44,11 +44,11 @@ mvn test -Dtest="*Service*"
 
 ### Database Operations
 ```bash
-# Access MySQL (Windows)
-"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p***REMOVED*** validation_system
+# Access MySQL (Windows) - use DB_PASSWORD env var
+"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p"$DB_PASSWORD" validation_system
 
 # Run migration (if needed)
-mysql -u root -p***REMOVED*** validation_system < src/main/resources/db/migration/V2.12.0__security_schema.sql
+mysql -u root -p"$DB_PASSWORD" validation_system < src/main/resources/db/migration/V2.12.0__security_schema.sql
 ```
 
 ### Development Services
@@ -172,14 +172,14 @@ Key migration files:
 
 ### SSL Certificate Issues
 ```bash
-# Regenerate keystore if needed
-keytool -genkeypair -alias tomcat -storetype PKCS12 -keyalg RSA -keysize 2048 -keystore keystore.p12 -storepass ***REMOVED***
+# Regenerate keystore if needed - use a strong password from SSL_KEYSTORE_PASSWORD env var
+keytool -genkeypair -alias tomcat -storetype PKCS12 -keyalg RSA -keysize 2048 -keystore keystore.p12 -storepass "$SSL_KEYSTORE_PASSWORD"
 ```
 
 ### Database Connection
 ```bash
-# Test connection
-mysql -u root -p***REMOVED*** -h localhost -P 3306 validation_system
+# Test connection - use DB_PASSWORD env var
+mysql -u root -p"$DB_PASSWORD" -h localhost -P 3306 validation_system
 ```
 
 ### Redis Connectivity

@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
-"""Upload all deployment files to VPS."""
+"""
+Upload all deployment files to VPS.
+
+SECURITY: All credentials are read from environment variables.
+Set the following before use:
+  VPS_HOST - Server hostname or IP
+  VPS_PORT - SSH port (default: 22)
+  VPS_USER - SSH username
+  VPS_PASS - SSH password (prefer SSH key auth instead)
+"""
 import paramiko
 import os
 import sys
 import stat
 
-VPS_HOST = "***REMOVED***"
-VPS_PORT = 22
-VPS_USER = "root"
-VPS_PASS = "***REMOVED***"
+VPS_HOST = os.environ.get("VPS_HOST", "")
+VPS_PORT = int(os.environ.get("VPS_PORT", "22"))
+VPS_USER = os.environ.get("VPS_USER", "")
+VPS_PASS = os.environ.get("VPS_PASS", "")
 REMOTE_APP_DIR = "/opt/app"
 
 # Base directory for local files
@@ -34,9 +43,31 @@ PYTHON_SCRIPTS = [
     ("generate_3d_animation.py", f"{REMOTE_APP_DIR}/generate_3d_animation.py"),
 ]
 
+def _validate_config():
+    """Validate that required environment variables are set."""
+    missing = []
+    if not VPS_HOST:
+        missing.append("VPS_HOST")
+    if not VPS_USER:
+        missing.append("VPS_USER")
+    if not VPS_PASS:
+        missing.append("VPS_PASS")
+    if missing:
+        print(f"[ERROR] Missing required environment variables: {', '.join(missing)}")
+        print("Set them before running this script:")
+        print("  export VPS_HOST=your-server-ip")
+        print("  export VPS_USER=your-username")
+        print("  export VPS_PASS=your-password")
+        sys.exit(1)
+
 def upload():
+    _validate_config()
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    try:
+        client.load_system_host_keys()
+    except Exception:
+        pass
     client.connect(VPS_HOST, port=VPS_PORT, username=VPS_USER, password=VPS_PASS, timeout=15)
     sftp = client.open_sftp()
 
@@ -100,7 +131,7 @@ def upload():
     sftp.close()
     client.close()
     print("\n--- Upload complete! ---")
-    print(f"Run deployment: ssh root@{VPS_HOST} 'bash {REMOTE_APP_DIR}/deploy.sh'")
+    print(f"Run deployment: ssh {VPS_USER}@{VPS_HOST} 'bash {REMOTE_APP_DIR}/deploy.sh'")
 
 if __name__ == "__main__":
     upload()

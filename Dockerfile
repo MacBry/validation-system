@@ -26,12 +26,19 @@ COPY generate_3d_animation.py /app/scripts/
 # Copy the build artifact
 COPY --from=build /app/target/validation-system.jar app.jar
 
+# Create non-root user and set ownership
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && chown -R appuser:appgroup /app /var/app /var/log/validation-system
+
 # Expose production port
 EXPOSE 8443
 
 # Environment configuration
 ENV PYTHON_SCRIPT_PATH=/app/scripts
 ENV PYTHON_EXECUTABLE=python3
+
+# Switch to non-root user
+USER appuser
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar", "--spring.profiles.active=prod"]

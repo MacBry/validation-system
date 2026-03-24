@@ -1,7 +1,9 @@
 #!/bin/bash
 # ============================================================
 # Validation System v2.12.0-ENTERPRISE - VPS Deployment Script
-# Target: ***REMOVED*** (Debian 13)
+# ============================================================
+# SECURITY: No credentials are stored in this script.
+# Ensure .env file is configured on the target server.
 # ============================================================
 set -e
 
@@ -12,6 +14,13 @@ echo "============================================"
 echo " Validation System - Production Deployment"
 echo " $(date)"
 echo "============================================"
+
+# Step 0: Verify .env file exists
+if [ ! -f "$APP_DIR/.env" ]; then
+    echo "  ERROR: .env file not found at $APP_DIR/.env"
+    echo "  Copy .env.example to .env and fill in the values before deploying."
+    exit 1
+fi
 
 # Step 1: Backup current deployment
 echo ""
@@ -31,7 +40,7 @@ echo "  Containers stopped."
 # Step 3: Verify new files are in place
 echo ""
 echo "[3/8] Verifying deployment files..."
-for f in docker-compose.yml Dockerfile.prod validation-system.jar; do
+for f in docker-compose.yml Dockerfile.prod validation-system.jar .env; do
     if [ ! -f "$APP_DIR/$f" ]; then
         echo "  ERROR: Missing $APP_DIR/$f"
         exit 1
@@ -125,6 +134,6 @@ fi
 echo ""
 echo "============================================"
 echo " Deployment complete!"
-echo " Access: http://***REMOVED***/"
-echo " Login:  admin / ***REMOVED***"
+echo " NOTE: Login with the admin credentials"
+echo " configured during initial setup."
 echo "============================================"

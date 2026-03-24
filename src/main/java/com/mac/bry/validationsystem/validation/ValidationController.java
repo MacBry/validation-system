@@ -326,9 +326,12 @@ public class ValidationController {
             RedirectAttributes redirectAttributes) {
         log.info("Aktualizacja statusu walidacji {} na {}", id, status);
 
-        String redirectTarget = returnUrl != null && !returnUrl.isEmpty()
-                ? "redirect:" + returnUrl
-                : "redirect:/validations/" + id;
+        String redirectTarget;
+        if (returnUrl != null && !returnUrl.isEmpty() && returnUrl.startsWith("/") && !returnUrl.startsWith("//")) {
+            redirectTarget = "redirect:" + returnUrl;
+        } else {
+            redirectTarget = "redirect:/validations/" + id;
+        }
 
         // Weryfikacja hasła użytkownika
         var user = userRepository.findByUsername(auth.getName()).orElse(null);
@@ -439,7 +442,20 @@ public class ValidationController {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "Brak podpisanego dokumentu dla walidacji ID: " + id));
 
-            byte[] bytes = Files.readAllBytes(Path.of(sig.getSignedPdfPath()));
+            // Security: Canonicalize path and validate it stays within allowed directory
+            Path signedPdfPath = Path.of(sig.getSignedPdfPath()).toAbsolutePath().normalize();
+            Path allowedDir = Path.of(System.getProperty("user.dir"), "uploads/signed")
+                    .toAbsolutePath().normalize();
+            Path altAllowedDir = Path.of("/var/app/signed-documents")
+                    .toAbsolutePath().normalize();
+
+            if (!signedPdfPath.startsWith(allowedDir) && !signedPdfPath.startsWith(altAllowedDir)) {
+                log.error("Path traversal attempt detected for validation ID: {}. Path: {}", id, signedPdfPath);
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Brak podpisanego dokumentu dla walidacji ID: " + id);
+            }
+
+            byte[] bytes = Files.readAllBytes(signedPdfPath);
 
             String filename = "validation_" + id + "_signed.pdf";
             return ResponseEntity.ok()

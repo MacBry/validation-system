@@ -109,9 +109,11 @@ public class SecurityConfig {
                                 .headers(headers -> headers
                                                 .frameOptions(frameOptions -> frameOptions.sameOrigin())
                                                 .xssProtection(xss -> {}) // Enable XSS protection with defaults
-                                                .httpStrictTransportSecurity(hsts -> hsts.disable())
+                                                .httpStrictTransportSecurity(hsts -> hsts
+                                                                .includeSubDomains(true)
+                                                                .maxAgeInSeconds(31536000)) // 1 year HSTS
                                                 .contentSecurityPolicy(csp -> csp.policyDirectives(
-                                                                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self';")));
+                                                                "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self';")));
 
                 http.authenticationProvider(authenticationProvider());
 

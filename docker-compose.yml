@@ -13,7 +13,7 @@ services:
       - SPRING_DATASOURCE_URL=${DB_URL:-jdbc:mysql://vcc-db:3306/validation_db?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&zeroDateTimeBehavior=convertToNull}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-validationuser}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
       - SPRING_FLYWAY_ENABLED=false
       - SPRING_REDIS_HOST=vcc-redis
       - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -21,9 +21,9 @@ services:
       - SPRING_MAIL_PORT=587
       - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
       - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
-      - APP_TSA_URL=http://***REMOVED***:8080/tsa
-      - APP_TSA_USERNAME=***REMOVED***
-      - APP_TSA_PASSWORD=***REMOVED***
+      - APP_TSA_URL=${TSA_URL:-http://timestamp.digicert.com}
+      - APP_TSA_USERNAME=${TSA_USERNAME:-}
+      - APP_TSA_PASSWORD=${TSA_PASSWORD:-}
       - APP_SECURITY_REMEMBER_ME_KEY=${REMEMBER_ME_KEY}
     entrypoint: >
       sh -c "

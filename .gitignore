@@ -38,15 +38,18 @@ Thumbs.db
 
 # Secrets & Config
 .env
+.env.*
+!.env.example
 *.p12
 *.jks
 ssh_keys/
 *.key
 *.pem
+*.keystore
 application-prod.properties
-# (Exclude application-prod.properties if it contains secrets; 
-# if it only has placeholders, it's fine to keep it, but 
-# it's safer to keep sensitive values in ENV or separate .properties)
+# Deploy secrets
+deploy/.env
+deploy/*.secret
 
 # Temporary/Analysis Files
 Vi2DebugAnalyzer*.java

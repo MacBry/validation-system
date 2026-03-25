@@ -11,11 +11,16 @@ public interface CoolingDeviceService {
 
     List<CoolingDevice> findAll();
 
-    /**
+     /**
      * FIX #2: Zwraca urządzenia dostępne dla aktualnie zalogowanego użytkownika.
      * Super Admin widzi wszystkie. Inni tylko swoje.
      */
-    Page<CoolingDevice> getAllAccessibleDevices(Pageable pageable);
+     Page<CoolingDevice> getAllAccessibleDevices(Pageable pageable);
+
+     /**
+      * Zwraca urządzenia dostępne dla użytkownika z opcjonalnym filtrowaniem.
+      */
+     Page<CoolingDevice> getAllAccessibleDevices(Pageable pageable, Long companyId, Long departmentId, Long laboratoryId);
 
     /**
      * Zwraca pełną listę wszystkich dostępnych urządzeń (bez paginacji).

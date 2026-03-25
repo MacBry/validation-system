@@ -9,6 +9,10 @@ import com.mac.bry.validationsystem.stats.ValidationSummaryStatsService;
 import com.mac.bry.validationsystem.security.repository.UserRepository;
 import com.mac.bry.validationsystem.security.service.AuditService;
 import com.mac.bry.validationsystem.security.util.UrlValidator;
+import com.mac.bry.validationsystem.company.CompanyService;
+import com.mac.bry.validationsystem.department.DepartmentService;
+import com.mac.bry.validationsystem.laboratory.LaboratoryService;
+import com.mac.bry.validationsystem.security.service.SecurityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -56,31 +61,49 @@ public class ValidationController {
     private final DeviationAnalysisRepository deviationAnalysisRepository;
     private final ValidationProtocolPdfService protocolPdfService;
     private final RecorderSummaryPdfService recorderSummaryPdfService;
+    private final SecurityService securityService;
+    private final DepartmentService departmentService;
+    private final CompanyService companyService;
+    private final LaboratoryService laboratoryService;
 
     /**
      * Lista wszystkich walidacji z opcjonalnym filtrowaniem po statusie
      */
-    @GetMapping("")
+    @GetMapping
     public String listValidations(
-            @RequestParam(value = "status", required = false) ValidationStatus status,
-            org.springframework.ui.Model model) {
+            @RequestParam(required = false) ValidationStatus status,
+            @RequestParam(required = false) Long companyId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long laboratoryId,
+            Model model) {
+        log.debug("Wyświetlanie listy walidacji (filtry: status={}, company={}, dept={}, lab={})",
+                status, companyId, departmentId, laboratoryId);
 
-        log.info("Wyświetlanie listy walidacji" + (status != null ? " dla statusu: " + status : ""));
-
-        List<Validation> validations = validationService.getAllAccessibleValidations();
-
-        if (status != null) {
-            validations = validations.stream()
-                    .filter(v -> v.getStatus() == status)
-                    .collect(Collectors.toList());
-            log.debug("Przefiltrowano do {} walidacji ze statusem {}", validations.size(), status);
-        } else {
-            log.debug("Znaleziono {} dostępnych walidacji", validations.size());
-        }
+        List<Validation> validations = validationService.getAllAccessibleValidations(
+                status, companyId, departmentId, laboratoryId);
 
         model.addAttribute("validations", validations);
         model.addAttribute("allStatuses", ValidationStatus.values());
-        model.addAttribute("currentStatus", status);
+        model.addAttribute("selectedStatus", status);
+
+        // Filtry lokalizacji
+        model.addAttribute("companyId", companyId);
+        model.addAttribute("departmentId", departmentId);
+        model.addAttribute("laboratoryId", laboratoryId);
+
+        // Dane do dropdownów filtrów
+        model.addAttribute("companies", companyService.getAllowedCompanies(securityService.getAllowedCompanyIds()));
+
+        if (companyId != null) {
+            model.addAttribute("departments", departmentService.getDepartmentsByCompany(companyId));
+        } else {
+            model.addAttribute("departments", departmentService.getAllowedDepartments(
+                    securityService.getDepartmentIdsWithImplicitAccess(), securityService.getAllowedCompanyIds()));
+        }
+
+        if (departmentId != null) {
+            model.addAttribute("laboratories", laboratoryService.getLaboratoriesByDepartment(departmentId));
+        }
 
         return "validation/list";
     }

@@ -3,6 +3,7 @@ package com.mac.bry.validationsystem.device;
 import com.mac.bry.validationsystem.audit.EnversRevisionService;
 import com.mac.bry.validationsystem.audit.FieldDiffDto;
 import com.mac.bry.validationsystem.audit.RevisionInfoDto;
+import com.mac.bry.validationsystem.company.CompanyService;
 import com.mac.bry.validationsystem.department.DepartmentService;
 import com.mac.bry.validationsystem.laboratory.Laboratory;
 import com.mac.bry.validationsystem.laboratory.LaboratoryService;
@@ -40,6 +41,7 @@ public class CoolingDeviceController {
 
     private final CoolingDeviceService coolingDeviceService;
     private final DepartmentService departmentService;
+    private final CompanyService companyService;
     private final LaboratoryService laboratoryService;
     private final MaterialTypeService materialTypeService;
     private final ValidationService validationService;
@@ -48,14 +50,41 @@ public class CoolingDeviceController {
     private final EnversRevisionService enversRevisionService;
 
     @GetMapping
-    public String list(@RequestParam(defaultValue = "0") int page, Model model) {
-        log.debug("Wyświetlanie listy urządzeń chłodniczych (strona: {})", page);
-        Page<CoolingDevice> devicePage = coolingDeviceService.getAllAccessibleDevices(PageRequest.of(page, 20));
+    public String list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) Long companyId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long laboratoryId,
+            Model model) {
+        log.debug("Wyświetlanie listy urządzeń chłodniczych (strona: {}, filtry: company={}, dept={}, lab={})", 
+                page, companyId, departmentId, laboratoryId);
+        
+        Page<CoolingDevice> devicePage = coolingDeviceService.getAllAccessibleDevices(
+                PageRequest.of(page, 20), companyId, departmentId, laboratoryId);
 
         model.addAttribute("devicePage", devicePage);
         model.addAttribute("devices", devicePage.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", devicePage.getTotalPages());
+        
+        // Filtry
+        model.addAttribute("companyId", companyId);
+        model.addAttribute("departmentId", departmentId);
+        model.addAttribute("laboratoryId", laboratoryId);
+        
+        // Dane do dropdownów filtrów
+        model.addAttribute("companies", companyService.getAllowedCompanies(securityService.getAllowedCompanyIds()));
+        
+        if (companyId != null) {
+            model.addAttribute("departments", departmentService.getDepartmentsByCompany(companyId));
+        } else {
+            model.addAttribute("departments", departmentService.getAllowedDepartments(
+                    securityService.getDepartmentIdsWithImplicitAccess(), securityService.getAllowedCompanyIds()));
+        }
+
+        if (departmentId != null) {
+            model.addAttribute("laboratories", laboratoryService.getLaboratoriesByDepartment(departmentId));
+        }
 
         // Dodaj statusy walidacji dla każdego urządzenia na bieżącej stronie
         java.util.Map<Long, DeviceValidationStatus> validationStatuses = new java.util.HashMap<>();

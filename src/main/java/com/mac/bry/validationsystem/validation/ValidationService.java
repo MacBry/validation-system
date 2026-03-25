@@ -207,23 +207,26 @@ public class ValidationService {
      */
     @Transactional(readOnly = true)
     public List<Validation> getAllAccessibleValidations() {
-        if (securityService.isSuperAdmin()) {
-            return validationRepository.findAllByOrderByCreatedDateDesc();
-        }
+        return getAllAccessibleValidations(null, null, null, null);
+    }
 
-        var companyIds = securityService.getAllowedCompanyIds();
-        var deptIds = securityService.getDepartmentIdsWithImplicitAccess();
-        var labIds = securityService.getAllowedLaboratoryIds();
+    /**
+     * Pobiera walidacje dostępne dla użytkownika z opcjonalnym filtrowaniem.
+     */
+    @Transactional(readOnly = true)
+    public List<Validation> getAllAccessibleValidations(ValidationStatus status, Long companyId, Long departmentId, Long laboratoryId) {
+        boolean isSuperAdmin = securityService.isSuperAdmin();
+        var allowedCompanyIds = emptyIfNull(securityService.getAllowedCompanyIds());
+        var allowedDeptIds = emptyIfNull(securityService.getDepartmentIdsWithImplicitAccess());
+        var allowedLabIds = emptyIfNull(securityService.getAllowedLaboratoryIds());
 
-        java.util.Collection<Long> safeCompanyIds = companyIds != null ? companyIds
-                : java.util.Collections.<Long>emptySet();
-        java.util.Collection<Long> safeDeptIds = deptIds != null ? deptIds : java.util.Collections.<Long>emptySet();
-        java.util.Collection<Long> safeLabIds = labIds != null ? labIds : java.util.Collections.<Long>emptySet();
+        log.debug("Pobieranie walidacji z filtrowaniem: status={}, company={}, dept={}, lab={}",
+                status, companyId, departmentId, laboratoryId);
 
-        log.debug("Pobieranie dostępnych walidacji: companyIds={}, deptIds={}, labIds={}",
-                safeCompanyIds, safeDeptIds, safeLabIds);
-
-        return validationRepository.findAllAccessible(false, safeCompanyIds, safeDeptIds, safeLabIds);
+        return validationRepository.findAll(
+                ValidationSpecifications.filterBy(
+                        isSuperAdmin, allowedCompanyIds, allowedDeptIds, allowedLabIds,
+                        status, companyId, departmentId, laboratoryId));
     }
 
     /**

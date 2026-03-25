@@ -47,10 +47,15 @@ public class CoolingDeviceServiceImpl implements CoolingDeviceService {
      */
     @Override
     public Page<CoolingDevice> getAllAccessibleDevices(Pageable pageable) {
+        return getAllAccessibleDevices(pageable, null, null, null);
+    }
+
+    @Override
+    public Page<CoolingDevice> getAllAccessibleDevices(Pageable pageable, Long companyId, Long departmentId, Long laboratoryId) {
         boolean isSuperAdmin = securityService.isSuperAdmin();
-        var companyIds = securityService.getAllowedCompanyIds();
-        var deptIds = securityService.getDepartmentIdsWithImplicitAccess();
-        var labIds = securityService.getAllowedLaboratoryIds();
+        var allowedCompanyIds = securityService.getAllowedCompanyIds();
+        var allowedDeptIds = securityService.getDepartmentIdsWithImplicitAccess();
+        var allowedLabIds = securityService.getAllowedLaboratoryIds();
 
         // Dodaj domyślne sortowanie jeśli brak
         if (pageable.getSort().isUnsorted()) {
@@ -59,16 +64,19 @@ public class CoolingDeviceServiceImpl implements CoolingDeviceService {
         }
 
         // Zabezpieczenie pustymi kolekcjami gdy brak uprawnień
-        java.util.Collection<Long> safeCompanyIds = companyIds != null ? companyIds
-                : java.util.Collections.<Long>emptySet();
-        java.util.Collection<Long> safeDeptIds = deptIds != null ? deptIds : java.util.Collections.<Long>emptySet();
-        java.util.Collection<Long> safeLabIds = labIds != null ? labIds : java.util.Collections.<Long>emptySet();
+        java.util.Collection<Long> safeCompanyIds = allowedCompanyIds != null ? allowedCompanyIds
+                : java.util.Collections.emptySet();
+        java.util.Collection<Long> safeDeptIds = allowedDeptIds != null ? allowedDeptIds : java.util.Collections.emptySet();
+        java.util.Collection<Long> safeLabIds = allowedLabIds != null ? allowedLabIds : java.util.Collections.emptySet();
 
         log.debug(
-                "Pobieranie urządzeń dostępnych dla użytkownika (paginacja): page={}, size={}, companyIds={}, deptIds={}, labIds={}",
-                pageable.getPageNumber(), pageable.getPageSize(), safeCompanyIds, safeDeptIds, safeLabIds);
+                "Pobieranie urządzeń z filtrowaniem: company={}, dept={}, lab={}, companyIds={}, deptIds={}, labIds={}",
+                companyId, departmentId, laboratoryId, safeCompanyIds, safeDeptIds, safeLabIds);
 
-        return coolingDeviceRepository.findAllAccessible(isSuperAdmin, safeCompanyIds, safeDeptIds, safeLabIds,
+        return coolingDeviceRepository.findAll(
+                CoolingDeviceSpecifications.filterBy(
+                        isSuperAdmin, safeCompanyIds, safeDeptIds, safeLabIds,
+                        companyId, departmentId, laboratoryId),
                 pageable);
     }
 

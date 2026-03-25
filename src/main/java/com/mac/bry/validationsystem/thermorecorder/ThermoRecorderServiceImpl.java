@@ -34,8 +34,13 @@ public class ThermoRecorderServiceImpl implements ThermoRecorderService {
 
     @Override
     public Page<ThermoRecorder> getAllAccessibleRecorders(Pageable pageable) {
-        log.debug("Pobieranie dostępnych rejestratorów TESTO (paginacja): page={}, size={}",
-                pageable.getPageNumber(), pageable.getPageSize());
+        return getAllAccessibleRecorders(pageable, null, null, null);
+    }
+
+    @Override
+    public Page<ThermoRecorder> getAllAccessibleRecorders(Pageable pageable, Long companyId, Long departmentId, Long laboratoryId) {
+        log.debug("Pobieranie rejestratorów z filtrowaniem: company={}, dept={}, lab={}",
+                companyId, departmentId, laboratoryId);
 
         // Domyślne sortowanie po numerze seryjnym
         if (pageable.getSort().isUnsorted()) {
@@ -43,13 +48,19 @@ public class ThermoRecorderServiceImpl implements ThermoRecorderService {
                     Sort.by("serialNumber").ascending());
         }
 
-        if (securityService.isSuperAdmin()) {
-            return thermoRecorderRepository.findAll(pageable);
-        }
+        boolean isSuperAdmin = securityService.isSuperAdmin();
+        var allowedCompanyIds = securityService.getAllowedCompanyIds();
+        var allowedDeptIds = securityService.getDepartmentIdsWithImplicitAccess();
 
-        return thermoRecorderRepository.findAllAccessible(
-                securityService.getAllowedCompanyIds(),
-                securityService.getDepartmentIdsWithImplicitAccess(),
+        // Zabezpieczenie pustymi kolekcjami gdy brak uprawnień
+        java.util.Collection<Long> safeCompanyIds = allowedCompanyIds != null ? allowedCompanyIds
+                : java.util.Collections.emptySet();
+        java.util.Collection<Long> safeDeptIds = allowedDeptIds != null ? allowedDeptIds : java.util.Collections.emptySet();
+
+        return thermoRecorderRepository.findAll(
+                ThermoRecorderSpecifications.filterBy(
+                        isSuperAdmin, safeCompanyIds, safeDeptIds,
+                        companyId, departmentId, laboratoryId),
                 pageable);
     }
 

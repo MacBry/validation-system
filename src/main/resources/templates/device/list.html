@@ -51,6 +51,51 @@
             <!-- Data card -->
             <div class="vcc-data-card vcc-animate-fade-in">
 
+                <!-- Filters -->
+                <form th:action="@{/devices}" method="get" class="vcc-filters" id="filterForm">
+                    <div class="vcc-filter-group">
+                        <label class="vcc-filter-label">Firma</label>
+                        <select name="companyId" id="companySelect" class="vcc-filter-select">
+                            <option value="">Wszystkie firmy</option>
+                            <option th:each="c : ${companies}" 
+                                    th:value="${c.id}" 
+                                    th:text="${c.name}"
+                                    th:selected="${c.id == companyId}"></option>
+                        </select>
+                    </div>
+                    
+                    <div class="vcc-filter-group">
+                        <label class="vcc-filter-label">Dział</label>
+                        <select name="departmentId" id="departmentSelect" class="vcc-filter-select">
+                            <option value="">Wszystkie działy</option>
+                            <option th:each="d : ${departments}" 
+                                    th:value="${d.id}" 
+                                    th:text="${d.name}"
+                                    th:selected="${d.id == departmentId}"></option>
+                        </select>
+                    </div>
+                    
+                    <div class="vcc-filter-group">
+                        <label class="vcc-filter-label">Pracownia</label>
+                        <select name="laboratoryId" id="laboratorySelect" class="vcc-filter-select">
+                            <option value="">Wszystkie pracownie</option>
+                            <option th:each="l : ${laboratories}" 
+                                    th:value="${l.id}" 
+                                    th:text="${l.fullName}"
+                                    th:selected="${l.id == laboratoryId}"></option>
+                        </select>
+                    </div>
+                    
+                    <div class="vcc-filter-actions">
+                        <button type="submit" class="vcc-btn vcc-btn--primary vcc-btn--filter">
+                            <i class="fas fa-filter"></i> Filtruj
+                        </button>
+                        <a th:href="@{/devices}" class="vcc-btn vcc-btn--outline vcc-btn--filter">
+                            <i class="fas fa-undo"></i> Reset
+                        </a>
+                    </div>
+                </form>
+
                 <!-- Empty state -->
                 <div th:if="${#lists.isEmpty(devices)}" class="vcc-empty-state">
                     <i class="fas fa-cube vcc-empty-state__icon"></i>
@@ -65,7 +110,7 @@
                             <tr>
                                 <th>Nr inwentarzowy</th>
                                 <th>Nazwa urządzenia</th>
-                                <th>Pracownia</th>
+                                <th>Dział/Pracownia</th>
                                 <th>Typ komory</th>
                                 <th>Materiał</th>
                                 <th>Status walidacji</th>
@@ -81,8 +126,12 @@
                                     <span class="vcc-table__primary" th:text="${device.name}">--</span>
                                 </td>
                                 <td>
-                                    <span class="vcc-table__label"
-                                          th:text="${device.laboratory != null ? device.laboratory.abbreviation : device.department.abbreviation}">--</span>
+                                    <div class="vcc-unit-stack">
+                                        <span class="vcc-table__label" th:text="${device.department.abbreviation}">DEPT</span>
+                                        <th:block th:if="${device.laboratory != null}">
+                                            <span class="vcc-table__label vcc-table__label--lab" th:text="${device.laboratory.abbreviation}">LAB</span>
+                                        </th:block>
+                                    </div>
                                 </td>
                                 <td>
                                     <span class="vcc-table__secondary" th:text="${device.chamberType.displayName}">--</span>
@@ -144,19 +193,19 @@
                     </div>
                     <ul class="vcc-pagination">
                         <li th:classappend="${currentPage == 0} ? 'disabled'">
-                            <a th:href="@{/devices(page=0)}" title="Pierwsza strona"><i class="fas fa-angle-double-left"></i></a>
+                            <a th:href="@{/devices(page=0, companyId=${companyId}, departmentId=${departmentId}, laboratoryId=${laboratoryId})}" title="Pierwsza strona"><i class="fas fa-angle-double-left"></i></a>
                         </li>
                         <li th:classappend="${currentPage == 0} ? 'disabled'">
-                            <a th:href="@{/devices(page=${currentPage - 1})}"><i class="fas fa-angle-left"></i></a>
+                            <a th:href="@{/devices(page=${currentPage - 1}, companyId=${companyId}, departmentId=${departmentId}, laboratoryId=${laboratoryId})}"><i class="fas fa-angle-left"></i></a>
                         </li>
                         <li th:each="i : ${#numbers.sequence(start, end)}" th:classappend="${currentPage == i} ? 'active'">
-                            <a th:href="@{/devices(page=${i})}" th:text="${i + 1}">1</a>
+                            <a th:href="@{/devices(page=${i}, companyId=${companyId}, departmentId=${departmentId}, laboratoryId=${laboratoryId})}" th:text="${i + 1}">1</a>
                         </li>
                         <li th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
-                            <a th:href="@{/devices(page=${currentPage + 1})}"><i class="fas fa-angle-right"></i></a>
+                            <a th:href="@{/devices(page=${currentPage + 1}, companyId=${companyId}, departmentId=${departmentId}, laboratoryId=${laboratoryId})}"><i class="fas fa-angle-right"></i></a>
                         </li>
                         <li th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
-                            <a th:href="@{/devices(page=${totalPages - 1})}" title="Ostatnia strona"><i class="fas fa-angle-double-right"></i></a>
+                            <a th:href="@{/devices(page=${totalPages - 1}, companyId=${companyId}, departmentId=${departmentId}, laboratoryId=${laboratoryId})}" title="Ostatnia strona"><i class="fas fa-angle-double-right"></i></a>
                         </li>
                     </ul>
                 </div>
@@ -199,6 +248,58 @@
                 });
             });
         }
+
+        // --- Multi-level Filter Cascading Logic ---
+        const companySelect = document.getElementById('companySelect');
+        const departmentSelect = document.getElementById('departmentSelect');
+        const laboratorySelect = document.getElementById('laboratorySelect');
+        const filterForm = document.getElementById('filterForm');
+
+        if (companySelect) {
+            companySelect.addEventListener('change', function() {
+                const companyId = this.value;
+                departmentSelect.innerHTML = '<option value="">Wszystkie działy</option>';
+                laboratorySelect.innerHTML = '<option value="">Wszystkie pracownie</option>';
+                
+                if (companyId) {
+                    fetch('/departments/by-company/' + companyId)
+                        .then(response => response.json())
+                        .then(data => {
+                            data.forEach(dept => {
+                                const option = document.createElement('option');
+                                option.value = dept.id;
+                                option.textContent = dept.name;
+                                departmentSelect.appendChild(option);
+                            });
+                        });
+                }
+            });
+        }
+
+        if (departmentSelect) {
+            departmentSelect.addEventListener('change', function() {
+                const departmentId = this.value;
+                laboratorySelect.innerHTML = '<option value="">Wszystkie pracownie</option>';
+                
+                if (departmentId) {
+                    fetch('/departments/' + departmentId + '/laboratories')
+                        .then(response => response.json())
+                        .then(data => {
+                            data.forEach(lab => {
+                                const option = document.createElement('option');
+                                option.value = lab.id;
+                                option.textContent = lab.name;
+                                laboratorySelect.appendChild(option);
+                            });
+                        });
+                }
+            });
+        }
+
+        // Auto-submit on filter change (optional, but requested UX often)
+        // [companySelect, departmentSelect, laboratorySelect].forEach(select => {
+        //     if (select) select.addEventListener('change', () => filterForm.submit());
+        // });
 
         // Delete confirmation event delegation
         document.addEventListener('submit', function(e) {

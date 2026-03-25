@@ -1948,10 +1948,26 @@ a:hover {
     background: var(--vcc-gradient);
     color: #fff;
     border-radius: var(--radius-full);
-    padding: 2px 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
     white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.vcc-table__label--lab {
+    background: linear-gradient(135deg, #8b5cf6 0%, #764ba2 100%);
+}
+
+.vcc-unit-stack {
+    display: inline-flex;
+    flex-direction: column; /* Stacked */
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.vcc-unit-sep {
+    display: none; /* Hide separator as they are stacked now */
 }
 
 /* Action buttons in table */
@@ -3267,4 +3283,84 @@ a:hover {
     border-top-color: #fff;
     border-radius: 50%;
     animation: vcc-spinner 0.6s linear infinite;
+}
+
+/* ============================================================
+   MULTI-LEVEL FILTERS
+   ============================================================ */
+.vcc-filters {
+    padding: var(--sp-5) var(--sp-6);
+    background: var(--surface-card);
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-6);
+    align-items: flex-end;
+}
+
+.vcc-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.vcc-filter-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.vcc-filter-select {
+    display: block;
+    width: 100%;
+    min-width: 200px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: var(--surface-inset);
+    border: 1.5px solid var(--border-default);
+    border-radius: var(--radius-md);
+    transition: all var(--duration-fast) var(--ease-out);
+    outline: none;
+    cursor: pointer;
+}
+
+.vcc-filter-select:hover {
+    border-color: #c7cee0;
+}
+
+.vcc-filter-select:focus {
+    border-color: var(--border-focus);
+    background: var(--surface-card);
+    box-shadow: var(--shadow-focus);
+}
+
+.vcc-filter-actions {
+    display: flex;
+    gap: var(--sp-2);
+    margin-left: auto;
+}
+
+.vcc-btn--filter {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 991px) {
+    .vcc-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .vcc-filter-select {
+        min-width: 0;
+    }
+    
+    .vcc-filter-actions {
+        margin-left: 0;
+        margin-top: var(--sp-2);
+    }
 }

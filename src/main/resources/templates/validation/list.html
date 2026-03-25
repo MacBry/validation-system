@@ -47,18 +47,61 @@
                 <span th:text="${error}"></span>
             </div>
 
-            <!-- Status filters -->
-            <div class="vcc-filter-bar">
-                <a th:href="@{/validations}"
-                   th:class="${currentStatus == null ? 'vcc-filter-btn vcc-filter-btn--active' : 'vcc-filter-btn'}">
-                    <i class="fas fa-list"></i> Wszystkie
-                </a>
-                <a th:each="s : ${allStatuses}" th:href="@{/validations(status=${s})}"
-                   th:class="${currentStatus == s ? 'vcc-filter-btn vcc-filter-btn--active' : 'vcc-filter-btn'}"
-                   th:text="${s.displayName}">
-                    Status
-                </a>
-            </div>
+            <!-- Filters -->
+            <form th:action="@{/validations}" method="get" class="vcc-filters" id="filterForm" style="margin-bottom: var(--sp-6); border-radius: var(--radius-lg); border-bottom: none; box-shadow: var(--shadow-sm);">
+                <div class="vcc-filter-group">
+                    <label class="vcc-filter-label">Status</label>
+                    <select name="status" id="statusSelect" class="vcc-filter-select">
+                        <option value="">Wszystkie statusy</option>
+                        <option th:each="s : ${allStatuses}" 
+                                th:value="${s}" 
+                                th:text="${s.displayName}"
+                                th:selected="${s == selectedStatus}"></option>
+                    </select>
+                </div>
+
+                <div class="vcc-filter-group">
+                    <label class="vcc-filter-label">Firma</label>
+                    <select name="companyId" id="companySelect" class="vcc-filter-select">
+                        <option value="">Wszystkie firmy</option>
+                        <option th:each="c : ${companies}" 
+                                th:value="${c.id}" 
+                                th:text="${c.name}"
+                                th:selected="${c.id == companyId}"></option>
+                    </select>
+                </div>
+                
+                <div class="vcc-filter-group">
+                    <label class="vcc-filter-label">Dział</label>
+                    <select name="departmentId" id="departmentSelect" class="vcc-filter-select">
+                        <option value="">Wszystkie działy</option>
+                        <option th:each="d : ${departments}" 
+                                th:value="${d.id}" 
+                                th:text="${d.name}"
+                                th:selected="${d.id == departmentId}"></option>
+                    </select>
+                </div>
+                
+                <div class="vcc-filter-group">
+                    <label class="vcc-filter-label">Pracownia</label>
+                    <select name="laboratoryId" id="laboratorySelect" class="vcc-filter-select">
+                        <option value="">Wszystkie pracownie</option>
+                        <option th:each="l : ${laboratories}" 
+                                th:value="${l.id}" 
+                                th:text="${l.fullName}"
+                                th:selected="${l.id == laboratoryId}"></option>
+                    </select>
+                </div>
+                
+                <div class="vcc-filter-actions">
+                    <button type="submit" class="vcc-btn vcc-btn--primary vcc-btn--filter">
+                        <i class="fas fa-filter"></i> Filtruj
+                    </button>
+                    <a th:href="@{/validations}" class="vcc-btn vcc-btn--outline vcc-btn--filter">
+                        <i class="fas fa-undo"></i> Reset
+                    </a>
+                </div>
+            </form>
 
             <!-- Data card -->
             <div class="vcc-data-card vcc-animate-fade-in">
@@ -115,10 +158,12 @@
                                         <div class="vcc-table__muted">
                                             <span th:text="'Nr inw: ' + ${validation.measurementSeries[0].coolingDevice.inventoryNumber}">Nr</span>
                                             <span style="margin:0 4px">&#183;</span>
-                                            <span th:if="${validation.measurementSeries[0].coolingDevice.laboratory != null}"
-                                                  th:text="${validation.measurementSeries[0].coolingDevice.laboratory.abbreviation}">Lab</span>
-                                            <span th:unless="${validation.measurementSeries[0].coolingDevice.laboratory != null}"
-                                                  style="font-style:italic">Brak pracowni</span>
+                                            <div class="vcc-unit-stack">
+                                                <span class="vcc-table__label" th:text="${validation.measurementSeries[0].coolingDevice.department.abbreviation}">DEPT</span>
+                                                <th:block th:if="${validation.measurementSeries[0].coolingDevice.laboratory != null}">
+                                                    <span class="vcc-table__label vcc-table__label--lab" th:text="${validation.measurementSeries[0].coolingDevice.laboratory.abbreviation}">LAB</span>
+                                                </th:block>
+                                            </div>
                                         </div>
                                     </div>
                                     <div th:if="${#lists.isEmpty(validation.measurementSeries) || validation.measurementSeries[0].coolingDevice == null}"
@@ -128,7 +173,7 @@
                                 </td>
                                 <td>
                                     <div class="vcc-table__actions">
-                                        <a th:href="@{/validations/{id}(id=${validation.id}, from=${currentStatus != null ? '/validations?status=' + currentStatus : '/validations'})}"
+                                        <a th:href="@{/validations/{id}(id=${validation.id}, from=${selectedStatus != null ? '/validations?status=' + selectedStatus : '/validations'})}"
                                            class="vcc-btn--table vcc-btn--table-primary">
                                             <i class="fas fa-eye"></i> Szczegóły
                                         </a>
@@ -181,6 +226,52 @@
                 rows.forEach(function(row) {
                     row.style.display = row.textContent.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
                 });
+            });
+        }
+
+        // --- Multi-level Filter Cascading Logic ---
+        const companySelect = document.getElementById('companySelect');
+        const departmentSelect = document.getElementById('departmentSelect');
+        const laboratorySelect = document.getElementById('laboratorySelect');
+
+        if (companySelect) {
+            companySelect.addEventListener('change', function() {
+                const companyId = this.value;
+                departmentSelect.innerHTML = '<option value="">Wszystkie działy</option>';
+                laboratorySelect.innerHTML = '<option value="">Wszystkie pracownie</option>';
+                
+                if (companyId) {
+                    fetch('/departments/by-company/' + companyId)
+                        .then(response => response.json())
+                        .then(data => {
+                            data.forEach(dept => {
+                                const option = document.createElement('option');
+                                option.value = dept.id;
+                                option.textContent = dept.name;
+                                departmentSelect.appendChild(option);
+                            });
+                        });
+                }
+            });
+        }
+
+        if (departmentSelect) {
+            departmentSelect.addEventListener('change', function() {
+                const departmentId = this.value;
+                laboratorySelect.innerHTML = '<option value="">Wszystkie pracownie</option>';
+                
+                if (departmentId) {
+                    fetch('/departments/' + departmentId + '/laboratories')
+                        .then(response => response.json())
+                        .then(data => {
+                            data.forEach(lab => {
+                                const option = document.createElement('option');
+                                option.value = lab.id;
+                                option.textContent = lab.name;
+                                laboratorySelect.appendChild(option);
+                            });
+                        });
+                }
             });
         }
 

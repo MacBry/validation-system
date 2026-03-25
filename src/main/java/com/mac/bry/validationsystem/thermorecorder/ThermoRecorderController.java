@@ -3,6 +3,7 @@ package com.mac.bry.validationsystem.thermorecorder;
 import com.mac.bry.validationsystem.audit.EnversRevisionService;
 import com.mac.bry.validationsystem.audit.FieldDiffDto;
 import com.mac.bry.validationsystem.audit.RevisionInfoDto;
+import com.mac.bry.validationsystem.company.CompanyService;
 import com.mac.bry.validationsystem.department.DepartmentService;
 import com.mac.bry.validationsystem.laboratory.LaboratoryService;
 import com.mac.bry.validationsystem.security.service.AuditService;
@@ -29,20 +30,48 @@ public class ThermoRecorderController {
 
     private final ThermoRecorderService thermoRecorderService;
     private final DepartmentService departmentService;
+    private final CompanyService companyService;
     private final LaboratoryService laboratoryService;
     private final SecurityService securityService;
     private final AuditService auditService;
     private final EnversRevisionService enversRevisionService;
 
     @GetMapping
-    public String list(@RequestParam(defaultValue = "0") int page, Model model) {
-        log.debug("Wyświetlanie listy rejestratorów TESTO (strona: {})", page);
-        Page<ThermoRecorder> recorderPage = thermoRecorderService.getAllAccessibleRecorders(PageRequest.of(page, 20));
+    public String list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) Long companyId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long laboratoryId,
+            Model model) {
+        log.debug("Wyświetlanie listy rejestratorów TESTO (strona: {}, filtry: company={}, dept={}, lab={})", 
+                page, companyId, departmentId, laboratoryId);
+        
+        Page<ThermoRecorder> recorderPage = thermoRecorderService.getAllAccessibleRecorders(
+                PageRequest.of(page, 20), companyId, departmentId, laboratoryId);
 
         model.addAttribute("recorderPage", recorderPage);
         model.addAttribute("recorders", recorderPage.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", recorderPage.getTotalPages());
+
+        // Filtry
+        model.addAttribute("companyId", companyId);
+        model.addAttribute("departmentId", departmentId);
+        model.addAttribute("laboratoryId", laboratoryId);
+
+        // Dane do dropdownów filtrów
+        model.addAttribute("companies", companyService.getAllowedCompanies(securityService.getAllowedCompanyIds()));
+        
+        if (companyId != null) {
+            model.addAttribute("departments", departmentService.getDepartmentsByCompany(companyId));
+        } else {
+            model.addAttribute("departments", departmentService.getAllowedDepartments(
+                    securityService.getAllowedDepartmentIds(), securityService.getAllowedCompanyIds()));
+        }
+
+        if (departmentId != null) {
+            model.addAttribute("laboratories", laboratoryService.getLaboratoriesByDepartment(departmentId));
+        }
 
         return "recorder/list";
     }

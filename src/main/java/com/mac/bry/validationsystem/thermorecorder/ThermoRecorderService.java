@@ -10,6 +10,12 @@ public interface ThermoRecorderService {
     org.springframework.data.domain.Page<ThermoRecorder> getAllAccessibleRecorders(
             org.springframework.data.domain.Pageable pageable);
 
+    /**
+     * Zwraca rejestratory dostępne dla użytkownika z opcjonalnym filtrowaniem.
+     */
+    org.springframework.data.domain.Page<ThermoRecorder> getAllAccessibleRecorders(
+            org.springframework.data.domain.Pageable pageable, Long companyId, Long departmentId, Long laboratoryId);
+
     List<ThermoRecorder> getAllAccessibleRecorders();
 
     Optional<ThermoRecorder> findById(Long id);

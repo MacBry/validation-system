@@ -255,6 +255,23 @@ public class DepartmentController {
     }
 
     /**
+     * API endpoint - pobiera działy dla firmy (AJAX)
+     */
+    @GetMapping("/by-company/{companyId}")
+    @ResponseBody
+    public List<DeptInfoDto> getDepartments(@PathVariable Long companyId) {
+        log.debug("Pobieranie działów dla firmy ID: {}", companyId);
+
+        return departmentService.getDepartmentsByCompany(companyId)
+                .stream()
+                .map(dept -> new DeptInfoDto(dept.getId(), dept.getName(), dept.getAbbreviation()))
+                .collect(Collectors.toList());
+    }
+
+    private record DeptInfoDto(Long id, String name, String abbreviation) {
+    }
+
+    /**
      * DTO dla AJAX response (pracownie)
      */
     private record LaboratoryDto(Long id, String name, String abbreviation) {

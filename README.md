@@ -4,79 +4,72 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-Internal-blue.svg)](#)
 
-A high-compliance web application designed for the pharmaceutical and laboratory sectors to manage, analyze, and validate cooling device performance. Features a proprietary binary decoder for TESTO `.vi2` data logger files.
+Zaawansowany system klasy Enterprise przeznaczony dla sektora farmaceutycznego i laboratoryjnego, służący do zarządzania, analizy i walidacji urządzeń chłodniczych (lodówki, zamrażarki, komory klimatyczne). System zapewnia pełną zgodność z normami **GMP Annex 11** oraz **FDA 21 CFR Part 11**.
 
 ---
 
-## ✨ Key Features
+## ✨ Kluczowe Funkcje
 
-- 🛰️ **Proprietary Vi2 Decoder**: Parses complex OLE2/CFB binary streams from TESTO loggers with 100% accuracy compared to native software.
-- 📦 **Validation Wizard**: Step-by-step workflow (OQ/PQ) for qualifying fridges, freezers, and cold rooms.
-- 🛡️ **GMP Compliance**: Built-in Audit Trail, Electronic Signatures (TSA), and strict session security following FDA 21 CFR Part 11.
-- 📊 **Advanced Analytics**: Automatic calculation of stability, drift, and spike detection using specialized laboratory algorithms.
-- 📄 **Report Generation**: Fully automated PDF generation for validation packages and calibration certificates.
+### 📂 Obsługa Danych Pomiarowych
+System wspiera automatyczny import i dekodowanie danych z rejestratorów TESTO:
+- **Dekoder .vi2**: Autorska implementacja parsująca binarne strumienie OLE2/CFB z 100% precyzją.
+- **Dekoder HTML**: Obsługa raportów generowanych bezpośrednio przez oprogramowanie Testo w formacie HTML (tabela pomiarów).
+
+### 📊 Zaawansowana Analityka i Statystyki
+Automatyczne wyliczanie kluczowych parametrów walidacyjnych dla serii pomiarowych oraz statystyk zbiorczych (Global):
+- **Statystyki Podstawowe**: Minimum, Maksimum, Średnia, Odchylenie Standardowe (StdDev).
+- **MKT (Mean Kinetic Temperature)**: Nieliniowy ekwiwalent profilu temperatur (wg WHO TRS 953).
+- **Compliance %**: Czas przebywania w zdefiniowanym zakresie temperatur.
+- **Analiza Trendów**: Wykrywanie dryftu (Drift) oraz anomalii impulsowych (Spikes - kryterium 3-sigma).
+- **Punkty Krytyczne**: Automatyczna identyfikacja **Hotspot** (najcieplejszy punkt) i **Coldspot** (najzimniejszy punkt).
+
+### 🎬 Wizualizacja i Animacja Przestrzenna
+Nowoczesne podejście do prezentacji danych:
+- **Wykresy Serii**: Interaktywne wykresy czasowe dla każdego rejestratora (Highcharts).
+- **Animacja Przestrzenna 3D**: Dynamiczna wizualizacja zmian temperatury w czasie rzeczywistym wewnątrz komory urządzenia. Mapowanie pozycji czujników w układzie współrzędnych X, Y, Z pozwala na animowaną analizę rozkładu mas powietrza.
+
+### 🛡️ Zgodność GMP i Workflow Walidacyjny
+- **Wizard OQ/PQ**: Kompletny, wieloetapowy kreator kwalifikacji operacyjnej i procesowej.
+- **Audit Trail**: Pełna historia zmian (Envers) oraz podpisy elektroniczne (TSA).
+- **Raporty PDF**: Automatycznie generowane protokoły walidacyjne z wykresami i tabelami statystycznymi.
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ Stack Technologiczny
 
-- **Backend**: Java 17, Spring Boot 3.x, Spring Security, Hibernate (Envers for Audit Trail).
-- **Database**: MySQL 8.0, Redis (Rate Limiting).
-- **Frontend**: Thymeleaf, Bootstrap 5, Highcharts (Data Visualization).
+- **Backend**: Java 17, Spring Boot 3.x, Spring Security, Hibernate.
+- **Data Engine**: Autorskie dekodery binarne, Integracja z Python (dla animacji 3D).
+- **Database**: MySQL 8.0, Redis.
+- **Frontend**: Thymeleaf, Bootstrap 5, Highcharts.
 - **Infrastructure**: Docker & Docker Compose.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Szybki Start
 
-### Prerequisites
+### Wymagania
 - JDK 17+
 - Maven 3.6+
 - Docker & Docker Compose
+- Środowisko Python (dla modułu wizualizacji 3D)
 
-### 1. Configure Secrets
-Create a `.env` file in the root directory (refer to `.env.example` if available):
-```env
-DB_PASSWORD=your_secure_password
-REDIS_PASSWORD=your_redis_password
-MAIL_PASSWORD=your_smtp_password
-```
+### Konfiguracja
+1. Skopiuj `.env.example` do `.env` i uzupełnij hasła.
+2. Uruchom infrastrukturę: `docker-compose up -d`.
+3. Zbuduj i uruchom: `mvn clean spring-boot:run`.
 
-### 2. Launch Infrastructure
-```bash
-docker-compose up -d
-```
-
-### 3. Build & Run
-```bash
-mvn clean spring-boot:run
-```
-The application will be available at `https://localhost:8443`.
+Aplikacja będzie dostępna pod adresem: `https://localhost:8443`.
 
 ---
 
-## 📂 Project Structure
+## 📂 Dokumentacja Techniczna
 
-- `measurement/`: Core logic for `.vi2` binary parsing and temperature analysis.
-- `validation/`: Workflow engine for OQ/PQ processes.
-- `security/`: Advanced security filters and compliance-related access control.
-- `docs/`: GMP-required technical and functional specifications.
-
----
-
-## 🔍 Technical Details: Vi2 Decoding
-
-The system decodes `.vi2` files by accessing internal OLE2 streams:
-- **Time Epoch**: 1961-07-09 01:30:00.
-- **Tick Resolution**: 131072 ticks per 24 hours.
-- **Data Block**: 8-byte sequences (4B Float32 Temperature + 4B Metadata Tick).
-
-For more details, see [Detailed Vi2 Specification](docs/DOKLADNY_DEKODER_VI2_V2.md).
+Szczegółowe opisy algorytmów i specyfikacje znajdują się w folderze `docs/`:
+- [Metodologia Statystyk](docs/VALIDATION_SUMMARY_STATS_METODOLOGIA.md)
+- [Specyfikacja Dekodera .vi2](docs/DOKLADNY_DEKODER_VI2_V2.md)
+- [Algorytmy Dryftu i Spike](docs/ALGORYTM_STABILNOSC_DRIFT_VS_SPIKE.md)
 
 ---
 
-## 📄 License
-Internal application. All rights reserved.
-
-**Version**: 2.12.0-ENTERPRISE  
-**Status**: ✅ Production Ready
+**Wersja**: 2.12.0-ENTERPRISE  
+**Status**: ✅ Gotowy do wdrożenia produkcyjnego

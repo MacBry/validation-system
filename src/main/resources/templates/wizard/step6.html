@@ -167,12 +167,37 @@
                                     <label class="vcc-form-label" style="font-size:0.78rem; margin-bottom:4px;">Pliki .vi2</label>
                                     <input type="file" name="files" multiple accept=".vi2" required>
                                 </div>
-                                <div>
-                                    <label class="vcc-form-label" style="font-size:0.78rem; margin-bottom:4px;">Pozycja</label>
-                                    <select name="recorderPosition" id="pos-select">
+                                <div style="grid-column: span 2;">
+                                    <label class="vcc-form-label" style="font-size:0.78rem; margin-bottom:8px;">Pozycja rejestratora</label>
+                                    
+                                    <!-- Hidden select for form submission -->
+                                    <select name="recorderPosition" id="pos-select" required style="display:none;">
                                         <option th:each="p : ${T(com.mac.bry.validationsystem.measurement.RecorderPosition).values()}"
                                                 th:value="${p}" th:text="${p}"></option>
                                     </select>
+
+                                    <!-- Visual Selector -->
+                                    <div class="vcc-pos-selector" style="max-width: 320px; padding: 12px; margin: 0;">
+                                        <div class="vcc-pos-levels" style="margin-bottom: 12px; gap: 4px;">
+                                            <button type="button" class="vcc-pos-level-btn" data-level="TOP" style="padding: 4px 8px; font-size: 0.65rem;">
+                                                <i class="fas fa-chevron-up" style="font-size: 0.75rem;"></i> Góra
+                                            </button>
+                                            <button type="button" class="vcc-pos-level-btn active" data-level="MIDDLE" style="padding: 4px 8px; font-size: 0.65rem;">
+                                                <i class="fas fa-square" style="font-size: 0.75rem;"></i> Środek
+                                            </button>
+                                            <button type="button" class="vcc-pos-level-btn" data-level="BOTTOM" style="padding: 4px 8px; font-size: 0.65rem;">
+                                                <i class="fas fa-chevron-down" style="font-size: 0.75rem;"></i> Dół
+                                            </button>
+                                        </div>
+
+                                        <div class="vcc-pos-grid-container" style="transform: scale(0.85); transform-origin: top left;">
+                                            <div class="vcc-pos-grid-wrapper">
+                                                <div class="vcc-pos-label-x"><span>L</span><span>S</span><span>P</span></div>
+                                                <div class="vcc-pos-label-y"><span>T</span><span>Ś</span><span>P</span></div>
+                                                <div class="vcc-pos-grid" id="posGrid"></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
@@ -437,6 +462,51 @@
             if (nextBtn) {
                 nextBtn.addEventListener('click', submitStep6);
             }
+
+            // --- Visual Position Selector Logic ---
+            const posMapping = {
+                'TOP': ['TOP_REAR_LEFT', 'TOP_REAR_CENTER', 'TOP_REAR_RIGHT', 'TOP_CENTER_LEFT', 'TOP_CENTER_CENTER', 'TOP_CENTER_RIGHT', 'TOP_FRONT_LEFT', 'TOP_FRONT_CENTER', 'TOP_FRONT_RIGHT'],
+                'MIDDLE': ['MIDDLE_REAR_LEFT', 'MIDDLE_REAR_CENTER', 'MIDDLE_REAR_RIGHT', 'MIDDLE_CENTER_LEFT', 'MIDDLE_CENTER_CENTER', 'MIDDLE_CENTER_RIGHT', 'MIDDLE_FRONT_LEFT', 'MIDDLE_FRONT_CENTER', 'MIDDLE_FRONT_RIGHT'],
+                'BOTTOM': ['BOTTOM_REAR_LEFT', 'BOTTOM_REAR_CENTER', 'BOTTOM_REAR_RIGHT', 'BOTTOM_CENTER_LEFT', 'BOTTOM_CENTER_CENTER', 'BOTTOM_CENTER_RIGHT', 'BOTTOM_FRONT_LEFT', 'BOTTOM_FRONT_CENTER', 'BOTTOM_FRONT_RIGHT']
+            };
+            const labelPrefix = { 'TOP': 'G', 'MIDDLE': 'S', 'BOTTOM': 'D' };
+            let currentLevel = 'MIDDLE';
+            let selectedPos = '';
+            const posSel = document.getElementById('pos-select');
+
+            function renderGrid() {
+                const grid = document.getElementById('posGrid');
+                if (!grid) return;
+                grid.innerHTML = '';
+                const positions = posMapping[currentLevel];
+                const prefix = labelPrefix[currentLevel];
+
+                positions.forEach((posKey, index) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'vcc-pos-cell';
+                    if (posKey === selectedPos) cell.classList.add('active');
+                    cell.textContent = prefix + (index + 1);
+                    cell.addEventListener('click', () => {
+                        selectedPos = posKey;
+                        posSel.value = posKey;
+                        document.querySelectorAll('.vcc-pos-cell').forEach(c => c.classList.remove('active'));
+                        cell.classList.add('active');
+                    });
+                    grid.appendChild(cell);
+                });
+            }
+
+            const levelBtns = document.querySelectorAll('.vcc-pos-level-btn');
+            levelBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    levelBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentLevel = btn.dataset.level;
+                    renderGrid();
+                });
+            });
+
+            renderGrid();
         });
     </script>
 </body>

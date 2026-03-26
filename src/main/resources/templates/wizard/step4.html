@@ -85,17 +85,42 @@
 
                             <!-- Recorder position -->
                             <div>
-                                <label for="position" class="vcc-form-label">
-                                    Pozycja rejestratora
+                                <label class="vcc-form-label">
+                                    Domyślna pozycja rejestratora
                                     <span class="vcc-required">*</span>
                                 </label>
-                                <select class="vcc-form-select" id="position" name="position">
+                                
+                                <!-- Hidden select for form submission -->
+                                <select id="position" name="position" required style="display:none;">
                                     <option th:each="pos : ${positions}"
                                             th:value="${pos}"
-                                            th:text="${pos.displayName}"
+                                            th:text="${pos}"
                                             th:selected="${pos == draft.recorderPosition}"></option>
                                 </select>
-                                <span class="vcc-form-hint">Domyślna pozycja rejestratora w komorze urządzenia.</span>
+
+                                <!-- Visual Selector -->
+                                <div class="vcc-pos-selector" style="max-width: 320px; padding: 12px; margin: 0;">
+                                    <div class="vcc-pos-levels" style="margin-bottom: 12px; gap: 4px;">
+                                        <button type="button" class="vcc-pos-level-btn" data-level="TOP" style="padding: 4px 8px; font-size: 0.65rem;">
+                                            <i class="fas fa-chevron-up" style="font-size: 0.75rem;"></i> Góra
+                                        </button>
+                                        <button type="button" class="vcc-pos-level-btn active" data-level="MIDDLE" style="padding: 4px 8px; font-size: 0.65rem;">
+                                            <i class="fas fa-square" style="font-size: 0.75rem;"></i> Środek
+                                        </button>
+                                        <button type="button" class="vcc-pos-level-btn" data-level="BOTTOM" style="padding: 4px 8px; font-size: 0.65rem;">
+                                            <i class="fas fa-chevron-down" style="font-size: 0.75rem;"></i> Dół
+                                        </button>
+                                    </div>
+
+                                    <div class="vcc-pos-grid-container" style="transform: scale(0.85); transform-origin: top left;">
+                                        <div class="vcc-pos-grid-wrapper">
+                                            <div class="vcc-pos-label-x"><span>L</span><span>S</span><span>P</span></div>
+                                            <div class="vcc-pos-label-y"><span>T</span><span>Ś</span><span>P</span></div>
+                                            <div class="vcc-pos-grid" id="posGrid"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="vcc-form-hint" style="margin-top: 12px; display: block;">Domyślna pozycja rejestratora w komorze urządzenia.</span>
                             </div>
                         </div>
                     </div>
@@ -171,6 +196,62 @@
             if (nextBtn) {
                 nextBtn.addEventListener('click', submitStep4);
             }
+
+            // --- Visual Position Selector Logic ---
+            const posMapping = {
+                'TOP': ['TOP_REAR_LEFT', 'TOP_REAR_CENTER', 'TOP_REAR_RIGHT', 'TOP_CENTER_LEFT', 'TOP_CENTER_CENTER', 'TOP_CENTER_RIGHT', 'TOP_FRONT_LEFT', 'TOP_FRONT_CENTER', 'TOP_FRONT_RIGHT'],
+                'MIDDLE': ['MIDDLE_REAR_LEFT', 'MIDDLE_REAR_CENTER', 'MIDDLE_REAR_RIGHT', 'MIDDLE_CENTER_LEFT', 'MIDDLE_CENTER_CENTER', 'MIDDLE_CENTER_RIGHT', 'MIDDLE_FRONT_LEFT', 'MIDDLE_FRONT_CENTER', 'MIDDLE_FRONT_RIGHT'],
+                'BOTTOM': ['BOTTOM_REAR_LEFT', 'BOTTOM_REAR_CENTER', 'BOTTOM_REAR_RIGHT', 'BOTTOM_CENTER_LEFT', 'BOTTOM_CENTER_CENTER', 'BOTTOM_CENTER_RIGHT', 'BOTTOM_FRONT_LEFT', 'BOTTOM_FRONT_CENTER', 'BOTTOM_FRONT_RIGHT']
+            };
+            const labelPrefix = { 'TOP': 'G', 'MIDDLE': 'S', 'BOTTOM': 'D' };
+            const posSel = document.getElementById('position');
+            
+            // Detect initial selection from draft
+            let selectedPos = posSel.value || '';
+            let currentLevel = 'MIDDLE';
+            
+            if (selectedPos) {
+                if (selectedPos.startsWith('TOP')) currentLevel = 'TOP';
+                else if (selectedPos.startsWith('BOTTOM')) currentLevel = 'BOTTOM';
+            }
+
+            function renderGrid() {
+                const grid = document.getElementById('posGrid');
+                if (!grid) return;
+                grid.innerHTML = '';
+                const positions = posMapping[currentLevel];
+                const prefix = labelPrefix[currentLevel];
+
+                positions.forEach((posKey, index) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'vcc-pos-cell';
+                    if (posKey === selectedPos) cell.classList.add('active');
+                    cell.textContent = prefix + (index + 1);
+                    cell.addEventListener('click', () => {
+                        selectedPos = posKey;
+                        posSel.value = posKey;
+                        document.querySelectorAll('.vcc-pos-cell').forEach(c => c.classList.remove('active'));
+                        cell.classList.add('active');
+                    });
+                    grid.appendChild(cell);
+                });
+            }
+
+            const levelBtns = document.querySelectorAll('.vcc-pos-level-btn');
+            // Sync active level button
+            levelBtns.forEach(btn => {
+                if (btn.dataset.level === currentLevel) btn.classList.add('active');
+                else btn.classList.remove('active');
+                
+                btn.addEventListener('click', () => {
+                    levelBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentLevel = btn.dataset.level;
+                    renderGrid();
+                });
+            });
+
+            renderGrid();
         });
     </script>
 </body>

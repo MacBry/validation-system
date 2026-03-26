@@ -252,32 +252,58 @@
 
                     <!-- Pozycja rejestratora — WYMAGANE (ukrywane gdy referencyjny) -->
                     <div id="positionWrapper" class="vcc-form-section" style="margin-bottom: 24px;">
-                        <label class="vcc-form-label" for="recorderPosition">
+                        <label class="vcc-form-label">
                             Umiejscowienie rejestratora w urządzeniu <span class="vcc-required">*</span>
                         </label>
-                        <select id="recorderPosition" name="recorderPosition"
-                                required class="vcc-form-select">
-                            <option value="">-- Wybierz pozycję rejestratora --</option>
-                            <optgroup label="Góra / Sufit (G1–G9)">
-                                <option th:each="pos : ${positions}"
-                                        th:if="${pos.name().startsWith('TOP')}"
-                                        th:value="${pos}"
-                                        th:text="${pos.displayName}"></option>
-                            </optgroup>
-                            <optgroup label="Środek (S1–S9)">
-                                <option th:each="pos : ${positions}"
-                                        th:if="${pos.name().startsWith('MIDDLE')}"
-                                        th:value="${pos}"
-                                        th:text="${pos.displayName}"></option>
-                            </optgroup>
-                            <optgroup label="Dół / Podłoga (D1–D9)">
-                                <option th:each="pos : ${positions}"
-                                        th:if="${pos.name().startsWith('BOTTOM')}"
-                                        th:value="${pos}"
-                                        th:text="${pos.displayName}"></option>
-                            </optgroup>
+                        
+                        <!-- Hidden select for form submission -->
+                        <select id="recorderPosition" name="recorderPosition" required style="display:none;">
+                            <option value="">-- Wybierz pozycję --</option>
+                            <option th:each="pos : ${positions}" th:value="${pos}" th:text="${pos}"></option>
                         </select>
-                        <span class="vcc-form-hint">
+
+                        <!-- Visual Selector -->
+                        <div class="vcc-pos-selector">
+                            <!-- Level Switcher -->
+                            <div class="vcc-pos-levels">
+                                <button type="button" class="vcc-pos-level-btn" data-level="TOP">
+                                    <i class="fas fa-chevron-up"></i>
+                                    Góra
+                                </button>
+                                <button type="button" class="vcc-pos-level-btn active" data-level="MIDDLE">
+                                    <i class="fas fa-square"></i>
+                                    Środek
+                                </button>
+                                <button type="button" class="vcc-pos-level-btn" data-level="BOTTOM">
+                                    <i class="fas fa-chevron-down"></i>
+                                    Dół
+                                </button>
+                            </div>
+
+                            <!-- Position Grid -->
+                            <div class="vcc-pos-grid-container" style="text-align: center;">
+                                <div class="vcc-pos-grid-wrapper">
+                                    <!-- X Labels (Columns) -->
+                                    <div class="vcc-pos-label-x">
+                                        <span>LEWY</span>
+                                        <span>ŚRODEK</span>
+                                        <span>PRAWY</span>
+                                    </div>
+                                    <!-- Y Labels (Depth) -->
+                                    <div class="vcc-pos-label-y">
+                                        <span>Tył</span>
+                                        <span>Śr.</span>
+                                        <span>Przód</span>
+                                    </div>
+                                    <!-- 3x3 Grid -->
+                                    <div class="vcc-pos-grid" id="posGrid">
+                                        <!-- Will be filled by JS: Cells 1-9 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <span class="vcc-form-hint" style="margin-top: 12px; display: block;">
                             Bez wyboru pozycji plik nie zostanie poprawnie wczytany
                         </span>
                     </div>
@@ -433,6 +459,76 @@
             btn.classList.add('is-pending');
             btn.innerHTML = '<span class="upload-spinner"></span> Przesyłanie...';
         });
+
+        // --- Visual Position Selector Logic ---
+        const posMapping = {
+            'TOP': [
+                'TOP_REAR_LEFT', 'TOP_REAR_CENTER', 'TOP_REAR_RIGHT',
+                'TOP_CENTER_LEFT', 'TOP_CENTER_CENTER', 'TOP_CENTER_RIGHT',
+                'TOP_FRONT_LEFT', 'TOP_FRONT_CENTER', 'TOP_FRONT_RIGHT'
+            ],
+            'MIDDLE': [
+                'MIDDLE_REAR_LEFT', 'MIDDLE_REAR_CENTER', 'MIDDLE_REAR_RIGHT',
+                'MIDDLE_CENTER_LEFT', 'MIDDLE_CENTER_CENTER', 'MIDDLE_CENTER_RIGHT',
+                'MIDDLE_FRONT_LEFT', 'MIDDLE_FRONT_CENTER', 'MIDDLE_FRONT_RIGHT'
+            ],
+            'BOTTOM': [
+                'BOTTOM_REAR_LEFT', 'BOTTOM_REAR_CENTER', 'BOTTOM_REAR_RIGHT',
+                'BOTTOM_CENTER_LEFT', 'BOTTOM_CENTER_CENTER', 'BOTTOM_CENTER_RIGHT',
+                'BOTTOM_FRONT_LEFT', 'BOTTOM_FRONT_CENTER', 'BOTTOM_FRONT_RIGHT'
+            ]
+        };
+        const labelPrefix = { 'TOP': 'G', 'MIDDLE': 'S', 'BOTTOM': 'D' };
+        let currentLevel = 'MIDDLE';
+        let selectedPos = '';
+
+        function initPosSelector() {
+            const grid = document.getElementById('posGrid');
+            const levelBtns = document.querySelectorAll('.vcc-pos-level-btn');
+
+            levelBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    levelBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentLevel = btn.dataset.level;
+                    renderGrid();
+                });
+            });
+
+            renderGrid();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('posGrid');
+            grid.innerHTML = '';
+            
+            const positions = posMapping[currentLevel];
+            const prefix = labelPrefix[currentLevel];
+
+            positions.forEach((posKey, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'vcc-pos-cell';
+                if (posKey === selectedPos) cell.classList.add('active');
+                
+                cell.textContent = prefix + (index + 1);
+                cell.dataset.pos = posKey;
+
+                cell.addEventListener('click', () => {
+                    selectedPos = posKey;
+                    posSel.value = posKey; // Update hidden select
+                    posSel.classList.remove('is-error');
+                    
+                    // Update UI highlighting
+                    document.querySelectorAll('.vcc-pos-cell').forEach(c => c.classList.remove('active'));
+                    cell.classList.add('active');
+                });
+
+                grid.appendChild(cell);
+            });
+        }
+
+        // Initialize on load
+        initPosSelector();
     </script>
 </body>
 

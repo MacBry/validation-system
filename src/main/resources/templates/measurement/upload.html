@@ -373,7 +373,8 @@
     </div>
 
     <script th:replace="~{fragments/sidebar :: sidebar-js}"></script>
-    <script>
+    <script th:inline="javascript" th:nonce="${cspNonce}">
+        /*<![CDATA[*/
         const input = document.getElementById('files');
         const dropZone = document.getElementById('dropZone');
         const refCheckbox = document.getElementById('isReferenceRecorder');
@@ -527,8 +528,9 @@
             });
         }
 
-        // Initialize on load
+        // Initialize visual selector
         initPosSelector();
+        /*]]>*/
     </script>
 </body>
 

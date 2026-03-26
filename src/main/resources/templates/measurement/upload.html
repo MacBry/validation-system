@@ -208,7 +208,6 @@
                         <i class="fas fa-info-circle" style="color: var(--vcc-primary); margin-right: 6px; flex-shrink:0;"></i>
                         <div>
                             <ul class="upload-info-list">
-                                <li>Możesz przesłać wiele plików (.vi2, .html, .htm) jednocześnie</li>
                                 <li>Akceptowane są pliki .vi2 oraz raporty tabelaryczne .html / .htm</li>
                                 <li>System automatycznie wyodrębni wszystkie dane pomiarowe</li>
                                 <li>Dane zostaną zapisane i będą dostępne do analizy</li>
@@ -232,7 +231,7 @@
                             </th:block>
                         </select>
                         <span class="vcc-form-hint">
-                            Urządzenie zostanie przypisane do wszystkich przesyłanych plików
+                            Urządzenie zostanie przypisane do przesyłanego pliku
                         </span>
                     </div>
 
@@ -313,16 +312,16 @@
                         <div class="upload-drop-zone__icon">
                             <i class="fas fa-cloud-upload-alt"></i>
                         </div>
-                        <p class="upload-drop-zone__label">Kliknij lub przeciągnij pliki tutaj</p>
-                        <p class="upload-drop-zone__hint">Obsługiwane: .vi2, .html, .htm (CTRL wybiera wiele)</p>
+                        <p class="upload-drop-zone__label">Kliknij lub przeciągnij plik tutaj</p>
+                        <p class="upload-drop-zone__hint">Obsługiwane: .vi2, .html, .htm</p>
                         <input type="file" id="files" name="files"
-                               accept=".vi2,.html,.htm" multiple required
-                               aria-label="Wybierz pliki do przesłania">
+                               accept=".vi2,.html,.htm" required
+                               aria-label="Wybierz plik do przesłania">
                     </div>
 
                     <!-- Selected files list -->
                     <div class="upload-file-list" id="fileList" style="display:none;">
-                        <p class="vcc-form-label" style="margin-bottom: 8px;">Wybrane pliki</p>
+                        <p class="vcc-form-label" style="margin-bottom: 8px;">Wybrany plik</p>
                         <div id="fileListItems"></div>
                     </div>
 

@@ -160,12 +160,12 @@
 
                     <!-- Upload panel (toggled) -->
                     <div class="upload-panel is-closed" id="upload-section">
-                        <p class="upload-panel__title"><i class="fas fa-upload"></i> Wgraj nowe pliki .vi2</p>
+                        <p class="upload-panel__title"><i class="fas fa-upload"></i> Wgraj nowy plik .vi2</p>
                         <form id="upload-form" enctype="multipart/form-data">
                             <div class="upload-panel__grid">
                                 <div>
-                                    <label class="vcc-form-label" style="font-size:0.78rem; margin-bottom:4px;">Pliki .vi2</label>
-                                    <input type="file" name="files" multiple accept=".vi2" required>
+                                    <label class="vcc-form-label" style="font-size:0.78rem; margin-bottom:4px;">Plik .vi2</label>
+                                    <input type="file" name="files" accept=".vi2" required>
                                 </div>
                                 <div style="grid-column: span 2;">
                                     <label class="vcc-form-label" style="font-size:0.78rem; margin-bottom:8px;">Pozycja rejestratora</label>
@@ -221,7 +221,7 @@
                     <div class="series-toolbar">
                         <span class="series-toolbar__title">Dostępne serie pomiarowe</span>
                         <button class="btn-toggle-upload toggle-upload-btn">
-                            <i class="fas fa-plus"></i> Dodaj pliki .vi2
+                            <i class="fas fa-plus"></i> Dodaj plik .vi2
                         </button>
                     </div>
 
@@ -350,7 +350,7 @@
                 updateTable(series);
                 form.reset();
                 toggleUpload();
-                alert('Pomyślnie wgrano ' + series.length + ' serii.');
+                alert('Pomyślnie wgrano serię.');
             } catch (err) {
                 console.error(err);
                 alert('Błąd: ' + err.message);

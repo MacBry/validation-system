@@ -76,6 +76,13 @@ public class SecurityConfig {
                                                                 "/error")
                                                 .permitAll()
                                                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                                                // PERIODIC_REVALIDATION: QA-only plan review and approval endpoints
+                                                .requestMatchers("/wizard/*/plan-review")
+                                                        .hasAnyRole("QA", "SUPER_ADMIN")
+                                                .requestMatchers("/wizard/*/plan-approve-*")
+                                                        .hasAnyRole("QA", "SUPER_ADMIN")
+                                                .requestMatchers("/wizard/*/plan-reject")
+                                                        .hasAnyRole("QA", "SUPER_ADMIN")
                                                 .anyRequest().authenticated())
                                 .formLogin(form -> form
                                                 .loginPage("/login")

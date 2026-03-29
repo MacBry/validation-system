@@ -22,7 +22,18 @@ public enum WizardStatus {
     /**
      * Wizard został porzucony (użytkownik anulował)
      */
-    ABANDONED("Porzucony", "Wizard anulowany przez użytkownika");
+    ABANDONED("Porzucony", "Wizard anulowany przez użytkownika"),
+
+    /**
+     * Plan walidacji oczekuje na zatwierdzenie QA (PERIODIC_REVALIDATION only).
+     *
+     * <p>
+     * Technik podpisał plan (step 8), wizard jest zablokowany na step >= 9.
+     * QA musi zatwierdzić plan przed kontynuacją fazy pomiarowej.
+     * </p>
+     */
+    AWAITING_QA_APPROVAL("Oczekuje na zatwierdzenie QA",
+                         "Plan walidacji podpisany przez technologa, oczekuje na zatwierdzenie QA");
 
     private final String displayName;
     private final String description;
@@ -45,5 +56,20 @@ public enum WizardStatus {
      */
     public boolean isActive() {
         return this == IN_PROGRESS;
+    }
+
+    /**
+     * Sprawdza czy wizard jest w stanie oczekiwania na zatwierdzenie QA
+     */
+    public boolean isAwaitingQaApproval() {
+        return this == AWAITING_QA_APPROVAL;
+    }
+
+    /**
+     * Sprawdza czy wizard nie jest zakończony ani porzucony
+     * (aktywny lub oczekujący na QA)
+     */
+    public boolean isInProgress() {
+        return this == IN_PROGRESS || this == AWAITING_QA_APPROVAL;
     }
 }

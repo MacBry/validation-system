@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR Krok 11 - Przegląd serii pomiarowych - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <th:block th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:block>
+    <style>
+        .wizard-container { max-width: 900px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+        .wizard-btn-next:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* Series block card */
+        .series-block {
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem) var(--sp-5, 1.25rem);
+            margin-bottom: var(--sp-4, 1rem);
+            background: var(--surface-card, #fff);
+            transition: box-shadow 0.15s;
+        }
+        .series-block:hover { box-shadow: 0 4px 16px rgba(102,126,234,0.08); }
+        .series-block__header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: var(--sp-4, 1rem); flex-wrap: wrap; gap: 8px;
+        }
+        .series-block__left { display: flex; align-items: center; gap: 10px; }
+        .series-block__index {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: rgba(102,126,234,0.12);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.78rem; font-weight: 700; color: var(--vcc-primary, #667eea);
+            flex-shrink: 0;
+        }
+        .series-block__date {
+            font-size: 0.9rem; font-weight: 700;
+            color: var(--text-primary, #1a1f3a); font-family: 'DM Mono', monospace;
+        }
+        .series-block__sn {
+            font-size: 0.78rem; color: var(--text-muted, #9298ae); margin-left: 6px;
+        }
+        .badge-ref {
+            display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px;
+            background: #fef9c3; color: #713f12;
+            border-radius: 99px; font-size: 0.7rem; font-weight: 700;
+        }
+        .badge-position {
+            display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px;
+            background: rgba(102,126,234,0.10); color: var(--vcc-primary, #667eea);
+            border-radius: 99px; font-size: 0.7rem; font-weight: 700;
+        }
+
+        /* Stats mini-grid */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px; margin-bottom: 12px;
+        }
+        .stat-item {
+            background: var(--surface-page, #f7f8fc);
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); padding: 9px 12px;
+        }
+        .stat-item__label {
+            font-size: 0.68rem; font-weight: 600; color: var(--text-muted, #9298ae);
+            text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
+        }
+        .stat-item__value {
+            font-size: 0.95rem; font-weight: 700;
+            color: var(--text-primary, #1a1f3a); font-family: 'DM Mono', monospace;
+        }
+        .stat-item__value--warn  { color: #f59e0b; }
+        .stat-item__value--error { color: #dc2626; }
+
+        /* Compliance bar */
+        .compliance-bar-wrap { margin-bottom: 10px; }
+        .compliance-bar-label {
+            display: flex; justify-content: space-between;
+            font-size: 0.75rem; color: var(--text-muted, #9298ae); margin-bottom: 4px;
+        }
+        .compliance-bar {
+            height: 6px; background: var(--surface-page, #f7f8fc);
+            border-radius: 99px; overflow: hidden;
+            border: 1px solid var(--border-default, #e5e7ef);
+        }
+        .compliance-bar__fill {
+            height: 100%; border-radius: 99px;
+            background: linear-gradient(90deg, var(--vcc-primary, #667eea), #10b981);
+            transition: width 0.4s ease-out;
+        }
+        .compliance-bar__fill--warn  { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+        .compliance-bar__fill--error { background: linear-gradient(90deg, #dc2626, #f87171); }
+
+        /* Series meta */
+        .series-block__meta {
+            font-size: 0.77rem; color: var(--text-muted, #9298ae);
+            display: flex; flex-wrap: wrap; gap: 12px;
+        }
+        .series-block__meta span { display: flex; align-items: center; gap: 5px; }
+
+        /* Alert no series */
+        .alert-no-series {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 14px 16px;
+            background: #fef2f2; border: 1px solid #fca5a5;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.85rem; color: #991b1b; margin-bottom: var(--sp-4, 1rem);
+        }
+
+        /* Info notice */
+        .info-notice {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px;
+            background: rgba(102,126,234,0.06); border: 1px solid rgba(102,126,234,0.20);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem; color: var(--text-secondary, #374151);
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .info-notice i { flex-shrink: 0; margin-top: 2px; color: var(--vcc-primary, #667eea); }
+    </style>
+</head>
+
+<body>
+    <aside th:block th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR Krok 11 — Przegląd serii pomiarowych</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:block th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:block>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Przegląd wgranych serii pomiarowych</h2>
+                        <p class="wizard-step-header__desc">Sprawdź dane wgranych serii pomiarowych przed obliczeniem statystyk walidacji. Aby dodać kolejne pliki, wróć do poprzedniego kroku.</p>
+                    </div>
+
+                    <!-- No series error -->
+                    <div th:if="${selectedSeries == null or #lists.isEmpty(selectedSeries)}"
+                         class="alert-no-series">
+                        <i class="fas fa-exclamation-circle" style="flex-shrink:0; margin-top:2px;"></i>
+                        <div>
+                            <strong>Brak serii pomiarowych.</strong>
+                            Wróć do kroku 10 i wgraj co najmniej jeden plik Vi2 z rejestratora TESTO.
+                        </div>
+                    </div>
+
+                    <!-- Series summary -->
+                    <div th:if="${selectedSeries != null and !#lists.isEmpty(selectedSeries)}">
+                        <div class="info-notice">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Znaleziono <strong th:text="${#lists.size(selectedSeries)}">0</strong> serii pomiarowych. Zweryfikuj dane przed obliczeniem statystyk. Upewnij się, że zaznaczono właściwy rejestrator referencyjny.</span>
+                        </div>
+
+                        <!-- Series blocks -->
+                        <div th:each="s, iter : ${selectedSeries}" class="series-block">
+                            <div class="series-block__header">
+                                <div class="series-block__left">
+                                    <div class="series-block__index" th:text="${iter.index + 1}">1</div>
+                                    <div>
+                                        <span class="series-block__date"
+                                              th:text="${#temporals.format(s.firstMeasurementTime, 'yyyy-MM-dd HH:mm')}">—</span>
+                                        <span class="series-block__sn"
+                                              th:text="'(' + ${s.recorderSerialNumber} + ')'">—</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span th:if="${s.isReferenceRecorder}" class="badge-ref">
+                                        <i class="fas fa-star" style="font-size:0.6rem;"></i> REFERENCYJNY
+                                    </span>
+                                    <span th:if="${!s.isReferenceRecorder}" class="badge-position"
+                                          th:text="'Pozycja: ' + (${s.recorderPosition} ?: '—')">—</span>
+                                </div>
+                            </div>
+
+                            <!-- Stats grid -->
+                            <div class="stat-grid">
+                                <div class="stat-item">
+                                    <div class="stat-item__label">Min [°C]</div>
+                                    <div class="stat-item__value"
+                                         th:text="${#numbers.formatDecimal(s.minTemperature, 1, 2)}">—</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-item__label">Max [°C]</div>
+                                    <div class="stat-item__value"
+                                         th:text="${#numbers.formatDecimal(s.maxTemperature, 1, 2)}">—</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-item__label">Avg [°C]</div>
+                                    <div class="stat-item__value"
+                                         th:text="${#numbers.formatDecimal(s.avgTemperature, 1, 2)}">—</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-item__label">MKT [°C]</div>
+                                    <div class="stat-item__value"
+                                         th:text="${#numbers.formatDecimal(s.mktTemperature, 1, 2)}">—</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-item__label">SD [°C]</div>
+                                    <div class="stat-item__value"
+                                         th:text="${#numbers.formatDecimal(s.stdDeviation, 1, 2)}">—</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-item__label">CV [%]</div>
+                                    <div class="stat-item__value"
+                                         th:classappend="${s.cvPercentage > 15} ? 'stat-item__value--warn' : ''"
+                                         th:text="${#numbers.formatDecimal(s.cvPercentage, 1, 2)}">—</div>
+                                </div>
+                            </div>
+
+                            <!-- Compliance bar -->
+                            <div class="compliance-bar-wrap">
+                                <div class="compliance-bar-label">
+                                    <span>Zgodność z kryterium</span>
+                                    <strong th:text="${#numbers.formatDecimal(s.compliancePercentage, 1, 1) + ' %'}">—</strong>
+                                </div>
+                                <div class="compliance-bar">
+                                    <div class="compliance-bar__fill"
+                                         th:classappend="${s.compliancePercentage < 90} ? 'compliance-bar__fill--error'
+                                                       : (${s.compliancePercentage < 95} ? 'compliance-bar__fill--warn' : '')"
+                                         th:style="'width: ' + ${s.compliancePercentage} + '%'"></div>
+                                </div>
+                            </div>
+
+                            <!-- Series meta -->
+                            <div class="series-block__meta">
+                                <span><i class="fas fa-file-binary"></i>
+                                    <span th:text="${s.originalFilename}">—</span></span>
+                                <span><i class="fas fa-list-ol"></i>
+                                    <span th:text="${s.measurementCount} + ' pomiarów'">—</span></span>
+                                <span><i class="fas fa-clock"></i>
+                                    <span th:text="${s.measurementIntervalMinutes} + ' min interwał'">—</span></span>
+                                <span><i class="fas fa-calendar-check"></i>
+                                    <span th:text="${#temporals.format(s.lastMeasurementTime, 'yyyy-MM-dd HH:mm')}">—</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <a th:href="@{/wizard/{id}/back/10(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Wróć (dodaj plik)
+                        </a>
+                        <button type="button" class="wizard-btn-next" id="nextBtn"
+                                th:disabled="${selectedSeries == null or #lists.isEmpty(selectedSeries)}">
+                            Oblicz statystyki <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <footer th:block th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript" th:nonce="${cspNonce}">
+        document.addEventListener('DOMContentLoaded', function() {
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', function() {
+                    const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+                    nextBtn.disabled = true;
+                    nextBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Obliczanie...';
+                    window.location.href = '/wizard/' + draftId + '/step/12';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

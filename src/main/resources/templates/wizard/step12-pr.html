@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR Krok 12 - Statystyki walidacji - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <th:block th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:block>
+    <style>
+        .wizard-container { max-width: 1000px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+
+        /* Global summary cards */
+        .global-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: var(--sp-4, 1rem);
+            margin-bottom: var(--sp-6, 1.5rem);
+        }
+        .global-stat-card {
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem) var(--sp-5, 1.25rem);
+            border: 1px solid transparent;
+        }
+        .global-stat-card--primary  { background: rgba(102,126,234,0.08); border-color: rgba(102,126,234,0.20); }
+        .global-stat-card--success  { background: rgba(16,185,129,0.07);  border-color: rgba(16,185,129,0.20); }
+        .global-stat-card--warning  { background: #fffbeb; border-color: #fcd34d; }
+        .global-stat-card--danger   { background: #fef2f2; border-color: #fca5a5; }
+        .global-stat-card__label {
+            font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.04em; margin-bottom: 6px; color: var(--text-muted, #9298ae);
+        }
+        .global-stat-card__value {
+            font-size: 1.5rem; font-weight: 800; font-family: 'DM Mono', monospace;
+            color: var(--text-primary, #1a1f3a);
+        }
+        .global-stat-card__unit {
+            font-size: 0.78rem; font-weight: 500; color: var(--text-muted, #9298ae); margin-left: 3px;
+        }
+
+        /* Overall result badge */
+        .result-badge-wrap {
+            display: flex; align-items: center; gap: 12px;
+            padding: var(--sp-4, 1rem) var(--sp-5, 1.25rem);
+            border-radius: var(--radius-md, 8px);
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .result-badge-wrap--pass { background: rgba(16,185,129,0.08); border: 1.5px solid rgba(16,185,129,0.25); }
+        .result-badge-wrap--fail { background: #fef2f2; border: 1.5px solid #fca5a5; }
+        .result-badge-icon { font-size: 1.5rem; flex-shrink: 0; }
+        .result-badge-wrap--pass .result-badge-icon { color: #10b981; }
+        .result-badge-wrap--fail .result-badge-icon { color: #dc2626; }
+        .result-badge-title { font-size: 1rem; font-weight: 700; }
+        .result-badge-wrap--pass .result-badge-title { color: #065f46; }
+        .result-badge-wrap--fail .result-badge-title { color: #991b1b; }
+        .result-badge-desc { font-size: 0.8rem; color: var(--text-secondary, #6b7280); margin-top: 2px; }
+
+        /* Stats table */
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+        .stats-table th {
+            background: var(--surface-page, #f7f8fc);
+            color: var(--text-muted, #9298ae);
+            font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.04em; padding: 9px 12px;
+            border-bottom: 2px solid var(--border-default, #e5e7ef); text-align: center;
+        }
+        .stats-table th:first-child,
+        .stats-table th:nth-child(2) { text-align: left; }
+        .stats-table td {
+            padding: 10px 12px; text-align: center;
+            border-bottom: 1px solid var(--border-default, #e5e7ef);
+            color: var(--text-primary, #1a1f3a); font-family: 'DM Mono', monospace;
+        }
+        .stats-table td:first-child,
+        .stats-table td:nth-child(2) { font-family: inherit; text-align: left; }
+        .stats-table tr:last-child td { border-bottom: none; }
+        .stats-table tr:hover td { background: rgba(102,126,234,0.03); }
+        .stats-table .td-pass { color: #10b981; font-weight: 700; }
+        .stats-table .td-fail { color: #dc2626; font-weight: 700; }
+
+        /* Criteria check table */
+        .criteria-check-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+        .criteria-check-table th {
+            background: var(--surface-page, #f7f8fc);
+            color: var(--text-muted, #9298ae); font-size: 0.72rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.04em; padding: 9px 12px;
+            border-bottom: 2px solid var(--border-default, #e5e7ef); text-align: left;
+        }
+        .criteria-check-table td {
+            padding: 10px 12px; border-bottom: 1px solid var(--border-default, #e5e7ef);
+            color: var(--text-primary, #1a1f3a);
+        }
+        .criteria-check-table tr:last-child td { border-bottom: none; }
+        .criteria-check-table .td-val { font-family: 'DM Mono', monospace; }
+
+        /* Info notice */
+        .info-notice {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px;
+            background: rgba(102,126,234,0.06); border: 1px solid rgba(102,126,234,0.20);
+            border-radius: var(--radius-md, 8px); font-size: 0.82rem; color: var(--text-secondary, #374151);
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .info-notice i { flex-shrink: 0; margin-top: 2px; color: var(--vcc-primary, #667eea); }
+
+        .badge-ref {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; background: #fef9c3; color: #713f12;
+            border-radius: 99px; font-size: 0.68rem; font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <aside th:block th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR Krok 12 — Statystyki walidacji</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:block th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:block>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Statystyki walidacji kwalifikacji PR</h2>
+                        <p class="wizard-step-header__desc">Zestawienie obliczonych parametrów statystycznych dla wszystkich serii pomiarowych oraz ocena spełnienia kryteriów akceptacji.</p>
+                    </div>
+
+                    <!-- Overall result badge -->
+                    <div class="result-badge-wrap"
+                         th:classappend="${validationPassed} ? 'result-badge-wrap--pass' : 'result-badge-wrap--fail'">
+                        <div class="result-badge-icon">
+                            <i th:class="${validationPassed} ? 'fas fa-circle-check' : 'fas fa-circle-xmark'"></i>
+                        </div>
+                        <div>
+                            <div class="result-badge-title"
+                                 th:text="${validationPassed} ? 'Kwalifikacja spełnia kryteria akceptacji' : 'Kwalifikacja NIE spełnia kryteriów akceptacji'">
+                            </div>
+                            <div class="result-badge-desc"
+                                 th:text="${validationPassed} ? 'Wszystkie parametry mieszczą się w dopuszczalnych granicach. Możesz przejść do finalizacji.' : 'Jeden lub więcej parametrów przekracza dopuszczalne limity. Sprawdź szczegóły poniżej.'">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Global stats summary -->
+                    <div class="global-stats-grid">
+                        <div class="global-stat-card global-stat-card--primary">
+                            <div class="global-stat-card__label">Liczba serii</div>
+                            <div class="global-stat-card__value"
+                                 th:text="${selectedSeries != null ? #lists.size(selectedSeries) : '—'}">—
+                                <span class="global-stat-card__unit">szt.</span>
+                            </div>
+                        </div>
+                        <div class="global-stat-card global-stat-card--primary">
+                            <div class="global-stat-card__label">Avg globalny [°C]</div>
+                            <div class="global-stat-card__value"
+                                 th:text="${globalAvg != null ? #numbers.formatDecimal(globalAvg, 1, 2) : '—'}">—
+                                <span class="global-stat-card__unit">°C</span>
+                            </div>
+                        </div>
+                        <div class="global-stat-card"
+                             th:classappend="${globalMin != null and draft.coolingDevice?.nominalTempMin != null and globalMin < draft.coolingDevice.nominalTempMin} ? 'global-stat-card--danger' : 'global-stat-card--success'">
+                            <div class="global-stat-card__label">Min globalny [°C]</div>
+                            <div class="global-stat-card__value"
+                                 th:text="${globalMin != null ? #numbers.formatDecimal(globalMin, 1, 2) : '—'}">—
+                                <span class="global-stat-card__unit">°C</span>
+                            </div>
+                        </div>
+                        <div class="global-stat-card"
+                             th:classappend="${globalMax != null and draft.coolingDevice?.nominalTempMax != null and globalMax > draft.coolingDevice.nominalTempMax} ? 'global-stat-card--danger' : 'global-stat-card--success'">
+                            <div class="global-stat-card__label">Max globalny [°C]</div>
+                            <div class="global-stat-card__value"
+                                 th:text="${globalMax != null ? #numbers.formatDecimal(globalMax, 1, 2) : '—'}">—
+                                <span class="global-stat-card__unit">°C</span>
+                            </div>
+                        </div>
+                        <div class="global-stat-card"
+                             th:classappend="${overallCompliance != null and overallCompliance < 95} ? 'global-stat-card--warning' : 'global-stat-card--success'">
+                            <div class="global-stat-card__label">Zgodność ogólna</div>
+                            <div class="global-stat-card__value"
+                                 th:text="${overallCompliance != null ? #numbers.formatDecimal(overallCompliance, 1, 1) : '—'}">—
+                                <span class="global-stat-card__unit">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Per-recorder stats table -->
+                    <div class="vcc-detail-section" style="margin-bottom: var(--sp-5, 1.25rem);">
+                        <div class="vcc-detail-section__header">
+                            <h3 class="vcc-detail-section__title">
+                                <i class="fas fa-table"></i>
+                                Statystyki szczegółowe — po rejestratorze
+                            </h3>
+                        </div>
+                        <div class="vcc-table-wrap">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left;">Rejestrator (SN)</th>
+                                        <th style="text-align:left;">Pozycja</th>
+                                        <th>Min [°C]</th>
+                                        <th>Max [°C]</th>
+                                        <th>Avg [°C]</th>
+                                        <th>MKT [°C]</th>
+                                        <th>SD [°C]</th>
+                                        <th>CV [%]</th>
+                                        <th>Zgod. [%]</th>
+                                        <th>Wynik</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="s : ${selectedSeries}">
+                                        <td class="vcc-table__mono" th:text="${s.recorderSerialNumber}">—</td>
+                                        <td>
+                                            <span th:if="${s.isReferenceRecorder}" class="badge-ref">
+                                                <i class="fas fa-star" style="font-size:0.55rem;"></i> REF
+                                            </span>
+                                            <span th:if="${!s.isReferenceRecorder}"
+                                                  th:text="${s.recorderPosition ?: '—'}">—</span>
+                                        </td>
+                                        <td th:text="${#numbers.formatDecimal(s.minTemperature, 1, 2)}">—</td>
+                                        <td th:text="${#numbers.formatDecimal(s.maxTemperature, 1, 2)}">—</td>
+                                        <td th:text="${#numbers.formatDecimal(s.avgTemperature, 1, 2)}">—</td>
+                                        <td th:text="${#numbers.formatDecimal(s.mktTemperature, 1, 2)}">—</td>
+                                        <td th:text="${#numbers.formatDecimal(s.stdDeviation, 1, 2)}">—</td>
+                                        <td th:text="${#numbers.formatDecimal(s.cvPercentage, 1, 2)}">—</td>
+                                        <td th:text="${#numbers.formatDecimal(s.compliancePercentage, 1, 1)}">—</td>
+                                        <td>
+                                            <span th:class="${s.passed} ? 'td-pass' : 'td-fail'"
+                                                  th:text="${s.passed ? 'POZYTYWNY' : 'NEGATYWNY'}">—</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Section: Criteria check -->
+                    <div class="vcc-detail-section" style="margin-bottom: var(--sp-5, 1.25rem);">
+                        <div class="vcc-detail-section__header">
+                            <h3 class="vcc-detail-section__title">
+                                <i class="fas fa-list-check"></i>
+                                Weryfikacja kryteriów akceptacji
+                            </h3>
+                        </div>
+                        <div class="vcc-table-wrap"
+                             th:if="${criteriaResults != null and !#lists.isEmpty(criteriaResults)}">
+                            <table class="criteria-check-table">
+                                <thead>
+                                    <tr>
+                                        <th>Kryterium</th>
+                                        <th>Operator</th>
+                                        <th>Wartość graniczna</th>
+                                        <th>Wartość obliczona</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="cr : ${criteriaResults}">
+                                        <td th:text="${cr.fieldName?.displayName ?: cr.fieldName}">—</td>
+                                        <td class="td-val" th:text="${cr.operator}">—</td>
+                                        <td class="td-val" th:text="${cr.limitValue}">—</td>
+                                        <td class="td-val" th:text="${cr.actualValue != null ? #numbers.formatDecimal(cr.actualValue, 1, 3) : '—'}">—</td>
+                                        <td>
+                                            <span th:class="${cr.passed} ? 'td-pass' : 'td-fail'"
+                                                  th:text="${cr.passed ? 'SPEŁNIONE' : 'NIESPEŁNIONE'}">—</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div th:if="${criteriaResults == null or #lists.isEmpty(criteriaResults)}"
+                             class="info-notice" style="margin-top:0;">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Zastosowano domyślne kryteria urządzenia. Ocena zgodna z zakresem nominalnym:
+                                <strong th:text="${draft.coolingDevice?.nominalTempMin ?: '—'}">2</strong>–<strong
+                                        th:text="${draft.coolingDevice?.nominalTempMax ?: '—'}">8</strong> °C.
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Info notice -->
+                    <div class="info-notice">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Powyższe statystyki zostaną uwzględnione w wygenerowanym protokole PR. W następnym kroku możesz dokonać przeglądu odchyleń i podpisać dokument walidacji.</span>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <a th:href="@{/wizard/{id}/back/11(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" class="wizard-btn-next" id="nextBtn">
+                            Przejdź do finalizacji <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <footer th:block th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript" th:nonce="${cspNonce}">
+        document.addEventListener('DOMContentLoaded', function() {
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', function() {
+                    const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+                    nextBtn.disabled = true;
+                    nextBtn.innerHTML = 'Przechodzenie... <i class="fas fa-spinner fa-spin"></i>';
+                    window.location.href = '/wizard/' + draftId + '/step/13';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

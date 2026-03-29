@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR Krok 8 - Podpisanie planu przez technika - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <style>
+        .wizard-container { max-width: 820px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+
+        /* Plan sign button — amber to match QA phase colour */
+        .wizard-btn-sign {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 26px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.9rem; font-weight: 700; color: #fff; cursor: pointer;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .wizard-btn-sign:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(245,158,11,0.35); }
+        .wizard-btn-sign:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* Plan summary preview */
+        .plan-preview {
+            background: var(--surface-page, #f7f8fc);
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            overflow: hidden;
+            margin-bottom: var(--sp-6, 1.5rem);
+        }
+        .plan-preview__header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px;
+            background: var(--surface-card, #fff);
+            border-bottom: 1px solid var(--border-default, #e5e7ef);
+            font-size: 0.82rem; font-weight: 700; color: var(--text-muted, #9298ae);
+            text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .plan-preview__header i { color: #dc2626; }
+        .plan-preview__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0;
+        }
+        .plan-preview__cell {
+            padding: 14px 16px;
+            border-right: 1px solid var(--border-default, #e5e7ef);
+            border-bottom: 1px solid var(--border-default, #e5e7ef);
+        }
+        .plan-preview__cell:last-child { border-right: none; }
+        .plan-preview__cell-label {
+            font-size: 0.72rem; font-weight: 600;
+            color: var(--text-muted, #9298ae);
+            text-transform: uppercase; letter-spacing: 0.04em;
+            margin-bottom: 5px;
+        }
+        .plan-preview__cell-value {
+            font-size: 0.88rem; font-weight: 600;
+            color: var(--text-primary, #1a1f3a);
+            font-family: 'DM Mono', monospace;
+        }
+
+        /* Checklist */
+        .plan-checklist {
+            display: flex; flex-direction: column; gap: 8px;
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .plan-checklist__item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px;
+            background: var(--surface-card, #fff);
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.83rem;
+        }
+        .plan-checklist__item--ok { border-color: rgba(16,185,129,0.30); }
+        .plan-checklist__item--warn { border-color: #fcd34d; background: #fffbeb; }
+        .plan-checklist__icon--ok   { color: #10b981; flex-shrink: 0; }
+        .plan-checklist__icon--warn { color: #f59e0b; flex-shrink: 0; }
+        .plan-checklist__label { color: var(--text-primary, #1a1f3a); font-weight: 500; }
+        .plan-checklist__sub   { font-size: 0.75rem; color: var(--text-muted, #9298ae); margin-left: auto; }
+
+        /* Warning notice */
+        .warning-notice {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px;
+            background: #fffbeb; border: 1px solid #fcd34d;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem; color: #92400e;
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .warning-notice i { flex-shrink: 0; margin-top: 2px; }
+        .warning-notice ul { margin: 6px 0 0 0; padding-left: 18px; }
+        .warning-notice ul li { margin-bottom: 3px; }
+
+        /* Password eye toggle */
+        .password-field-wrap { position: relative; }
+        .password-field-wrap .vcc-form-input { padding-right: 42px; }
+        .btn-eye {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer;
+            color: var(--text-muted, #9298ae); font-size: 0.9rem; padding: 4px;
+            transition: color 0.15s;
+        }
+        .btn-eye:hover { color: var(--text-primary, #1a1f3a); }
+    </style>
+</head>
+
+<body>
+    <aside th:block th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:block th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR Krok 8 — Podpisanie planu</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:block th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:block>
+
+                <!-- Flash messages -->
+                <div th:if="${error}" class="vcc-flash vcc-flash--error" style="margin-bottom:var(--sp-4,1rem);">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span th:text="${error}"></span>
+                </div>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Podpisanie planu kwalifikacji przez technika</h2>
+                        <p class="wizard-step-header__desc">Ostatni krok fazy planowania. Po podpisaniu plan zostanie zamrożony i przekazany do zatwierdzenia przez Kierownika Jakości (QA).</p>
+                    </div>
+
+                    <!-- Plan summary -->
+                    <div class="plan-preview">
+                        <div class="plan-preview__header">
+                            <i class="fas fa-file-pdf"></i>
+                            Podsumowanie planu kwalifikacji PR
+                        </div>
+                        <div class="plan-preview__grid">
+                            <div class="plan-preview__cell">
+                                <div class="plan-preview__cell-label">Urządzenie</div>
+                                <div class="plan-preview__cell-value" th:text="${draft.coolingDevice?.name ?: '—'}">—</div>
+                            </div>
+                            <div class="plan-preview__cell">
+                                <div class="plan-preview__cell-label">Procedura</div>
+                                <div class="plan-preview__cell-value" th:text="${draft.procedureType?.getDisplayName() ?: 'Rewalidacja Okresowa'}">Rewalidacja Okresowa</div>
+                            </div>
+                            <div class="plan-preview__cell">
+                                <div class="plan-preview__cell-label">T nominalna</div>
+                                <div class="plan-preview__cell-value" th:text="${draft.planData?.acceptanceCriteria?.planNominalTemp + ' °C'}">—</div>
+                            </div>
+                            <div class="plan-preview__cell">
+                                <div class="plan-preview__cell-label">T dopuszczalna</div>
+                                <div class="plan-preview__cell-value" th:text="${draft.planData?.acceptanceCriteria?.planAcceptanceTempMin + ' do ' + draft.planData?.acceptanceCriteria?.planAcceptanceTempMax + ' °C'}">—</div>
+                            </div>
+                            <div class="plan-preview__cell">
+                                <div class="plan-preview__cell-label">Stan obciążenia</div>
+                                <div class="plan-preview__cell-value" th:text="${draft.planData?.acceptanceCriteria?.planDeviceLoadState}">—</div>
+                            </div>
+                            <div class="plan-preview__cell">
+                                <div class="plan-preview__cell-label">Max MKT / ΔT</div>
+                                <div class="plan-preview__cell-value" th:text="${draft.planData?.acceptanceCriteria?.planMktMaxTemp + ' / ' + draft.planData?.acceptanceCriteria?.planUniformityDeltaMax + ' °C'}">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plan completeness checklist -->
+                    <div class="vcc-form-section" style="margin-bottom: var(--sp-5, 1.25rem);">
+                        <legend style="font-size:0.82rem; font-weight:700; color:var(--text-primary); margin-bottom:var(--sp-3, 0.75rem);">
+                            Kompletność planu
+                        </legend>
+                        <div class="plan-checklist">
+                            <!-- 1. Urządzenie -->
+                            <th:block th:if="${draft.coolingDevice != null}">
+                                <div class="plan-checklist__item plan-checklist__item--ok">
+                                    <i class="fas fa-check-circle plan-checklist__icon--ok"></i>
+                                    <span class="plan-checklist__label">Urządzenie wybrane</span>
+                                    <span class="plan-checklist__sub" th:text="${draft.coolingDevice.name}">—</span>
+                                </div>
+                            </th:block>
+                            <th:block th:unless="${draft.coolingDevice != null}">
+                                <div class="plan-checklist__item plan-checklist__item--warn">
+                                    <i class="fas fa-exclamation-circle plan-checklist__icon--warn"></i>
+                                    <span class="plan-checklist__label">Urządzenie wybrane</span>
+                                    <span class="plan-checklist__sub">Brak</span>
+                                </div>
+                            </th:block>
+                            <!-- 2. Powód kwalifikacji -->
+                            <th:block th:if="${draft.planData?.details?.revalidationReason != null}">
+                                <div class="plan-checklist__item plan-checklist__item--ok">
+                                    <i class="fas fa-check-circle plan-checklist__icon--ok"></i>
+                                    <span class="plan-checklist__label">Powód kwalifikacji</span>
+                                    <span class="plan-checklist__sub" th:text="${draft.planData.details.revalidationReason}">—</span>
+                                </div>
+                            </th:block>
+                            <th:block th:unless="${draft.planData?.details?.revalidationReason != null}">
+                                <div class="plan-checklist__item plan-checklist__item--warn">
+                                    <i class="fas fa-exclamation-circle plan-checklist__icon--warn"></i>
+                                    <span class="plan-checklist__label">Powód kwalifikacji</span>
+                                    <span class="plan-checklist__sub">—</span>
+                                </div>
+                            </th:block>
+                            <!-- 3. Kryteria akceptacji -->
+                            <th:block th:if="${draft.planData?.acceptanceCriteria?.planNominalTemp != null}">
+                                <div class="plan-checklist__item plan-checklist__item--ok">
+                                    <i class="fas fa-check-circle plan-checklist__icon--ok"></i>
+                                    <span class="plan-checklist__label">Kryteria akceptacji</span>
+                                    <span class="plan-checklist__sub">Zdefiniowane</span>
+                                </div>
+                            </th:block>
+                            <th:block th:unless="${draft.planData?.acceptanceCriteria?.planNominalTemp != null}">
+                                <div class="plan-checklist__item plan-checklist__item--warn">
+                                    <i class="fas fa-exclamation-circle plan-checklist__icon--warn"></i>
+                                    <span class="plan-checklist__label">Kryteria akceptacji</span>
+                                    <span class="plan-checklist__sub">Brak</span>
+                                </div>
+                            </th:block>
+                            <!-- 4. Procedury CAPA -->
+                            <th:block th:if="${draft.planData?.deviationProcedures?.criticalText != null}">
+                                <div class="plan-checklist__item plan-checklist__item--ok">
+                                    <i class="fas fa-check-circle plan-checklist__icon--ok"></i>
+                                    <span class="plan-checklist__label">Procedury CAPA</span>
+                                    <span class="plan-checklist__sub">Wypełnione</span>
+                                </div>
+                            </th:block>
+                            <th:block th:unless="${draft.planData?.deviationProcedures?.criticalText != null}">
+                                <div class="plan-checklist__item plan-checklist__item--warn">
+                                    <i class="fas fa-exclamation-circle plan-checklist__icon--warn"></i>
+                                    <span class="plan-checklist__label">Procedury CAPA</span>
+                                    <span class="plan-checklist__sub">Brak</span>
+                                </div>
+                            </th:block>
+                        </div>
+                    </div>
+
+                    <!-- Signature form -->
+                    <form th:action="@{/wizard/{id}/finalize-plan(id=${draft.id})}" method="post">
+                        <th:block th:replace="~{fragments/csrf-token :: csrf-input}"></th:block>
+
+                        <div class="vcc-form-section">
+                            <legend style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:var(--sp-4);">
+                                Podpis elektroniczny — technik kwalifikujący
+                            </legend>
+
+                            <div class="vcc-form-row">
+                                <div>
+                                    <label for="password" class="vcc-form-label">Potwierdź hasłem systemowym <span class="vcc-required">*</span></label>
+                                    <div class="password-field-wrap">
+                                        <input type="password" class="vcc-form-input" id="password" name="password" required 
+                                               autocomplete="current-password" placeholder="Wprowadź hasło">
+                                        <button type="button" class="btn-eye" id="eyeBtn" aria-label="Pokaż/ukryj hasło">
+                                            <i class="fas fa-eye" id="eyeIcon"></i>
+                                        </button>
+                                    </div>
+                                    <span class="vcc-form-hint">Zgodnie z FDA 21 CFR Part 11, wprowadzenie hasła stanowi wiążący podpis elektroniczny.</span>
+                                </div>
+                                <div style="display:flex; align-items:flex-end; padding-bottom:12px;">
+                                     <span class="vcc-form-hint">Działanie: <strong>Zatwierdzam plan kwalifikacji PR i przekazuję do oceny QA</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-actions" style="margin-top: var(--sp-6, 1.5rem);">
+                            <a th:href="@{/wizard/{id}/back/7(id=${draft.id})}" class="wizard-btn-back">
+                                <i class="fas fa-arrow-left"></i> Poprzedni krok
+                            </a>
+                            <button type="submit" class="wizard-btn-sign" id="signBtn">
+                                <i class="fas fa-pen-nib"></i> Podpisz plan i wyślij do QA
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+        <footer th:block th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:nonce="${cspNonce}">
+        document.addEventListener('DOMContentLoaded', function() {
+            const eyeBtn = document.getElementById('eyeBtn');
+            const passEl = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+
+            if (eyeBtn && passEl) {
+                eyeBtn.addEventListener('click', function() {
+                    if (passEl.type === 'password') {
+                        passEl.type = 'text';
+                        eyeIcon.classList.replace('fa-eye', 'fa-eye-slash');
+                    } else {
+                        passEl.type = 'password';
+                        eyeIcon.classList.replace('fa-eye-slash', 'fa-eye');
+                    }
+                });
+            }
+
+            const form = document.querySelector('form');
+            const signBtn = document.getElementById('signBtn');
+            if (form && signBtn) {
+                form.addEventListener('submit', function() {
+                    signBtn.disabled = true;
+                    signBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Podpisywanie...';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

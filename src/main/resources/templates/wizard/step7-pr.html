@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR Krok 7 - Procedury odchyleń - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <th:block th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:block>
+    <style>
+        .wizard-container { max-width: 840px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+        .wizard-btn-next:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* CAPA deviation severity cards */
+        .capa-card {
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            overflow: hidden;
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .capa-card__header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px;
+            font-size: 0.85rem; font-weight: 700;
+        }
+        .capa-card__header--critical {
+            background: #fef2f2; border-bottom: 1.5px solid #fca5a5; color: #991b1b;
+        }
+        .capa-card__header--major {
+            background: #fffbeb; border-bottom: 1.5px solid #fcd34d; color: #92400e;
+        }
+        .capa-card__header--minor {
+            background: rgba(102,126,234,0.06); border-bottom: 1.5px solid rgba(102,126,234,0.20); color: #3730a3;
+        }
+        .capa-card__badge {
+            display: inline-flex; align-items: center; padding: 2px 9px;
+            border-radius: 99px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em;
+        }
+        .capa-card__badge--critical { background: #dc2626; color: #fff; }
+        .capa-card__badge--major    { background: #f59e0b; color: #fff; }
+        .capa-card__badge--minor    { background: var(--vcc-primary, #667eea); color: #fff; }
+        .capa-card__body { padding: var(--sp-4, 1rem) var(--sp-5, 1.25rem); background: var(--surface-card, #fff); }
+        .capa-card__desc {
+            font-size: 0.78rem; color: var(--text-muted, #9298ae);
+            margin-bottom: var(--sp-3, 0.75rem); line-height: 1.6;
+        }
+
+        /* Info / warning notices */
+        .info-notice {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px;
+            background: rgba(102,126,234,0.06); border: 1px solid rgba(102,126,234,0.20);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem; color: var(--text-secondary, #374151);
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .info-notice i { flex-shrink: 0; margin-top: 2px; color: var(--vcc-primary, #667eea); }
+        .warning-info {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px;
+            background: #fffbeb; border: 1px solid #fcd34d;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem; color: #92400e;
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .warning-info i { flex-shrink: 0; margin-top: 2px; }
+
+        /* Character counter */
+        .char-counter {
+            font-size: 0.72rem; color: var(--text-muted, #9298ae);
+            text-align: right; margin-top: 4px;
+        }
+        .char-counter.is-warn { color: #f59e0b; }
+        .char-counter.is-over { color: #dc2626; }
+    </style>
+</head>
+
+<body>
+    <aside th:block th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:block th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR Krok 7 — Procedury odchyleń (CAPA)</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:block th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:block>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Procedury odchyleń i CAPA</h2>
+                        <p class="wizard-step-header__desc">Zdefiniuj procedury postępowania przy odchyleniach temperatury według klasyfikacji CRITICAL / MAJOR / MINOR.</p>
+                    </div>
+
+                    <!-- Info notice -->
+                    <div class="info-notice">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Procedury te są wymagane przed rozpoczęciem fazy pomiarowej zgodnie z GMP.</span>
+                    </div>
+
+                    <!-- CRITICAL CAPA -->
+                    <div class="capa-card">
+                        <div class="capa-card__header capa-card__header--critical">
+                            <i class="fas fa-circle-exclamation"></i>
+                            <span>Odchylenie KRYTYCZNE</span>
+                            <span class="capa-card__badge capa-card__badge--critical">CRITICAL</span>
+                        </div>
+                        <div class="capa-card__body">
+                            <label for="planDeviationCriticalText" class="vcc-form-label">Procedura <span class="vcc-required">*</span></label>
+                            <textarea class="vcc-form-textarea" id="planDeviationCriticalText" rows="4" maxlength="5000"
+                                      th:text="${draft.planData?.deviationProcedures?.criticalText}"></textarea>
+                            <div id="criticalCounter" class="char-counter">0 / 5000</div>
+                        </div>
+                    </div>
+
+                    <!-- MAJOR CAPA -->
+                    <div class="capa-card">
+                        <div class="capa-card__header capa-card__header--major">
+                            <i class="fas fa-triangle-exclamation"></i>
+                            <span>Odchylenie POWAŻNE</span>
+                            <span class="capa-card__badge capa-card__badge--major">MAJOR</span>
+                        </div>
+                        <div class="capa-card__body">
+                            <label for="planDeviationMajorText" class="vcc-form-label">Procedura <span class="vcc-required">*</span></label>
+                            <textarea class="vcc-form-textarea" id="planDeviationMajorText" rows="4" maxlength="5000"
+                                      th:text="${draft.planData?.deviationProcedures?.majorText}"></textarea>
+                            <div id="majorCounter" class="char-counter">0 / 5000</div>
+                        </div>
+                    </div>
+
+                    <!-- MINOR CAPA -->
+                    <div class="capa-card">
+                        <div class="capa-card__header capa-card__header--minor">
+                            <i class="fas fa-circle-info"></i>
+                            <span>Odchylenie DROBNE</span>
+                            <span class="capa-card__badge capa-card__badge--minor">MINOR</span>
+                        </div>
+                        <div class="capa-card__body">
+                            <label for="planDeviationMinorText" class="vcc-form-label">Procedura <span class="vcc-required">*</span></label>
+                            <textarea class="vcc-form-textarea" id="planDeviationMinorText" rows="4" maxlength="5000"
+                                      th:text="${draft.planData?.deviationProcedures?.minorText}"></textarea>
+                            <div id="minorCounter" class="char-counter">0 / 5000</div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <a th:href="@{/wizard/{id}/back/6(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" class="wizard-btn-next" id="nextBtn">
+                            Dalej <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <footer th:block th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript" th:nonce="${cspNonce}">
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function updateCounter(el, counterId) {
+            const counter = document.getElementById(counterId);
+            if (!counter) return;
+            const len = el.value.length;
+            const max = el.getAttribute('maxlength');
+            counter.textContent = `${len} / ${max}`;
+            counter.classList.toggle('is-warn', len > max * 0.9);
+            counter.classList.toggle('is-over', len >= max);
+        }
+
+        function submitStep7Pr() {
+            const data = {
+                planDeviationCriticalText: document.getElementById('planDeviationCriticalText').value.trim(),
+                planDeviationMajorText: document.getElementById('planDeviationMajorText').value.trim(),
+                planDeviationMinorText: document.getElementById('planDeviationMinorText').value.trim()
+            };
+
+            if (data.planDeviationCriticalText.length < 10) { alert('Procedura krytyczna musi mieć min. 10 znaków.'); return; }
+            if (data.planDeviationMajorText.length < 10) { alert('Procedura poważna musi mieć min. 10 znaków.'); return; }
+            if (data.planDeviationMinorText.length < 10) { alert('Procedura drobna musi mieć min. 10 znaków.'); return; }
+
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            if (!csrfToken || csrfToken === '') { csrfToken = getCookie('XSRF-TOKEN'); csrfHeader = 'X-XSRF-TOKEN'; }
+
+            const btn = document.getElementById('nextBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
+
+            const headers = { 
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest', 
+                'Accept': 'application/json' 
+            };
+            if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+            fetch('/wizard/' + draftId + '/api/step7-pr', {
+                method: 'POST', 
+                headers: headers, 
+                body: JSON.stringify(data)
+            }).then(async r => {
+                if (!r.ok) {
+                    const text = await r.text();
+                    try { const json = JSON.parse(text); throw new Error(json.message || 'Błąd serwera'); }
+                    catch(e) { throw new Error('Błąd HTTP ' + r.status); }
+                }
+                return r.json();
+            }).then(() => {
+                window.location.href = '/wizard/' + draftId + '/step/8';
+            }).catch(err => {
+                console.error('Error:', err);
+                alert('Błąd zapisu: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = 'Dalej <i class="fas fa-arrow-right"></i>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const ids = ['planDeviationCriticalText', 'planDeviationMajorText', 'planDeviationMinorText'];
+            const counters = ['criticalCounter', 'majorCounter', 'minorCounter'];
+            
+            ids.forEach((id, idx) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', () => updateCounter(el, counters[idx]));
+                    updateCounter(el, counters[idx]);
+                }
+            });
+
+            document.getElementById('nextBtn')?.addEventListener('click', submitStep7Pr);
+        });
+    </script>
+</body>
+</html>

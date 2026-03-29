@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR Krok 9 - Potwierdzenie zatwierdzenia QA - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <th:block th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:block>
+        .wizard-container { max-width: 800px; margin: 0 auto; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; text-decoration: none;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .wizard-btn-next:hover { opacity: 0.88; box-shadow: 0 4px 14px rgba(16,185,129,0.30); }
+
+        /* Approval hero */
+        .approval-hero {
+            text-align: center;
+            padding: var(--sp-8, 2rem) var(--sp-6, 1.5rem) var(--sp-6, 1.5rem);
+        }
+        .approval-hero__icon-wrap {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: rgba(16,185,129,0.10);
+            border: 2px solid rgba(16,185,129,0.30);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto var(--sp-5, 1.25rem);
+            font-size: 2rem; color: #10b981;
+        }
+        .approval-hero__title {
+            font-size: 1.4rem; font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+            margin: 0 0 8px 0;
+        }
+        .approval-hero__subtitle {
+            font-size: 0.9rem; color: var(--text-secondary, #6b7280);
+            max-width: 480px; margin: 0 auto; line-height: 1.6;
+        }
+
+        /* Approval meta */
+        .approval-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--sp-3, 0.75rem);
+            margin: var(--sp-5, 1.25rem) 0;
+        }
+        .approval-meta-item {
+            background: rgba(16,185,129,0.05);
+            border: 1px solid rgba(16,185,129,0.20);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem);
+        }
+        .approval-meta-item__label {
+            font-size: 0.72rem; font-weight: 600;
+            color: #065f46;
+            text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px;
+        }
+        .approval-meta-item__value {
+            font-size: 0.9rem; font-weight: 600;
+            color: var(--text-primary, #1a1f3a);
+            font-family: 'DM Mono', monospace;
+        }
+
+        /* QA comments box */
+        .qa-comments-box {
+            background: var(--surface-page, #f7f8fc);
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem) var(--sp-5, 1.25rem);
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .qa-comments-box__label {
+            font-size: 0.75rem; font-weight: 700; color: var(--text-muted, #9298ae);
+            text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;
+        }
+        .qa-comments-box__text {
+            font-size: 0.85rem; color: var(--text-primary, #1a1f3a); line-height: 1.6;
+        }
+
+        /* Phase unlock notice */
+        .phase-unlock-notice {
+            display: flex; gap: 14px; align-items: center;
+            padding: var(--sp-4, 1rem) var(--sp-5, 1.25rem);
+            background: rgba(16,185,129,0.06);
+            border: 1.5px solid rgba(16,185,129,0.25);
+            border-radius: var(--radius-md, 8px);
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .phase-unlock-notice__icon {
+            width: 44px; height: 44px; flex-shrink: 0;
+            border-radius: 10px;
+            background: rgba(16,185,129,0.15);
+            display: flex; align-items: center; justify-content: center;
+            color: #10b981; font-size: 1.1rem;
+        }
+        .phase-unlock-notice__title { font-size: 0.9rem; font-weight: 700; color: #065f46; margin-bottom: 3px; }
+        .phase-unlock-notice__desc  { font-size: 0.8rem; color: #047857; line-height: 1.5; }
+    </style>
+</head>
+
+<body>
+    <aside th:block th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR Krok 9 — Zatwierdzenie QA</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:block th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:block>
+
+                <div class="vcc-form-card">
+                    <!-- Approval hero -->
+                    <div class="approval-hero">
+                        <div class="approval-hero__icon-wrap">
+                            <i class="fas fa-circle-check"></i>
+                        </div>
+                        <h2 class="approval-hero__title">Plan zatwierdzony przez Kierownika Jakości</h2>
+                        <p class="approval-hero__subtitle">
+                            Faza pomiarowa jest odblokowana. Możesz teraz wgrać pliki pomiarowe i przeprowadzić analizę statystyczną wyników kwalifikacji PR.
+                        </p>
+                    </div>
+
+                    <!-- Approval metadata -->
+                    <div class="approval-meta-grid">
+                        <div class="approval-meta-item">
+                            <div class="approval-meta-item__label">Data zatwierdzenia QA</div>
+                            <div class="approval-meta-item__value"
+                                 th:text="${draft.qaApprovedAt != null ? #temporals.format(draft.qaApprovedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</div>
+                        </div>
+                        <div class="approval-meta-item">
+                            <div class="approval-meta-item__label">Zatwierdził</div>
+                            <div class="approval-meta-item__value" th:text="${draft.qaApprovedBy ?: '—'}">—</div>
+                        </div>
+                        <div class="approval-meta-item">
+                            <div class="approval-meta-item__label">Urządzenie</div>
+                            <div class="approval-meta-item__value"
+                                 th:text="${draft.coolingDevice?.name ?: '—'}">—</div>
+                        </div>
+                        <div class="approval-meta-item">
+                            <div class="approval-meta-item__label">Status planu</div>
+                            <div class="approval-meta-item__value">
+                                <span class="vcc-status vcc-status--valid">Zatwierdzony</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QA comments (if any) -->
+                    <div class="qa-comments-box"
+                         th:if="${draft.qaComments != null and !#strings.isEmpty(draft.qaComments)}">
+                        <div class="qa-comments-box__label">
+                            <i class="fas fa-comment-dots"></i> Uwagi Kierownika Jakości
+                        </div>
+                        <div class="qa-comments-box__text" th:text="${draft.qaComments}">—</div>
+                    </div>
+
+                    <!-- Phase unlock notice -->
+                    <div class="phase-unlock-notice">
+                        <div class="phase-unlock-notice__icon">
+                            <i class="fas fa-unlock"></i>
+                        </div>
+                        <div>
+                            <div class="phase-unlock-notice__title">Faza pomiarowa odblokowana</div>
+                            <div class="phase-unlock-notice__desc">
+                                Przejdź do następnego kroku, aby wgrać pliki Vi2 z rejestratora TESTO i rozpocząć analizę statystyczną wyników kwalifikacji okresowej PR.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <a th:href="@{/wizard/}" class="wizard-btn-back">
+                            <i class="fas fa-list"></i> Lista wizardów
+                        </a>
+                        <a th:href="@{/wizard/{id}/step/10(id=${draft.id})}" class="wizard-btn-next">
+                            Rozpocznij fazę pomiarową <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <footer th:block th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+</body>
+</html>

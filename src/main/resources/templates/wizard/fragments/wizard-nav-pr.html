@@ -1,0 +1,320 @@
+<!-- Wizard PR Navigation Progress Bar Fragment — VCC Design System -->
+<!-- 13-step PR (Plan Review) wizard navigation: Planning (3-8) + QA Approval + Measurement (9-13) -->
+<div th:fragment="wizard-nav-pr" class="wizard-progress-wrap">
+
+    <style>
+        .wizard-progress-wrap {
+            margin: 0 0 var(--sp-6, 1.5rem) 0;
+        }
+
+        .wizard-progress {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            position: relative;
+            padding: 0 0 var(--sp-4, 1rem) 0;
+        }
+
+        /* horizontal connector line behind the circles */
+        .wizard-progress::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: calc(100% / 26);
+            right: calc(100% / 26);
+            height: 2px;
+            background: var(--border-default, #e5e7ef);
+            z-index: 0;
+        }
+
+        .wizard-step {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .wizard-step__circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.78rem;
+            font-family: 'DM Mono', monospace;
+            transition: background var(--duration-fast, 0.15s) var(--ease-out, ease-out),
+                        box-shadow var(--duration-fast, 0.15s) var(--ease-out, ease-out);
+            position: relative;
+        }
+
+        .wizard-step__circle--completed {
+            background: var(--vcc-primary, #667eea);
+            color: #fff;
+        }
+
+        .wizard-step__circle--current {
+            background: var(--vcc-primary, #667eea);
+            color: #fff;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.18);
+        }
+
+        .wizard-step__circle--pending {
+            background: var(--surface-card, #fff);
+            color: var(--text-muted, #9298ae);
+            border: 2px solid var(--border-default, #e5e7ef);
+        }
+
+        .wizard-step__circle--locked {
+            background: var(--surface-card, #fff);
+            color: var(--text-muted, #9298ae);
+            border: 2px solid var(--border-default, #e5e7ef);
+        }
+
+        .wizard-step__circle--locked::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239298ae'%3E%3Cpath d='M8 1a3.5 3.5 0 0 0-3.5 3.5V6H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1.5V4.5A3.5 3.5 0 0 0 8 1zm2.5 5H5.5V4.5a2.5 2.5 0 0 1 5 0V6z'/%3E%3C/svg%3E") center/14px no-repeat;
+            opacity: 0.6;
+        }
+
+        .wizard-step__circle--locked span { opacity: 0; }
+
+        /* QA approval step — amber color */
+        .wizard-step__circle--qa {
+            background: #f59e0b;
+            color: #fff;
+        }
+
+        .wizard-step__circle--qa-pending {
+            background: var(--surface-card, #fff);
+            color: #d97706;
+            border: 2px solid #fcd34d;
+        }
+
+        /* connector segment */
+        .wizard-step__line {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: var(--border-default, #e5e7ef);
+            z-index: 0;
+        }
+
+        .wizard-step__line--filled {
+            background: var(--vcc-primary, #667eea);
+        }
+
+        .wizard-step__line--qa-filled {
+            background: #f59e0b;
+        }
+
+        .wizard-step__label {
+            margin-top: 8px;
+            font-size: 0.6rem;
+            font-weight: 500;
+            color: var(--text-muted, #9298ae);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 52px;
+        }
+
+        .wizard-step__label--active {
+            color: var(--vcc-primary, #667eea);
+            font-weight: 600;
+        }
+
+        /* Phase dividers */
+        .wizard-phase-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: var(--sp-4, 1rem);
+        }
+
+        .wizard-phase {
+            flex: 1;
+            height: 4px;
+            border-radius: 99px;
+        }
+
+        .wizard-phase--planning {
+            background: var(--vcc-primary, #667eea);
+            flex: 6;
+        }
+
+        .wizard-phase--approval {
+            background: #f59e0b;
+            flex: 1;
+        }
+
+        .wizard-phase--measurement {
+            background: #10b981;
+            flex: 5;
+            opacity: 0.3;
+        }
+
+        .wizard-phase--measurement.is-active {
+            opacity: 1;
+        }
+
+        /* lock notice */
+        .wizard-lock-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 14px;
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.8rem;
+            color: #92400e;
+            margin-top: var(--sp-4, 1rem);
+        }
+
+        .wizard-lock-notice i { flex-shrink: 0; margin-top: 2px; }
+
+        /* approval-pending notice */
+        .wizard-approval-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 14px;
+            background: #fffbeb;
+            border: 1px solid #f59e0b;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.8rem;
+            color: #92400e;
+            margin-top: var(--sp-4, 1rem);
+        }
+
+        .wizard-approval-notice i { flex-shrink: 0; margin-top: 2px; }
+
+        /* counter pill */
+        .wizard-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary, #6b7280);
+            margin-bottom: var(--sp-4, 1rem);
+        }
+
+        .wizard-counter__badge {
+            background: var(--vcc-primary, #667eea);
+            color: #fff;
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: 0.72rem;
+        }
+
+        @media (max-width: 640px) {
+            .wizard-step__label { display: none; }
+            .wizard-step__circle { width: 28px; height: 28px; font-size: 0.65rem; }
+            .wizard-progress::before { top: 14px; }
+            .wizard-step__line { top: 14px; }
+        }
+    </style>
+
+    <!-- Phase bar -->
+    <div class="wizard-phase-bar">
+        <div class="wizard-phase wizard-phase--planning"
+             title="Faza planowania (kroki 3–8)"></div>
+        <div class="wizard-phase wizard-phase--approval"
+             title="Zatwierdzenie QA"></div>
+        <div class="wizard-phase wizard-phase--measurement"
+             th:classappend="${planApproved} ? 'is-active' : ''"
+             title="Faza pomiaru (kroki 9–13)"></div>
+    </div>
+
+    <!-- Step counter -->
+    <div class="wizard-counter">
+        <span>Kreator PR (Plan Review)</span>
+        <span class="wizard-counter__badge" th:text="${currentStep} + ' z 13'">1 z 13</span>
+    </div>
+
+    <!-- Progress steps -->
+    <div class="wizard-progress">
+        <!-- Steps 1–13 -->
+        <div th:each="i : ${#numbers.sequence(1, 13)}" class="wizard-step">
+            <!-- connector to next -->
+            <div class="wizard-step__line"
+                 th:classappend="${i < currentStep} ? 'wizard-step__line--filled' : ''"></div>
+
+            <!-- circle -->
+            <!-- Completed step (all steps before current) -->
+            <div th:if="${i < currentStep}" class="wizard-step__circle wizard-step__circle--completed">
+                <i class="fas fa-check" style="font-size:0.6rem;"></i>
+            </div>
+            <!-- Current step -->
+            <div th:if="${i == currentStep}" class="wizard-step__circle wizard-step__circle--current">
+                <span th:text="${i}">1</span>
+            </div>
+            <!-- Steps after current (pending, locked, or QA approval) -->
+            <th:block th:if="${i > currentStep}">
+                <!-- Step 7: QA Approval -->
+                <div th:if="${i == 7 and !planApproved}" class="wizard-step__circle wizard-step__circle--qa-pending">
+                    <i class="fas fa-shield-halved" style="font-size:0.6rem;"></i>
+                </div>
+                <div th:if="${i == 7 and planApproved}" class="wizard-step__circle wizard-step__circle--qa">
+                    <i class="fas fa-shield-halved" style="font-size:0.6rem;"></i>
+                </div>
+                <!-- Non-QA step: locked (if within lock range) or pending -->
+                <th:block th:if="${i != 7}">
+                    <!-- Locked: between step 3 and stepLockFrom (exclusive) -->
+                    <div th:if="${stepLockFrom != null and i >= 3 and i < stepLockFrom}"
+                         class="wizard-step__circle wizard-step__circle--locked">
+                        <i class="fas fa-lock" style="font-size:0.6rem;"></i>
+                    </div>
+                    <!-- Pending: all other unlocked future steps -->
+                    <div th:if="${stepLockFrom == null or i >= stepLockFrom or i < 3}"
+                         class="wizard-step__circle wizard-step__circle--pending">
+                        <span th:text="${i}">1</span>
+                    </div>
+                </th:block>
+            </th:block>
+
+            <!-- label -->
+            <div class="wizard-step__label"
+                 th:classappend="${i == currentStep} ? 'wizard-step__label--active' : ''">
+                <span th:switch="${i}">
+                    <span th:case="1">Procedura</span>
+                    <span th:case="2">Urządzenie</span>
+                    <span th:case="3">Powód</span>
+                    <span th:case="4">Mapowanie</span>
+                    <span th:case="5">Stan</span>
+                    <span th:case="6">Kryteria</span>
+                    <span th:case="7">Odchylenia</span>
+                    <span th:case="8">Plan QA</span>
+                    <span th:case="9">Zatw. QA</span>
+                    <span th:case="10">Vi2</span>
+                    <span th:case="11">Serie</span>
+                    <span th:case="12">Statystyki</span>
+                    <span th:case="13">Odchyl.</span>
+                    <!--<span th:case="*" th:text="${i}"></span>-->
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lock notice -->
+    <div th:if="${stepLockFrom != null}" class="wizard-lock-notice">
+        <i class="fas fa-lock"></i>
+        <span><strong>Kroki 3–<span th:text="${stepLockFrom - 1}">7</span> zablokowane:</strong> Dane planu są zamrożone po podpisaniu. Utwórz nowy szkic, aby wprowadzić zmiany.</span>
+    </div>
+
+    <!-- Approval pending notice -->
+    <div th:if="${!planApproved and currentStep >= 9}" class="wizard-approval-notice">
+        <i class="fas fa-hourglass-half"></i>
+        <span><strong>Plan oczekuje na zatwierdzenie QA.</strong> Faza pomiarowa zostanie odblokowana po zaakceptowaniu przez Kierownika Jakości.</span>
+    </div>
+</div>

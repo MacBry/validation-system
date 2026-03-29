@@ -47,9 +47,36 @@ public interface ValidationDraftRepository extends JpaRepository<ValidationDraft
     Optional<ValidationDraft> findByIdAndCreatedBy(Long id, String createdBy);
 
     /**
-     * Find a completed draft that created a specific validation
+     * Find a completed draft that created a specific validation (by ID).
      * @param validationId Validation ID
      * @return Optional draft
      */
     Optional<ValidationDraft> findByCompletedValidationId(Long validationId);
+
+    /**
+     * Find a completed draft by the Validation entity itself.
+     * Used by {@link com.mac.bry.validationsystem.validation.ValidationPackageService}
+     * to check whether a PERIODIC_REVALIDATION plan PDF should be prepended to the ZIP.
+     *
+     * @param validation The completed Validation
+     * @return Optional draft whose completedValidation matches the given entity
+     */
+    Optional<ValidationDraft> findByCompletedValidation(
+        com.mac.bry.validationsystem.validation.Validation validation
+    );
+
+    /**
+     * Find the most recent completed validation draft for a device by procedure type.
+     * Used to determine mapping status for PERIODIC_REVALIDATION (last MAPPING validation).
+     *
+     * @param coolingDeviceId Device ID
+     * @param procedureType Procedure type (e.g., MAPPING)
+     * @param status Status (e.g., COMPLETED)
+     * @return Optional containing the most recently updated draft
+     */
+    Optional<ValidationDraft> findTopByCoolingDeviceIdAndProcedureTypeAndStatusOrderByUpdatedAtDesc(
+        Long coolingDeviceId,
+        ValidationProcedureType procedureType,
+        WizardStatus status
+    );
 }

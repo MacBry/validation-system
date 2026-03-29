@@ -46,7 +46,20 @@ public enum ValidationProcedureType {
      * </p>
      */
     MAPPING("Mapowanie - Pole Temperaturowe",
-            "Badanie rozkładu temperatur w urządzeniu bez testów OQ/PQ");
+            "Badanie rozkładu temperatur w urządzeniu bez testów OQ/PQ"),
+
+    /**
+     * Periodic Revalidation
+     *
+     * <p>
+     * Rewalidacja okresowa - dwufazowy proces (Plan + Pomiary)
+     * wymagający zatwierdzenia QA między fazami zgodnie z GMP Annex 15 §10.
+     * Faza 1 (kroki 1-8): Plan walidacji z podpisem technologa i zatwierdzeniem QA.
+     * Faza 2 (kroki 9-13): Pomiary i finalizacja po zatwierdzeniu planu.
+     * </p>
+     */
+    PERIODIC_REVALIDATION("Rewalidacja Okresowa",
+                          "Dwufazowy proces: plan walidacji + pomiary, wymagający zatwierdzenia QA");
 
     private final String displayName;
     private final String description;
@@ -79,6 +92,21 @@ public enum ValidationProcedureType {
     }
 
     /**
+     * Sprawdza czy procedura wymaga planu walidacji z zatwierdzeniem QA
+     * (dwufazowy wizard: plan + pomiary)
+     */
+    public boolean requiresValidationPlan() {
+        return this == PERIODIC_REVALIDATION;
+    }
+
+    /**
+     * Sprawdza czy procedura jest dwufazowa (plan + pomiary)
+     */
+    public boolean isTwoPhaseWizard() {
+        return this == PERIODIC_REVALIDATION;
+    }
+
+    /**
      * Zwraca emoji dla typu procedury
      */
     public String getIcon() {
@@ -89,6 +117,8 @@ public enum ValidationProcedureType {
                 return "📊"; // Performance
             case MAPPING:
                 return "🗺️"; // Mapping
+            case PERIODIC_REVALIDATION:
+                return "🔄"; // Periodic
             default:
                 return "❓";
         }

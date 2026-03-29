@@ -281,6 +281,23 @@
                                 </div>
                             </label>
 
+                            <!-- Periodic Revalidation -->
+                            <label class="procedure-option">
+                                <input type="radio" name="procedureType" value="PERIODIC_REVALIDATION" required
+                                       onchange="updateSelection()"
+                                       th:checked="${draft.procedureType?.name() == 'PERIODIC_REVALIDATION'}">
+                                <div class="procedure-card">
+                                    <div class="procedure-card__icon">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </div>
+                                    <div class="procedure-card__name">Rewalidacja Okresowa</div>
+                                    <div class="procedure-card__desc">Dwufazowy proces: plan walidacji + pomiary, wymagający zatwierdzenia QA.</div>
+                                    <div class="procedure-card__check">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                </div>
+                            </label>
+
                         </div>
 
                         <!-- Navigation -->

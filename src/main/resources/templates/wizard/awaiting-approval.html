@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR — Oczekiwanie na zatwierdzenie QA - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <style>
+        .wizard-container { max-width: 760px; margin: 0 auto; }
+
+        /* Waiting hero */
+        .waiting-hero {
+            text-align: center;
+            padding: var(--sp-8, 2rem) var(--sp-6, 1.5rem) var(--sp-6, 1.5rem);
+        }
+        .waiting-hero__icon-wrap {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: #fffbeb;
+            border: 2px solid #fcd34d;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto var(--sp-5, 1.25rem);
+            font-size: 2rem; color: #f59e0b;
+            animation: pulse-amber 2s ease-in-out infinite;
+        }
+        @keyframes pulse-amber {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.30); }
+            50%       { box-shadow: 0 0 0 12px rgba(245,158,11,0); }
+        }
+        .waiting-hero__title {
+            font-size: 1.4rem; font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+            margin: 0 0 8px 0;
+        }
+        .waiting-hero__subtitle {
+            font-size: 0.9rem; color: var(--text-secondary, #6b7280);
+            max-width: 480px; margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Status badge */
+        .status-badge-qa {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 6px 16px;
+            background: #fffbeb; border: 1.5px solid #fcd34d;
+            border-radius: 99px; font-size: 0.82rem; font-weight: 700;
+            color: #92400e; margin: var(--sp-5, 1.25rem) auto 0;
+        }
+        .status-badge-qa i { font-size: 0.75rem; }
+
+        /* Plan info summary */
+        .plan-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--sp-3, 0.75rem);
+            margin: var(--sp-6, 1.5rem) 0;
+        }
+        .plan-info-item {
+            background: var(--surface-page, #f7f8fc);
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem);
+        }
+        .plan-info-item__label {
+            font-size: 0.72rem; font-weight: 600;
+            color: var(--text-muted, #9298ae);
+            text-transform: uppercase; letter-spacing: 0.04em;
+            margin-bottom: 5px;
+        }
+        .plan-info-item__value {
+            font-size: 0.9rem; font-weight: 600;
+            color: var(--text-primary, #1a1f3a);
+            font-family: 'DM Mono', monospace;
+        }
+
+        /* Timeline */
+        .timeline {
+            display: flex; flex-direction: column; gap: 0;
+            margin: var(--sp-5, 1.25rem) 0;
+        }
+        .timeline-item {
+            display: flex; align-items: flex-start; gap: 14px;
+            position: relative; padding-bottom: var(--sp-5, 1.25rem);
+        }
+        .timeline-item:last-child { padding-bottom: 0; }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 15px; top: 32px;
+            width: 2px; height: calc(100% - 16px);
+            background: var(--border-default, #e5e7ef);
+        }
+        .timeline-item:last-child::before { display: none; }
+        .timeline-item__dot {
+            width: 32px; height: 32px; flex-shrink: 0;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700;
+            position: relative; z-index: 1;
+        }
+        .timeline-item__dot--done    { background: var(--vcc-primary, #667eea); color: #fff; }
+        .timeline-item__dot--current { background: #f59e0b; color: #fff; }
+        .timeline-item__dot--pending { background: var(--surface-card, #fff); border: 2px solid var(--border-default, #e5e7ef); color: var(--text-muted, #9298ae); }
+        .timeline-item__body { padding-top: 5px; }
+        .timeline-item__title { font-size: 0.88rem; font-weight: 700; color: var(--text-primary, #1a1f3a); }
+        .timeline-item__desc  { font-size: 0.78rem; color: var(--text-muted, #9298ae); margin-top: 3px; line-height: 1.5; }
+        .timeline-item__time  { font-size: 0.73rem; color: var(--text-muted, #9298ae); margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+        /* Action buttons */
+        .awaiting-actions {
+            display: flex; gap: var(--sp-3, 0.75rem); flex-wrap: wrap;
+            justify-content: center; margin-top: var(--sp-6, 1.5rem);
+        }
+        .btn-outline-primary {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff);
+            border: 1.5px solid var(--vcc-primary, #667eea);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--vcc-primary, #667eea); text-decoration: none; cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-outline-primary:hover { background: rgba(102,126,234,0.06); }
+        .btn-muted {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .btn-muted:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR — Oczekiwanie na zatwierdzenie QA</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:replace>
+
+                <div class="vcc-form-card">
+                    <!-- Waiting hero section -->
+                    <div class="waiting-hero">
+                        <div class="waiting-hero__icon-wrap">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                        <h2 class="waiting-hero__title">Plan przekazany do zatwierdzenia QA</h2>
+                        <p class="waiting-hero__subtitle">
+                            Plan kwalifikacji PR został podpisany elektronicznie i przesłany do Kierownika Jakości.
+                            Faza pomiarowa zostanie odblokowana po zaakceptowaniu planu przez QA.
+                        </p>
+                        <div style="display:flex; justify-content:center;">
+                            <span class="status-badge-qa">
+                                <i class="fas fa-shield-halved"></i>
+                                Oczekuje na zatwierdzenie QA
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Plan info summary -->
+                    <div class="vcc-detail-section">
+                        <div class="vcc-detail-section__header">
+                            <h3 class="vcc-detail-section__title">
+                                <i class="fas fa-file-lines"></i>
+                                Dane planu kwalifikacji
+                            </h3>
+                        </div>
+                        <div class="plan-info-grid">
+                            <div class="plan-info-item">
+                                <div class="plan-info-item__label">ID szkicu</div>
+                                <div class="plan-info-item__value" th:text="${draft.id}">—</div>
+                            </div>
+                            <div class="plan-info-item">
+                                <div class="plan-info-item__label">Urządzenie</div>
+                                <div class="plan-info-item__value"
+                                     th:text="${draft.coolingDevice?.name ?: '—'}">—</div>
+                            </div>
+                            <div class="plan-info-item">
+                                <div class="plan-info-item__label">Procedura</div>
+                                <div class="plan-info-item__value"
+                                     th:text="${draft.procedureType?.getDisplayName() ?: '—'}">PR</div>
+                            </div>
+                            <div class="plan-info-item">
+                                <div class="plan-info-item__label">Powód kwalifikacji</div>
+                                <div class="plan-info-item__value"
+                                     th:text="${draft.qualificationReason?.name() ?: '—'}">—</div>
+                            </div>
+                            <div class="plan-info-item">
+                                <div class="plan-info-item__label">Data podpisania</div>
+                                <div class="plan-info-item__value"
+                                     th:text="${draft.planSignedAt != null ? #temporals.format(draft.planSignedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</div>
+                            </div>
+                            <div class="plan-info-item">
+                                <div class="plan-info-item__label">Status</div>
+                                <div class="plan-info-item__value">
+                                    <span class="vcc-status vcc-status--none">Oczekuje QA</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress timeline -->
+                    <div class="vcc-detail-section" style="margin-top: var(--sp-5, 1.25rem);">
+                        <div class="vcc-detail-section__header">
+                            <h3 class="vcc-detail-section__title">
+                                <i class="fas fa-timeline"></i>
+                                Postęp procesu kwalifikacji
+                            </h3>
+                        </div>
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-item__dot timeline-item__dot--done">
+                                    <i class="fas fa-check" style="font-size:0.6rem;"></i>
+                                </div>
+                                <div class="timeline-item__body">
+                                    <div class="timeline-item__title">Faza planowania ukończona</div>
+                                    <div class="timeline-item__desc">Plan kwalifikacji PR (kroki 1–8) został uzupełniony i podpisany przez technika kwalifikującego.</div>
+                                    <div class="timeline-item__time"
+                                         th:text="${draft.planSignedAt != null ? #temporals.format(draft.planSignedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-item__dot timeline-item__dot--current">
+                                    <i class="fas fa-hourglass-half" style="font-size:0.6rem;"></i>
+                                </div>
+                                <div class="timeline-item__body">
+                                    <div class="timeline-item__title">Zatwierdzenie przez Kierownika Jakości</div>
+                                    <div class="timeline-item__desc">Kierownik Jakości weryfikuje kompletność i poprawność planu. Może zatwierdzić plan lub zwrócić do poprawy.</div>
+                                    <div class="timeline-item__time">W toku...</div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-item__dot timeline-item__dot--pending">
+                                    <i class="fas fa-flask" style="font-size:0.6rem;"></i>
+                                </div>
+                                <div class="timeline-item__body">
+                                    <div class="timeline-item__title">Faza pomiarowa</div>
+                                    <div class="timeline-item__desc">Po zatwierdzeniu planu przez QA możliwe będzie wgranie danych pomiarowych i obliczenie statystyk walidacji (kroki 9–13).</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="awaiting-actions">
+                        <a th:href="@{/wizard/}" class="btn-muted">
+                            <i class="fas fa-list"></i> Wróć do listy wizardów
+                        </a>
+                        <a th:href="@{/device/{id}(id=${draft.coolingDevice?.id})}"
+                           th:if="${draft.coolingDevice != null}"
+                           class="btn-outline-primary">
+                            <i class="fas fa-cube"></i> Szczegóły urządzenia
+                        </a>
+                        <!-- QA manager sees a link to the review page -->
+                        <a th:href="@{/wizard/{id}/pr/plan-review(id=${draft.id})}"
+                           sec:authorize="hasAnyRole('SUPER_ADMIN', 'ADMIN')"
+                           class="wizard-btn-sign"
+                           style="display:inline-flex; align-items:center; gap:7px; padding:9px 20px;
+                                  background:linear-gradient(135deg,#f59e0b,#d97706); border:none;
+                                  border-radius:var(--radius-md,8px); font-size:0.875rem; font-weight:600;
+                                  color:#fff; text-decoration:none;">
+                            <i class="fas fa-shield-halved"></i> Przejdź do przeglądu QA
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+</body>
+</html>

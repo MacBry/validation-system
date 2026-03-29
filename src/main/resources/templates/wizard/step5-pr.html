@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR Krok 5 - Stan obciążenia i temperatura nominalna - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <th:block th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:block>
+    <style>
+        .wizard-container { max-width: 820px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+        .wizard-btn-next:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* Criteria grouping */
+        .criteria-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--sp-5, 1.25rem);
+            margin-top: var(--sp-4, 1rem);
+        }
+        .criteria-group {
+            padding: var(--sp-4, 1rem);
+            background: var(--surface-page, #f7f8fc);
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+        }
+        .criteria-group__title {
+            font-size: 0.82rem; font-weight: 700; color: var(--text-muted, #9298ae);
+            text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <aside th:block th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:block th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR Krok 5 — Kryteria akceptacji</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:block th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:block>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Kryteria akceptacji planu</h2>
+                        <p class="wizard-step-header__desc">Określ stan obciążenia oraz parametry temperatury, które muszą zostać spełnione podczas badania rewalidacyjnego.</p>
+                    </div>
+
+                    <div class="vcc-form-section">
+                        <!-- Basic Setup -->
+                        <div class="criteria-group">
+                            <div class="criteria-group__title"><i class="fas fa-cog"></i> Ustawienia ogólne</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div>
+                                    <label for="planDeviceLoadState" class="vcc-form-label">Stan obciążenia <span class="vcc-required">*</span></label>
+                                    <select class="vcc-form-select" id="planDeviceLoadState">
+                                        <option value="EMPTY" th:selected="${draft.planData?.acceptanceCriteria?.planDeviceLoadState == 'EMPTY'}">Puste urządzenie</option>
+                                        <option value="PARTIALLY_LOADED" th:selected="${draft.planData?.acceptanceCriteria?.planDeviceLoadState == 'PARTIALLY_LOADED'}">Częściowe obciążenie</option>
+                                        <option value="FULL_LOAD" th:selected="${draft.planData?.acceptanceCriteria?.planDeviceLoadState == 'FULL_LOAD'}">Pełne obciążenie</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="planNominalTemp" class="vcc-form-label">Temp. nominalna [°C] <span class="vcc-required">*</span></label>
+                                    <input type="number" step="0.5" class="vcc-form-input vcc-form-input--mono" id="planNominalTemp" 
+                                           th:value="${draft.planData?.acceptanceCriteria?.planNominalTemp}" placeholder="np. 5.0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Temperature Range -->
+                        <div class="criteria-grid">
+                            <div class="criteria-group">
+                                <div class="criteria-group__title"><i class="fas fa-thermometer-half"></i> Zakres temperatury</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div>
+                                        <label for="planAcceptanceTempMin" class="vcc-form-label">T min [°C] <span class="vcc-required">*</span></label>
+                                        <input type="number" step="0.1" class="vcc-form-input vcc-form-input--mono" id="planAcceptanceTempMin" 
+                                               th:value="${draft.planData?.acceptanceCriteria?.planAcceptanceTempMin}" placeholder="np. 2.0">
+                                    </div>
+                                    <div>
+                                        <label for="planAcceptanceTempMax" class="vcc-form-label">T max [°C] <span class="vcc-required">*</span></label>
+                                        <input type="number" step="0.1" class="vcc-form-input vcc-form-input--mono" id="planAcceptanceTempMax" 
+                                               th:value="${draft.planData?.acceptanceCriteria?.planAcceptanceTempMax}" placeholder="np. 8.0">
+                                    </div>
+                                </div>
+                                <span class="vcc-form-hint" style="margin-top:8px;">Dopuszczalne granice temperatury podczas całego badania.</span>
+                            </div>
+
+                            <div class="criteria-group">
+                                <div class="criteria-group__title"><i class="fas fa-chart-line"></i> Analiza statystyczna</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div>
+                                        <label for="planMktMaxTemp" class="vcc-form-label">Max MKT [°C]</label>
+                                        <input type="number" step="0.1" class="vcc-form-input vcc-form-input--mono" id="planMktMaxTemp" 
+                                               th:value="${draft.planData?.acceptanceCriteria?.planMktMaxTemp}" placeholder="np. 8.0">
+                                    </div>
+                                    <div>
+                                        <label for="planUniformityDeltaMax" class="vcc-form-label">Max ΔT [°C]</label>
+                                        <input type="number" step="0.1" class="vcc-form-input vcc-form-input--mono" id="planUniformityDeltaMax" 
+                                               th:value="${draft.planData?.acceptanceCriteria?.planUniformityDeltaMax}" placeholder="np. 2.0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="criteria-group" style="margin-top: 1rem;">
+                            <div class="criteria-group__title"><i class="fas fa-info-circle"></i> Dodatkowe informacje</div>
+                            <label for="planMaterialDescription" class="vcc-form-label">Opis materiałów</label>
+                            <textarea class="vcc-form-textarea" id="planMaterialDescription" name="planMaterialDescription" rows="2"
+                                      placeholder="np. Leki wrażliwe na temperaturę..."
+                                      th:text="${draft.planData?.acceptanceCriteria?.planMaterialDescription}"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions" style="margin-top: var(--sp-6, 1.5rem);">
+                        <a th:href="@{/wizard/{id}/back/4(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" class="wizard-btn-next" id="nextBtn">
+                            Dalej <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <footer th:block th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript" th:nonce="${cspNonce}">
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function submitStep5Pr() {
+            const data = {
+                planDeviceLoadState: document.getElementById('planDeviceLoadState').value,
+                planNominalTemp: parseFloat(document.getElementById('planNominalTemp').value),
+                planAcceptanceTempMin: parseFloat(document.getElementById('planAcceptanceTempMin').value),
+                planAcceptanceTempMax: parseFloat(document.getElementById('planAcceptanceTempMax').value),
+                planMktMaxTemp: parseFloat(document.getElementById('planMktMaxTemp').value || 0),
+                planUniformityDeltaMax: parseFloat(document.getElementById('planUniformityDeltaMax').value || 0),
+                planDriftMaxTemp: 0.5 // Default for PR
+            };
+
+            if (!data.planNominalTemp && data.planNominalTemp !== 0) { alert('Podaj temperaturę nominalną.'); return; }
+            if (!data.planAcceptanceTempMin && data.planAcceptanceTempMin !== 0) { alert('Podaj T min.'); return; }
+            if (!data.planAcceptanceTempMax && data.planAcceptanceTempMax !== 0) { alert('Podaj T max.'); return; }
+
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            if (!csrfToken || csrfToken === '') { csrfToken = getCookie('XSRF-TOKEN'); csrfHeader = 'X-XSRF-TOKEN'; }
+
+            const btn = document.getElementById('nextBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
+
+            const headers = { 
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest', 
+                'Accept': 'application/json' 
+            };
+            if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+            fetch('/wizard/' + draftId + '/api/step5-pr', {
+                method: 'POST', 
+                headers: headers, 
+                body: JSON.stringify(data)
+            }).then(async r => {
+                if (!r.ok) {
+                    const text = await r.text();
+                    try { const json = JSON.parse(text); throw new Error(json.message || 'Błąd serwera'); }
+                    catch(e) { throw new Error('Błąd HTTP ' + r.status); }
+                }
+                return r.json();
+            }).then(() => {
+                window.location.href = '/wizard/' + draftId + '/step/6';
+            }).catch(err => {
+                console.error('Error:', err);
+                alert('Błąd zapisu: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = 'Dalej <i class="fas fa-arrow-right"></i>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('nextBtn')?.addEventListener('click', submitStep5Pr);
+        });
+    </script>
+</body>
+</html>

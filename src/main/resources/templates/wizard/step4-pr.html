@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR Krok 4 - Status mapowania - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <th:block th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:block>
+    <style>
+        .wizard-container { max-width: 760px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .wizard-btn-next:hover { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+        .wizard-btn-next:disabled { opacity: 0.5; cursor: not-allowed; background: var(--text-muted, #9298ae); }
+
+        /* Mapping status display */
+        .mapping-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--sp-4, 1rem);
+            margin-bottom: var(--sp-6, 1.5rem);
+        }
+
+        .mapping-status-item {
+            background: var(--surface-page, #f7f8fc);
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem);
+        }
+
+        .mapping-status-item__label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted, #9298ae);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+
+        .mapping-status-item__value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary, #1a1f3a);
+            font-family: 'DM Mono', monospace;
+        }
+
+        .mapping-status-item__value--accent {
+            color: var(--vcc-primary, #667eea);
+        }
+
+        .sensor-positions-wrap {
+            margin-top: var(--sp-4, 1rem);
+        }
+
+        .sensor-positions-empty {
+            display: flex; gap: 10px; align-items: center;
+            padding: 14px 16px;
+            background: #fef2f2; border: 1px solid #fca5a5;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.83rem; color: #991b1b;
+        }
+
+        .readonly-notice {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 10px 14px;
+            background: rgba(102,126,234,0.05);
+            border: 1px solid rgba(102,126,234,0.18);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem; color: var(--text-secondary, #374151);
+            margin-bottom: var(--sp-4, 1rem);
+        }
+        .readonly-notice i { color: var(--vcc-primary, #667eea); flex-shrink: 0; margin-top: 2px; }
+
+        .ack-container {
+            background: #fffbef;
+            border: 1.5px dashed #f59e0b;
+            border-radius: var(--radius-md, 8px);
+            padding: 16px;
+            margin-top: var(--sp-6, 1.5rem);
+        }
+        .ack-container__title { font-weight: 700; color: #92400e; font-size: 0.9rem; margin-bottom: 8px; display: block; }
+        .ack-checkbox-wrap { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+        .ack-checkbox-wrap input { margin-top: 3px; }
+        .ack-checkbox-wrap span { font-size: 0.88rem; color: #4b5563; line-height: 1.4; }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR Krok 4 — Status mapowania</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id},
+                          data-mapping-status=${mappingStatus?.mappingStatus},
+                          data-mapping-date=${mappingStatus != null and mappingStatus.mappingCheckDate != null ? #temporals.format(mappingStatus.mappingCheckDate, 'yyyy-MM-dd') : ''}">
+
+                <th:block th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:block>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Status mapowania urządzenia</h2>
+                        <p class="wizard-step-header__desc">Przegląd stanu mapowania urządzenia. Te dane są pobierane automatycznie z poprzednich kwalifikacji i nie mogą być edytowane w tym kroku.</p>
+                    </div>
+
+                    <!-- Read-only notice -->
+                    <div class="readonly-notice">
+                        <i class="fas fa-lock-open"></i>
+                        <span>Poniższe dane mają charakter informacyjny. Odzwierciedlają aktualny stan mapowania urządzenia na podstawie ostatniej zakończonej kwalifikacji mappingowej.</span>
+                    </div>
+
+                    <!-- Mapping status summary -->
+                    <div class="mapping-status-grid">
+                        <div class="mapping-status-item">
+                            <div class="mapping-status-item__label">Status mapowania</div>
+                            <div class="mapping-status-item__value">
+                                <span th:if="${mappingStatus != null}"
+                                      class="vcc-status"
+                                      th:classappend="${mappingStatus.statusCssClass}"
+                                      th:text="${mappingStatus.statusDisplayName}">WAŻNE</span>
+                                <span th:if="${mappingStatus == null}" class="vcc-status vcc-status--none">Brak mapowania</span>
+                            </div>
+                        </div>
+                        <div class="mapping-status-item">
+                            <div class="mapping-status-item__label">Data ostatniego mapowania</div>
+                            <div class="mapping-status-item__value mapping-status-item__value--accent"
+                                 th:text="${mappingStatus != null and mappingStatus.lastMappingDate != null ? #temporals.format(mappingStatus.lastMappingDate, 'dd.MM.yyyy') : '—'}">—</div>
+                        </div>
+                        <div class="mapping-status-item">
+                            <div class="mapping-status-item__label">Ważność mapowania do</div>
+                            <div class="mapping-status-item__value"
+                                 th:text="${mappingStatus != null and mappingStatus.mappingValidUntil != null ? #temporals.format(mappingStatus.mappingValidUntil, 'dd.MM.yyyy') : '—'}">—</div>
+                        </div>
+                        <div class="mapping-status-item">
+                            <div class="mapping-status-item__label">Liczba czujników</div>
+                            <div class="mapping-status-item__value mapping-status-item__value--accent"
+                                 th:text="${mappingStatus != null and mappingStatus.sensorCount != null ? mappingStatus.sensorCount : '—'}">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Sensor positions -->
+                    <div class="vcc-detail-section" style="margin-top: var(--sp-4, 1rem);">
+                        <div class="vcc-detail-section__header">
+                            <h3 class="vcc-detail-section__title">
+                                <i class="fas fa-map-marker-alt"></i>
+                                Pozycje czujników z mapowania
+                            </h3>
+                        </div>
+
+                        <div class="sensor-positions-wrap">
+                            <!-- Has sensor positions -->
+                            <div th:if="${mappingStatus != null and mappingStatus.sensorPositions != null and !#lists.isEmpty(mappingStatus.sensorPositions)}"
+                                 class="vcc-table-wrap">
+                                <table class="vcc-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Pozycja</th>
+                                            <th>Rejestrator (SN)</th>
+                                            <th>Wynik mapowania</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="pos, iter : ${mappingStatus.sensorPositions}">
+                                            <td class="vcc-table__muted" th:text="${iter.index + 1}">1</td>
+                                            <td class="vcc-table__mono" th:text="${pos.position}">MIDDLE_CENTER_CENTER</td>
+                                            <td class="vcc-table__secondary" th:text="${pos.recorderSerialNumber ?: '—'}">SN12345</td>
+                                            <td>
+                                                <span class="vcc-status"
+                                                      th:classappend="${pos.resultPassed} ? 'vcc-status--valid' : 'vcc-status--invalid'"
+                                                      th:text="${pos.resultPassed ? 'POZYTYWNY' : 'NEGATYWNY'}">POZYTYWNY</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- No sensor positions -->
+                            <div th:if="${mappingStatus == null or mappingStatus.sensorPositions == null or #lists.isEmpty(mappingStatus.sensorPositions)}"
+                                 class="sensor-positions-empty">
+                                <i class="fas fa-exclamation-circle" style="flex-shrink:0;"></i>
+                                <span>Brak danych o pozycjach czujników. Urządzenie nie posiada zakończonego mapowania.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Overdue acknowledgment -->
+                    <div th:if="${mappingStatus != null and mappingStatus.requiresAcknowledgement()}" class="ack-container">
+                        <span class="ack-container__title"><i class="fas fa-exclamation-triangle"></i> Potwierdzenie świadomej kontynuacji</span>
+                        <label class="ack-checkbox-wrap">
+                            <input type="checkbox" id="ackCheckbox">
+                            <span>Jestem świadomy, że urządzenie nie posiada aktualnego mapowania (ostatnie wykonano ponad 730 dni temu lub nigdy). Potwierdzam zgodę na kontynuację rewalidacji okresowej zgodnie z oceną ryzyka.</span>
+                        </label>
+                    </div>
+
+                    <div class="wizard-actions" style="margin-top: var(--sp-6, 1.5rem);">
+                        <a th:href="@{/wizard/{id}/back/3(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" id="nextBtn" class="wizard-btn-next">
+                            Dalej <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript" th:nonce="${cspNonce}">
+        const container = document.querySelector('.wizard-container');
+        const draftId = container.getAttribute('data-draft-id');
+        const mappingStatusRaw = container.getAttribute('data-mapping-status');
+        const mappingCheckDateRaw = container.getAttribute('data-mapping-date');
+        
+        const nextBtn = document.getElementById('nextBtn');
+        const ackCheckbox = document.getElementById('ackCheckbox');
+
+        function updateNextButton() {
+            if (mappingStatusRaw === 'CURRENT') {
+                nextBtn.disabled = false;
+            } else if (ackCheckbox) {
+                nextBtn.disabled = !ackCheckbox.checked;
+            } else {
+                nextBtn.disabled = false;
+            }
+        }
+
+        if (ackCheckbox) {
+            ackCheckbox.addEventListener('change', updateNextButton);
+        }
+        updateNextButton();
+
+        nextBtn.addEventListener('click', function() {
+            const acknowledged = ackCheckbox ? ackCheckbox.checked : false;
+            
+            // Get CSRF
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+            const body = {
+                mappingCheckDate: mappingCheckDateRaw || null,
+                mappingStatus: mappingStatusRaw || null,
+                mappingOverdueAcknowledged: acknowledged
+            };
+
+            nextBtn.disabled = true;
+            nextBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
+
+            fetch(`/wizard/${draftId}/api/step4-pr`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [csrfHeader]: csrfToken
+                },
+                body: JSON.stringify(body)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = `/wizard/${draftId}/step/5`;
+                } else {
+                    return response.text().then(text => { throw new Error(text); });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Błąd zapisu statusu mapowania: ' + error.message);
+                nextBtn.disabled = false;
+                nextBtn.innerHTML = 'Dalej <i class="fas fa-arrow-right"></i>';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR Krok 13 - Finalizacja i podpis elektroniczny - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <th:block th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:block>
+    <style>
+        .wizard-container { max-width: 840px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-finalize {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 28px;
+            background: linear-gradient(135deg, var(--vcc-primary, #667eea) 0%, var(--vcc-secondary, #764ba2) 100%);
+            border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.9rem; font-weight: 700; color: #fff; cursor: pointer;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .wizard-btn-finalize:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 18px rgba(102,126,234,0.35); }
+        .wizard-btn-finalize:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* Deviations summary */
+        .deviation-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--sp-4, 1rem);
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .deviation-summary-item {
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem);
+            border-left: 4px solid transparent;
+        }
+        .deviation-summary-item--none     { background: rgba(16,185,129,0.06); border-color: #10b981; }
+        .deviation-summary-item--minor    { background: rgba(102,126,234,0.06); border-color: var(--vcc-primary, #667eea); }
+        .deviation-summary-item--major    { background: #fffbeb; border-color: #f59e0b; }
+        .deviation-summary-item--critical { background: #fef2f2; border-color: #dc2626; }
+        .deviation-summary-item__label {
+            font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.04em; margin-bottom: 6px;
+        }
+        .deviation-summary-item--none     .deviation-summary-item__label { color: #065f46; }
+        .deviation-summary-item--minor    .deviation-summary-item__label { color: #3730a3; }
+        .deviation-summary-item--major    .deviation-summary-item__label { color: #92400e; }
+        .deviation-summary-item--critical .deviation-summary-item__label { color: #991b1b; }
+        .deviation-summary-item__count {
+            font-size: 2rem; font-weight: 800; font-family: 'DM Mono', monospace;
+            line-height: 1;
+        }
+        .deviation-summary-item--none     .deviation-summary-item__count { color: #10b981; }
+        .deviation-summary-item--minor    .deviation-summary-item__count { color: var(--vcc-primary, #667eea); }
+        .deviation-summary-item--major    .deviation-summary-item__count { color: #f59e0b; }
+        .deviation-summary-item--critical .deviation-summary-item__count { color: #dc2626; }
+        .deviation-summary-item__unit { font-size: 0.78rem; font-weight: 500; color: var(--text-muted, #9298ae); margin-top: 3px; }
+
+        /* Deviation detail table */
+        .deviation-detail-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+        .deviation-detail-table th {
+            background: var(--surface-page, #f7f8fc);
+            color: var(--text-muted, #9298ae); font-size: 0.72rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.04em; padding: 9px 12px;
+            border-bottom: 2px solid var(--border-default, #e5e7ef); text-align: left;
+        }
+        .deviation-detail-table td {
+            padding: 10px 12px; border-bottom: 1px solid var(--border-default, #e5e7ef);
+            color: var(--text-primary, #1a1f3a);
+        }
+        .deviation-detail-table tr:last-child td { border-bottom: none; }
+        .deviation-detail-table .td-mono { font-family: 'DM Mono', monospace; }
+        .sev-critical { display:inline-block; padding:2px 8px; border-radius:99px; font-size:0.68rem; font-weight:700; background:#dc2626; color:#fff; }
+        .sev-major    { display:inline-block; padding:2px 8px; border-radius:99px; font-size:0.68rem; font-weight:700; background:#f59e0b; color:#fff; }
+        .sev-minor    { display:inline-block; padding:2px 8px; border-radius:99px; font-size:0.68rem; font-weight:700; background:var(--vcc-primary,#667eea); color:#fff; }
+
+        /* Document preview box */
+        .preview-box {
+            background: var(--surface-page, #f7f8fc);
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); overflow: hidden;
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .preview-box__header {
+            padding: 11px 16px;
+            background: var(--surface-card, #fff);
+            border-bottom: 1px solid var(--border-default, #e5e7ef);
+            font-size: 0.82rem; font-weight: 700; color: var(--text-muted, #9298ae);
+            text-transform: uppercase; letter-spacing: 0.04em;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .preview-box__grid {
+            display: grid; grid-template-columns: 160px 1fr; gap: 6px 16px;
+            font-size: 0.83rem; padding: var(--sp-4, 1rem) var(--sp-5, 1.25rem);
+        }
+        .preview-box__key { color: var(--text-muted, #9298ae); font-weight: 600; padding: 4px 0; }
+        .preview-box__val { color: var(--text-primary, #1a1f3a); font-family: 'DM Mono', monospace; padding: 4px 0; }
+
+        /* Warning notice */
+        .warning-notice {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px;
+            background: #fffbeb; border: 1px solid #fcd34d;
+            border-radius: var(--radius-md, 8px); font-size: 0.82rem; color: #92400e;
+            margin-bottom: var(--sp-5, 1.25rem);
+        }
+        .warning-notice i { flex-shrink: 0; margin-top: 2px; }
+        .warning-notice ul { margin: 6px 0 0 0; padding-left: 18px; }
+        .warning-notice ul li { margin-bottom: 3px; }
+
+        /* Password eye toggle */
+        .password-field-wrap { position: relative; }
+        .password-field-wrap .vcc-form-input { padding-right: 42px; }
+        .btn-eye {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer;
+            color: var(--text-muted, #9298ae); font-size: 0.9rem; padding: 4px;
+        }
+        .btn-eye:hover { color: var(--text-primary, #1a1f3a); }
+
+        /* No deviations notice */
+        .no-deviations-notice {
+            display: flex; gap: 12px; align-items: center;
+            padding: var(--sp-4, 1rem) var(--sp-5, 1.25rem);
+            background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.22);
+            border-radius: var(--radius-md, 8px); font-size: 0.85rem; color: #065f46;
+            margin-bottom: var(--sp-4, 1rem);
+        }
+        .no-deviations-notice i { font-size: 1.2rem; color: #10b981; flex-shrink: 0; }
+    </style>
+</head>
+
+<body>
+    <aside th:block th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR Krok 13 — Odchylenia i finalizacja</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:block th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:block>
+
+                <!-- Flash messages -->
+                <div th:if="${error}" class="vcc-flash vcc-flash--error" style="margin-bottom:var(--sp-4,1rem);">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span th:text="${error}"></span>
+                </div>
+                <div th:if="${success}" class="vcc-flash vcc-flash--success" style="margin-bottom:var(--sp-4,1rem);">
+                    <i class="fas fa-check-circle"></i>
+                    <span th:text="${success}"></span>
+                </div>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Odchylenia i finalizacja kwalifikacji PR</h2>
+                        <p class="wizard-step-header__desc">Przegląd wykrytych odchyleń temperatury, weryfikacja protokołu i złożenie podpisu elektronicznego kończącego proces kwalifikacji okresowej.</p>
+                    </div>
+
+                    <!-- Section 1: Deviations summary -->
+                    <div class="vcc-detail-section" style="margin-bottom: var(--sp-5, 1.25rem);">
+                        <div class="vcc-detail-section__header">
+                            <h3 class="vcc-detail-section__title">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                Podsumowanie odchyleń temperatury
+                            </h3>
+                        </div>
+
+                        <!-- No deviations -->
+                        <div th:if="${deviations == null or #lists.isEmpty(deviations)}"
+                             class="no-deviations-notice">
+                            <i class="fas fa-circle-check"></i>
+                            <span><strong>Brak odchyleń.</strong> Żaden czujnik nie przekroczył zdefiniowanych tolerancji temperatury podczas całego okresu pomiarowego. Kwalifikacja przebiega prawidłowo.</span>
+                        </div>
+
+                        <!-- Deviation counters -->
+                        <div th:if="${deviations != null and !#lists.isEmpty(deviations)}">
+                            <div class="deviation-summary-grid">
+                                <div class="deviation-summary-item deviation-summary-item--critical">
+                                    <div class="deviation-summary-item__label">Krytyczne</div>
+                                    <div class="deviation-summary-item__count"
+                                         th:text="${criticalCount ?: 0}">0</div>
+                                    <div class="deviation-summary-item__unit">odchyleń</div>
+                                </div>
+                                <div class="deviation-summary-item deviation-summary-item--major">
+                                    <div class="deviation-summary-item__label">Poważne</div>
+                                    <div class="deviation-summary-item__count"
+                                         th:text="${majorCount ?: 0}">0</div>
+                                    <div class="deviation-summary-item__unit">odchyleń</div>
+                                </div>
+                                <div class="deviation-summary-item deviation-summary-item--minor">
+                                    <div class="deviation-summary-item__label">Drobne</div>
+                                    <div class="deviation-summary-item__count"
+                                         th:text="${minorCount ?: 0}">0</div>
+                                    <div class="deviation-summary-item__unit">odchyleń</div>
+                                </div>
+                                <div class="deviation-summary-item deviation-summary-item--none">
+                                    <div class="deviation-summary-item__label">Łącznie</div>
+                                    <div class="deviation-summary-item__count"
+                                         th:text="${#lists.size(deviations)}">0</div>
+                                    <div class="deviation-summary-item__unit">zdarzeń</div>
+                                </div>
+                            </div>
+
+                            <!-- Deviation detail table -->
+                            <div class="vcc-table-wrap">
+                                <table class="deviation-detail-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Rejestrator (SN)</th>
+                                            <th>Czas rozpoczęcia</th>
+                                            <th>Czas trwania</th>
+                                            <th>Temp. [°C]</th>
+                                            <th>Klasyfikacja</th>
+                                            <th>Zastosowana procedura</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="dev, iter : ${deviations}">
+                                            <td class="vcc-table__muted" th:text="${iter.index + 1}">1</td>
+                                            <td class="td-mono" th:text="${dev.recorderSerialNumber ?: '—'}">—</td>
+                                            <td class="td-mono"
+                                                th:text="${dev.startTime != null ? #temporals.format(dev.startTime, 'dd.MM.yyyy HH:mm') : '—'}">—</td>
+                                            <td class="td-mono"
+                                                th:text="${dev.durationMinutes != null ? dev.durationMinutes + ' min' : '—'}">—</td>
+                                            <td class="td-mono"
+                                                th:text="${dev.temperature != null ? #numbers.formatDecimal(dev.temperature, 1, 2) + ' °C' : '—'}">—</td>
+                                            <td>
+                                                <span th:switch="${dev.severity?.name()}">
+                                                    <span th:case="'CRITICAL'" class="sev-critical">CRITICAL</span>
+                                                    <span th:case="'MAJOR'"    class="sev-major">MAJOR</span>
+                                                    <span th:case="'MINOR'"    class="sev-minor">MINOR</span>
+                                                    <span th:case="*"          class="vcc-status vcc-status--none" th:text="${dev.severity}">—</span>
+                                                </span>
+                                            </td>
+                                            <td style="font-size:0.78rem; color:var(--text-secondary,#6b7280);"
+                                                th:text="${dev.appliedProcedure ?: 'Automatyczna'}">—</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Document preview -->
+                    <div class="vcc-detail-section" style="margin-bottom: var(--sp-5, 1.25rem);">
+                        <div class="vcc-detail-section__header">
+                            <h3 class="vcc-detail-section__title">
+                                <i class="fas fa-file-pdf" style="color:#dc2626;"></i>
+                                Podgląd protokołu kwalifikacji PR
+                            </h3>
+                        </div>
+                        <div class="preview-box">
+                            <div class="preview-box__header">
+                                <i class="fas fa-file-pdf" style="color:#dc2626;"></i>
+                                Protokół PR — dane finalne
+                            </div>
+                            <div class="preview-box__grid">
+                                <span class="preview-box__key">ID walidacji</span>
+                                <span class="preview-box__val" th:text="${draft.id}">—</span>
+
+                                <span class="preview-box__key">Urządzenie</span>
+                                <span class="preview-box__val" th:text="${draft.coolingDevice?.name ?: '—'}">—</span>
+
+                                <span class="preview-box__key">Nr inwentarzowy</span>
+                                <span class="preview-box__val" th:text="${draft.coolingDevice?.inventoryNumber ?: '—'}">—</span>
+
+                                <span class="preview-box__key">Procedura</span>
+                                <span class="preview-box__val" th:text="${draft.procedureType?.getDisplayName() ?: '—'}">PR</span>
+
+                                <span class="preview-box__key">Powód kwalifikacji</span>
+                                <span class="preview-box__val" th:text="${draft.qualificationReason?.name() ?: '—'}">—</span>
+
+                                <span class="preview-box__key">Temp. nominalna</span>
+                                <span class="preview-box__val"
+                                      th:text="${draft.nominalTemperature != null ? draft.nominalTemperature + ' °C' : '—'}">—</span>
+
+                                <span class="preview-box__key">Zgodność ogólna</span>
+                                <span class="preview-box__val"
+                                      th:text="${overallCompliance != null ? #numbers.formatDecimal(overallCompliance, 1, 1) + ' %' : '—'}">—</span>
+
+                                <span class="preview-box__key">Wynik</span>
+                                <span class="preview-box__val">
+                                    <span th:class="${validationPassed} ? 'vcc-status vcc-status--valid' : 'vcc-status vcc-status--invalid'"
+                                          th:text="${validationPassed} ? 'POZYTYWNY' : 'NEGATYWNY'">—</span>
+                                </span>
+
+                                <span class="preview-box__key">Zatwierdzony przez QA</span>
+                                <span class="preview-box__val"
+                                      th:text="${draft.qaApprovedBy ?: '—'}">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warning — irreversible -->
+                    <div class="warning-notice">
+                        <i class="fas fa-lock"></i>
+                        <div>
+                            <strong>Ważne — finalizacja nieodwracalna:</strong>
+                            <ul>
+                                <li>Po złożeniu podpisu elektronicznego nie będzie możliwe wprowadzenie żadnych zmian.</li>
+                                <li>Wygenerowany protokół PR zostanie trwale zapisany w systemie z adnotacją GMP.</li>
+                                <li>Podpis jest wiążący i poświadcza przeprowadzenie i zatwierdzenie kwalifikacji.</li>
+                                <li>Dokument zostanie udostępniony do pobrania w formacie PDF.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Signing form -->
+                    <form th:action="@{/wizard/{id}/pr/finalize(id=${draft.id})}" method="post" id="finalizeForm">
+                        <th:block th:replace="~{fragments/csrf-token :: csrf-input}"></th:block>
+
+                        <div class="vcc-form-section">
+                            <legend style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:var(--sp-4);">
+                                Podpis elektroniczny — finalizacja protokołu PR
+                            </legend>
+
+                            <div class="vcc-form-row">
+                                <!-- Certificate password -->
+                                <div>
+                                    <label for="password" class="vcc-form-label">
+                                        Hasło do certyfikatu
+                                        <span class="vcc-required">*</span>
+                                    </label>
+                                    <div class="password-field-wrap">
+                                        <input type="password"
+                                               class="vcc-form-input"
+                                               id="password"
+                                               name="password"
+                                               required
+                                               autocomplete="current-password"
+                                               placeholder="Wprowadź hasło">
+                                        <button type="button" class="btn-eye" id="eyeBtn"
+                                                aria-label="Pokaż/ukryj hasło">
+                                            <i class="fas fa-eye" id="eyeIcon"></i>
+                                        </button>
+                                    </div>
+                                    <span class="vcc-form-hint">Hasło do klucza prywatnego certyfikatu PKCS12 firmy.</span>
+                                </div>
+
+                                <!-- Intent -->
+                                <div>
+                                    <label for="intent" class="vcc-form-label">Oświadczenie woli</label>
+                                    <input type="text"
+                                           class="vcc-form-input"
+                                           id="intent"
+                                           name="intent"
+                                           value="Zatwierdzam wynik kwalifikacji PR i poświadczam kompletność protokołu">
+                                    <span class="vcc-form-hint">Treść oświadczenia dołączona do podpisu TSA.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-actions" style="margin-top: var(--sp-6, 1.5rem);">
+                            <a th:href="@{/wizard/{id}/back/12(id=${draft.id})}" class="wizard-btn-back">
+                                <i class="fas fa-arrow-left"></i> Poprzedni krok
+                            </a>
+                            <a th:href="@{/wizard/}" class="wizard-btn-back">
+                                <i class="fas fa-times"></i> Anuluj
+                            </a>
+                            <button type="submit" class="wizard-btn-finalize" id="finalizeBtn">
+                                <i class="fas fa-pen-nib"></i> Finalizuj i podpisz protokół PR
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+        <footer th:block th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+    <div th:block th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:nonce="${cspNonce}">
+        document.addEventListener('DOMContentLoaded', function() {
+            // Password eye toggle
+            const eyeBtn   = document.getElementById('eyeBtn');
+            const passEl   = document.getElementById('password');
+            const eyeIcon  = document.getElementById('eyeIcon');
+            if (eyeBtn && passEl) {
+                eyeBtn.addEventListener('click', function() {
+                    if (passEl.type === 'password') {
+                        passEl.type = 'text';
+                        eyeIcon.classList.replace('fa-eye', 'fa-eye-slash');
+                    } else {
+                        passEl.type = 'password';
+                        eyeIcon.classList.replace('fa-eye-slash', 'fa-eye');
+                    }
+                });
+            }
+
+            // Disable finalize button on submit to prevent double-submit
+            const form         = document.getElementById('finalizeForm');
+            const finalizeBtn  = document.getElementById('finalizeBtn');
+            if (form && finalizeBtn) {
+                form.addEventListener('submit', function() {
+                    finalizeBtn.disabled = true;
+                    finalizeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizowanie...';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

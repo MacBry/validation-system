@@ -1,0 +1,25 @@
+{
+  "agents": {
+    "spring-boot-backend-dev": {
+      "description": "Spring Boot backend development — implements services, repositories, controllers",
+      "setting_sources": ["project"],
+      "model": "claude-opus-4-6"
+    },
+    "db-specialist-mysql-flyway": {
+      "description": "MySQL database specialist — creates migrations, optimizes queries",
+      "setting_sources": ["project"],
+      "model": "claude-opus-4-6"
+    },
+    "frontend-saas-specialist": {
+      "description": "Frontend SaaS specialist — builds Thymeleaf templates with VCC design system",
+      "setting_sources": ["project"],
+      "model": "claude-opus-4-6"
+    }
+  },
+  "project": {
+    "name": "Validation System v2.11.0",
+    "type": "spring-boot",
+    "languages": ["java", "sql", "html", "javascript"],
+    "compliance": ["GMP Annex 11", "FDA 21 CFR Part 11", "GAMP 5"]
+  }
+}

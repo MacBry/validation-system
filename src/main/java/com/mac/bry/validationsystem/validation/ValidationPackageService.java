@@ -8,6 +8,9 @@ import com.mac.bry.validationsystem.measurement.MeasurementPointRepository;
 import com.mac.bry.validationsystem.measurement.MeasurementSeries;
 import com.mac.bry.validationsystem.stats.ValidationSummaryStatsDto;
 import com.mac.bry.validationsystem.stats.ValidationSummaryStatsService;
+import com.mac.bry.validationsystem.wizard.ValidationDraft;
+import com.mac.bry.validationsystem.wizard.ValidationDraftRepository;
+import com.mac.bry.validationsystem.wizard.ValidationProcedureType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,7 @@ public class ValidationPackageService {
     private final RecorderSummaryPdfService recorderSummaryPdfService;
     private final ValidationSummaryStatsService summaryStatsService;
     private final DeviationDetectionService deviationDetectionService;
+    private final ValidationDraftRepository draftRepository;
 
     private static final DateTimeFormatter FILE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -52,6 +56,9 @@ public class ValidationPackageService {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+
+            // 0. Dla PERIODIC_REVALIDATION: dodaj Plan Walidacji PDF jako pierwszy dokument
+            addPlanPdfIfPeriodicRevalidation(zos, validation);
 
             // 1. Dodaj schemat rozmieszczenia rejestratorów (DOCX)
             addSchemaDocument(zos, validation);
@@ -79,6 +86,71 @@ public class ValidationPackageService {
 
         log.info("Paczka dokumentów wygenerowana: {} bajtów", baos.size());
         return baos.toByteArray();
+    }
+
+    /**
+     * Jeśli walidacja pochodzi z draftu PERIODIC_REVALIDATION i draft zawiera ścieżkę
+     * do podpisanego PDF planu walidacji — dodaje ten plik jako "00_Plan_Walidacji_..." do ZIP.
+     *
+     * <p>
+     * GMP Annex 15 §10 wymaga, aby plan walidacji był dołączony do kompletnego pakietu
+     * dokumentacyjnego. Plik jest wczytywany z dysku (ścieżka przechowywana w planData.pdfInfo).
+     * Jeśli plik nie istnieje lub draft nie istnieje — błąd jest logowany, ale nie blokuje
+     * generowania reszty paczki.
+     * </p>
+     */
+    private void addPlanPdfIfPeriodicRevalidation(ZipOutputStream zos,
+                                                   Validation validation) throws IOException {
+        try {
+            Optional<ValidationDraft> draftOpt = draftRepository.findByCompletedValidation(validation);
+            if (draftOpt.isEmpty()) {
+                log.debug("No draft found for validation ID: {} — skipping plan PDF", validation.getId());
+                return;
+            }
+
+            ValidationDraft draft = draftOpt.get();
+            if (draft.getProcedureType() != ValidationProcedureType.PERIODIC_REVALIDATION) {
+                log.debug("Validation ID: {} is not PERIODIC_REVALIDATION — skipping plan PDF",
+                    validation.getId());
+                return;
+            }
+
+            if (draft.getPlanData() == null || draft.getPlanData().getPdfInfo() == null
+                || draft.getPlanData().getPdfInfo().getPdfPath() == null) {
+                log.warn("PERIODIC_REVALIDATION draft {} has no plan PDF path — "
+                    + "plan PDF will not be included in ZIP for validation: {}",
+                    draft.getId(), validation.getId());
+                return;
+            }
+
+            String planPdfPath = draft.getPlanData().getPdfInfo().getPdfPath();
+            Path filePath = Path.of(planPdfPath);
+
+            if (!Files.exists(filePath)) {
+                log.warn("Plan PDF file does not exist on disk: {} — "
+                    + "skipping for validation: {}", planPdfPath, validation.getId());
+                return;
+            }
+
+            byte[] planBytes = Files.readAllBytes(filePath);
+
+            String dateStr = validation.getCreatedDate() != null
+                ? validation.getCreatedDate().format(FILE_DATE_FORMAT) : "unknown";
+            String fileName = String.format("00_Plan_Walidacji_%s_%s.pdf",
+                validation.getId(), dateStr);
+
+            ZipEntry entry = new ZipEntry(fileName);
+            zos.putNextEntry(entry);
+            zos.write(planBytes);
+            zos.closeEntry();
+
+            log.info("Dodano Plan Walidacji PDF do ZIP: {} ({} bajtów)", fileName, planBytes.length);
+
+        } catch (Exception e) {
+            log.error("Błąd podczas dodawania Planu Walidacji PDF do ZIP dla walidacji {}: {}",
+                validation.getId(), e.getMessage(), e);
+            // Do not block ZIP generation due to plan PDF failure
+        }
     }
 
     /**

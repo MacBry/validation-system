@@ -166,6 +166,19 @@ public class ValidationDraft {
     @Builder.Default
     private List<Long> selectedSeriesIds = new ArrayList<>();
 
+    // ========== PLAN DATA (PERIODIC_REVALIDATION only) ==========
+
+    /**
+     * Validation plan data for PERIODIC_REVALIDATION procedure type.
+     * NULL for OQ, PQ, and MAPPING procedures.
+     * Contains plan details, mapping status, acceptance criteria, signatures, and QA approval.
+     */
+    @JsonIgnore
+    @NotAudited
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "plan_data_id", unique = true, nullable = true)
+    private ValidationPlanData planData;
+
     // ========== STEP 9: FINALIZATION ==========
 
     /**
@@ -210,6 +223,21 @@ public class ValidationDraft {
      */
     public boolean requiresPqChecklist() {
         return procedureType == ValidationProcedureType.PQ;
+    }
+
+    /**
+     * Checks if this draft requires a validation plan (PERIODIC_REVALIDATION)
+     */
+    public boolean requiresValidationPlan() {
+        return procedureType != null && procedureType.requiresValidationPlan();
+    }
+
+    /**
+     * Checks if the plan has been fully approved (technician signed + QA approved)
+     * Returns false for non-PERIODIC_REVALIDATION procedures.
+     */
+    public boolean isPlanFullyApproved() {
+        return planData != null && planData.isFullyApproved();
     }
 
     @PrePersist

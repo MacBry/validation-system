@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR Krok 3 - Powód i poprzednia walidacja - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <th:block th:replace="~{fragments/csrf-token :: csrf-ajax-setup}"></th:block>
+    <style>
+        .wizard-container { max-width: 800px; margin: 0 auto; }
+        .wizard-step-header { margin-bottom: var(--sp-6, 1.5rem); }
+        .wizard-step-header__title { font-size: 1.35rem; font-weight: 700; color: var(--text-primary, #1a1f3a); margin: 0 0 6px 0; }
+        .wizard-step-header__desc { font-size: 0.88rem; color: var(--text-secondary, #6b7280); margin: 0; }
+        .wizard-actions {
+            display: flex; gap: var(--sp-4, 1rem); justify-content: flex-end; align-items: center;
+            padding-top: var(--sp-4, 1rem); border-top: 1px solid var(--border-default, #e5e7ef); flex-wrap: wrap;
+        }
+        .wizard-btn-back {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none; cursor: pointer;
+            transition: border-color var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-back:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+        .wizard-btn-next {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 22px;
+            background: var(--vcc-primary, #667eea); border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.875rem; font-weight: 600; color: #fff; cursor: pointer;
+            transition: opacity var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s);
+        }
+        .wizard-btn-next:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(102,126,234,0.30); }
+        .wizard-btn-next:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* Reason type cards */
+        .reason-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: var(--sp-3, 0.75rem);
+            margin-bottom: var(--sp-6, 1.5rem);
+        }
+        .reason-option { display: contents; }
+        .reason-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+        .reason-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: var(--sp-3, 0.75rem);
+            padding: var(--sp-5, 1.25rem) var(--sp-3, 0.75rem);
+            background: var(--surface-card, #fff);
+            border: 2px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+        }
+        .reason-card:hover { border-color: var(--vcc-primary, #667eea); box-shadow: 0 4px 16px rgba(102,126,234,0.12); }
+        .reason-option input[type="radio"]:checked + .reason-card {
+            border-color: var(--vcc-primary, #667eea);
+            background: rgba(102,126,234,0.05);
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+        }
+        .reason-card__icon {
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            background: rgba(102,126,234,0.10);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--vcc-primary, #667eea);
+            font-size: 1.1rem;
+            transition: background 0.15s;
+        }
+        .reason-option input[type="radio"]:checked + .reason-card .reason-card__icon {
+            background: var(--vcc-primary, #667eea);
+            color: #fff;
+        }
+        .reason-card__name { font-size: 0.85rem; font-weight: 700; color: var(--text-primary, #1a1f3a); }
+        .reason-card__desc { font-size: 0.72rem; color: var(--text-secondary, #6b7280); line-height: 1.5; }
+
+        /* Previous validation card */
+        .prev-validation-card {
+            background: var(--surface-page, #f7f8fc);
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-4, 1rem);
+            margin-top: var(--sp-4, 1rem);
+        }
+        .prev-validation-card__title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-muted, #9298ae);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: var(--sp-3, 0.75rem);
+        }
+        .prev-validation-grid {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 6px 12px;
+            font-size: 0.82rem;
+        }
+        .prev-validation-grid__key { color: var(--text-muted, #9298ae); font-weight: 600; }
+        .prev-validation-grid__val { color: var(--text-primary, #1a1f3a); font-family: 'DM Mono', monospace; }
+
+        /* No previous validation notice */
+        .no-prev-notice {
+            display: flex; gap: 10px; align-items: center;
+            padding: 10px 14px;
+            background: rgba(102,126,234,0.05);
+            border: 1px solid rgba(102,126,234,0.18);
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.82rem;
+            color: var(--text-secondary, #6b7280);
+            margin-top: var(--sp-4, 1rem);
+        }
+        .no-prev-notice i { color: var(--vcc-primary, #667eea); flex-shrink: 0; }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR Krok 3 — Powód i poprzednia walidacja</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <th:block th:replace="~{wizard/fragments/wizard-nav-pr :: wizard-nav-pr}"></th:block>
+
+                <div class="vcc-form-card">
+                    <div class="wizard-step-header">
+                        <h2 class="wizard-step-header__title">Powód kwalifikacji i poprzednia walidacja</h2>
+                        <p class="wizard-step-header__desc">Określ przyczynę przeprowadzenia kwalifikacji oraz wskaż poprzednią walidację urządzenia (jeśli istnieje).</p>
+                    </div>
+
+                    <!-- Reason type selection -->
+                    <div class="vcc-form-section">
+                        <legend style="font-size:0.82rem; font-weight:700; color:var(--text-primary); margin-bottom:var(--sp-4, 1rem);">
+                            Powód kwalifikacji <span class="vcc-required">*</span>
+                        </legend>
+
+                        <div class="reason-grid" id="reasonGrid">
+                            <label class="reason-option">
+                                <input type="radio" name="qualificationReason" value="INITIAL" class="reason-radio"
+                                       th:checked="${planData != null and planData.details != null and planData.details.revalidationReason == 'INITIAL'}">
+                                <div class="reason-card">
+                                    <div class="reason-card__icon"><i class="fas fa-star"></i></div>
+                                    <div class="reason-card__name">Pierwsza kwalifikacja</div>
+                                    <div class="reason-card__desc">Urządzenie jest kwalifikowane po raz pierwszy.</div>
+                                </div>
+                            </label>
+                            <label class="reason-option">
+                                <input type="radio" name="qualificationReason" value="PERIODIC" class="reason-radio"
+                                       th:checked="${planData != null and planData.details != null and planData.details.revalidationReason == 'PERIODIC'}">
+                                <div class="reason-card">
+                                    <div class="reason-card__icon"><i class="fas fa-rotate"></i></div>
+                                    <div class="reason-card__name">Okresowa</div>
+                                    <div class="reason-card__desc">Rekwalifikacja periodyczna zgodnie z harmonogramem.</div>
+                                </div>
+                            </label>
+                            <label class="reason-option">
+                                <input type="radio" name="qualificationReason" value="AFTER_REPAIR" class="reason-radio"
+                                       th:checked="${planData != null and planData.details != null and planData.details.revalidationReason == 'AFTER_REPAIR'}">
+                                <div class="reason-card">
+                                    <div class="reason-card__icon"><i class="fas fa-wrench"></i></div>
+                                    <div class="reason-card__name">Po naprawie</div>
+                                    <div class="reason-card__desc">Kwalifikacja po naprawie lub konserwacji urządzenia.</div>
+                                </div>
+                            </label>
+                            <label class="reason-option">
+                                <input type="radio" name="qualificationReason" value="AFTER_RELOCATION" class="reason-radio"
+                                       th:checked="${planData != null and planData.details != null and planData.details.revalidationReason == 'AFTER_RELOCATION'}">
+                                <div class="reason-card">
+                                    <div class="reason-card__icon"><i class="fas fa-truck-moving"></i></div>
+                                    <div class="reason-card__name">Po przeniesieniu</div>
+                                    <div class="reason-card__desc">Kwalifikacja po zmianie lokalizacji urządzenia.</div>
+                                </div>
+                            </label>
+                            <label class="reason-option">
+                                <input type="radio" name="qualificationReason" value="OTHER" class="reason-radio"
+                                       th:checked="${planData != null and planData.details != null and planData.details.revalidationReason == 'OTHER'}">
+                                <div class="reason-card">
+                                    <div class="reason-card__icon"><i class="fas fa-ellipsis"></i></div>
+                                    <div class="reason-card__name">Inny powód</div>
+                                    <div class="reason-card__desc">Inny powód kwalifikacji — opisz poniżej.</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Additional notes for OTHER reason -->
+                        <div id="otherReasonSection"
+                             th:style="${planData != null and planData.details != null and planData.details.revalidationReason == 'OTHER'} ? '' : 'display:none'">
+                            <label for="reasonNotes" class="vcc-form-label">
+                                Opis powodu kwalifikacji
+                                <span class="vcc-required">*</span>
+                            </label>
+                            <textarea class="vcc-form-textarea"
+                                      id="reasonNotes"
+                                      name="reasonNotes"
+                                      rows="3"
+                                      placeholder="Opisz powód kwalifikacji..."
+                                      th:text="${planData != null and planData.details != null ? planData.details.previousValidationNumber : ''}"></textarea>
+                            <span class="vcc-form-hint">Wymagane gdy wybrano &quot;Inny powód&quot;.</span>
+                        </div>
+                    </div>
+
+                    <!-- Previous validation section -->
+                    <div class="vcc-form-section" style="margin-top: var(--sp-6, 1.5rem);">
+                        <legend style="font-size:0.82rem; font-weight:700; color:var(--text-primary); margin-bottom:var(--sp-4, 1rem);">
+                            Poprzednia walidacja urządzenia
+                        </legend>
+
+                        <!-- Has previous validation -->
+                        <div th:if="${previousValidation != null}" class="prev-validation-card">
+                            <p class="prev-validation-card__title">
+                                <i class="fas fa-history"></i> Ostatnia walidacja
+                            </p>
+                            <div class="prev-validation-grid">
+                                <span class="prev-validation-grid__key">ID walidacji:</span>
+                                <span class="prev-validation-grid__val" th:text="${previousValidation.id}">—</span>
+
+                                <span class="prev-validation-grid__key">Data:</span>
+                                <span class="prev-validation-grid__val"
+                                      th:text="${#temporals.format(previousValidation.validationDate, 'dd.MM.yyyy')}">—</span>
+
+                                <span class="prev-validation-grid__key">Procedura:</span>
+                                <span class="prev-validation-grid__val"
+                                      th:text="${previousValidation.procedureType?.getDisplayName() ?: '—'}">—</span>
+
+                                <span class="prev-validation-grid__key">Status:</span>
+                                <td>
+                                    <span class="vcc-status vcc-status--valid"
+                                          th:classappend="${previousValidation.status?.name() == 'VALID'} ? 'vcc-status--valid'
+                                                       : (${previousValidation.status?.name() == 'INVALID'} ? 'vcc-status--invalid'
+                                                       : 'vcc-status--none')"
+                                          th:text="${previousValidation.status?.getDisplayName() ?: '—'}">WAŻNA</span>
+                                </td>
+
+                                <span class="prev-validation-grid__key">Ważna do:</span>
+                                <span class="prev-validation-grid__val"
+                                      th:text="${previousValidation.validUntil != null ? #temporals.format(previousValidation.validUntil, 'dd.MM.yyyy') : '—'}">—</span>
+                            </div>
+                            <div style="margin-top: var(--sp-4, 1rem);">
+                                <a th:href="@{/validation/{id}(id=${previousValidation.id})}"
+                                   class="vcc-link-internal" target="_blank">
+                                    <i class="fas fa-external-link-alt" style="font-size:0.75rem;"></i>
+                                    Otwórz poprzednią walidację
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- No previous validation -->
+                        <div th:if="${previousValidation == null}" class="no-prev-notice">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Brak poprzedniej walidacji dla tego urządzenia. Zostanie to odnotowane w protokole PR.</span>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions" style="margin-top: var(--sp-6, 1.5rem);">
+                        <a th:href="@{/wizard/{id}/back/2(id=${draft.id})}" class="wizard-btn-back">
+                            <i class="fas fa-arrow-left"></i> Poprzedni krok
+                        </a>
+                        <button type="button" class="wizard-btn-next" id="nextBtn"
+                                th:disabled="${planData == null or planData.details == null or planData.details.revalidationReason == null or planData.details.revalidationReason == ''}">
+                            Dalej <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}" th:nonce="${cspNonce}"></script>
+    <div th:replace="~{fragments/sidebar :: sidebar-js}"></div>
+    <script th:inline="javascript" th:nonce="${cspNonce}">
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function updateReasonSelection() {
+            const selected = document.querySelector('input[name="qualificationReason"]:checked');
+            const nextBtn = document.getElementById('nextBtn');
+            const otherSection = document.getElementById('otherReasonSection');
+
+            if (nextBtn) nextBtn.disabled = !selected;
+
+            if (otherSection) {
+                otherSection.style.display = (selected && selected.value === 'OTHER') ? '' : 'none';
+            }
+        }
+
+        const reasonDescriptions = {
+            'INITIAL': 'Pierwsza kwalifikacja — urządzenie jest kwalifikowane po raz pierwszy',
+            'PERIODIC': 'Rekwalifikacja periodyczna zgodnie z harmonogramem walidacji',
+            'AFTER_REPAIR': 'Kwalifikacja po naprawie lub konserwacji urządzenia',
+            'AFTER_RELOCATION': 'Kwalifikacja po zmianie lokalizacji urządzenia',
+            'OTHER': 'OTHER'
+        };
+
+        function submitStep3Pr() {
+            const selected = document.querySelector('input[name="qualificationReason"]:checked');
+            if (!selected) {
+                alert('Proszę wybrać powód kwalifikacji.');
+                return;
+            }
+            const reasonNotes = document.getElementById('reasonNotes')?.value || '';
+            if (selected.value === 'OTHER' && !reasonNotes.trim()) {
+                alert('Proszę opisać powód kwalifikacji.');
+                document.getElementById('reasonNotes')?.focus();
+                return;
+            }
+
+            const draftId = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+            const csrfMeta = document.querySelector('meta[name="_csrf"]');
+            let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            let csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            if (!csrfToken || csrfToken === '') { csrfToken = getCookie('XSRF-TOKEN'); csrfHeader = 'X-XSRF-TOKEN'; }
+
+            const btn = document.getElementById('nextBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
+
+            // Build JSON body matching ValidationPlanDataDto
+            const revalidationReason = selected.value === 'OTHER'
+                ? reasonNotes.trim()
+                : reasonDescriptions[selected.value] || selected.value;
+
+            const jsonBody = {
+                revalidationReason: revalidationReason
+            };
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            };
+            if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+            fetch('/wizard/' + draftId + '/api/step3-pr', {
+                method: 'POST', headers: headers, body: JSON.stringify(jsonBody)
+            }).then(async r => {
+                if (!r.ok) {
+                    const text = await r.text();
+                    try { const json = JSON.parse(text); throw new Error(json.message || 'Błąd serwera'); }
+                    catch(e) { throw new Error('Błąd HTTP ' + r.status + ': ' + text.substring(0, 100)); }
+                }
+                return r.json();
+            }).then(() => {
+                window.location.href = '/wizard/' + draftId + '/step/4';
+            }).catch(err => {
+                console.error('Error:', err);
+                alert('Błąd zapisu: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = 'Dalej <i class="fas fa-arrow-right"></i>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateReasonSelection();
+
+            document.querySelectorAll('.reason-radio').forEach(radio => {
+                radio.addEventListener('change', updateReasonSelection);
+            });
+
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', submitStep3Pr);
+            }
+        });
+    </script>
+</body>
+</html>

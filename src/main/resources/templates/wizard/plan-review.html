@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pl"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard PR — Przegląd planu QA - VCC</title>
+    <link th:href="@{/css/fonts.css}" rel="stylesheet">
+    <link th:href="@{/fa/css/all.min.css}" rel="stylesheet">
+    <link th:href="@{/css/style-saas.css}" rel="stylesheet">
+    <th:block th:replace="~{fragments/csrf-token :: csrf-meta}"></th:block>
+    <style>
+        .wizard-container { max-width: 900px; margin: 0 auto; }
+
+        /* QA review header banner */
+        .qa-review-banner {
+            display: flex; align-items: center; gap: 16px;
+            padding: var(--sp-5, 1.25rem) var(--sp-6, 1.5rem);
+            background: linear-gradient(135deg, #fffbeb 0%, #fef9c3 100%);
+            border: 1.5px solid #fcd34d;
+            border-radius: var(--radius-md, 8px);
+            margin-bottom: var(--sp-6, 1.5rem);
+        }
+        .qa-review-banner__icon {
+            width: 48px; height: 48px; flex-shrink: 0;
+            border-radius: 12px;
+            background: #f59e0b; color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem;
+        }
+        .qa-review-banner__title {
+            font-size: 1.1rem; font-weight: 700; color: #92400e; margin: 0 0 4px 0;
+        }
+        .qa-review-banner__desc {
+            font-size: 0.83rem; color: #a16207; margin: 0;
+        }
+
+        /* Plan detail grid */
+        .review-grid {
+            display: grid;
+            grid-template-columns: 160px 1fr;
+            gap: 6px 16px;
+            font-size: 0.83rem;
+        }
+        .review-grid__key {
+            color: var(--text-muted, #9298ae); font-weight: 600;
+            padding: 6px 0; border-bottom: 1px solid var(--border-default, #e5e7ef);
+        }
+        .review-grid__val {
+            color: var(--text-primary, #1a1f3a);
+            font-family: 'DM Mono', monospace;
+            padding: 6px 0; border-bottom: 1px solid var(--border-default, #e5e7ef);
+        }
+
+        /* CAPA review block */
+        .capa-review-block {
+            border-left: 4px solid var(--border-default, #e5e7ef);
+            padding: var(--sp-3, 0.75rem) var(--sp-4, 1rem);
+            margin-bottom: var(--sp-4, 1rem);
+            background: var(--surface-page, #f7f8fc);
+            border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+        }
+        .capa-review-block--critical { border-color: #dc2626; }
+        .capa-review-block--major    { border-color: #f59e0b; }
+        .capa-review-block--minor    { border-color: var(--vcc-primary, #667eea); }
+        .capa-review-block__title {
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.04em; margin-bottom: 6px;
+        }
+        .capa-review-block--critical .capa-review-block__title { color: #991b1b; }
+        .capa-review-block--major    .capa-review-block__title { color: #92400e; }
+        .capa-review-block--minor    .capa-review-block__title { color: #3730a3; }
+        .capa-review-block__text {
+            font-size: 0.83rem; color: var(--text-primary, #1a1f3a);
+            line-height: 1.6; white-space: pre-wrap;
+        }
+        .capa-review-block__empty {
+            font-size: 0.83rem; color: var(--text-muted, #9298ae); font-style: italic;
+        }
+
+        /* Criteria table */
+        .criteria-review-table { width: 100%; font-size: 0.83rem; border-collapse: collapse; }
+        .criteria-review-table th {
+            background: var(--surface-page, #f7f8fc);
+            color: var(--text-muted, #9298ae);
+            font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.04em; padding: 9px 12px;
+            border-bottom: 2px solid var(--border-default, #e5e7ef);
+            text-align: left;
+        }
+        .criteria-review-table td {
+            padding: 9px 12px;
+            border-bottom: 1px solid var(--border-default, #e5e7ef);
+            color: var(--text-primary, #1a1f3a);
+        }
+        .criteria-review-table td:last-child { font-family: 'DM Mono', monospace; }
+
+        /* Decision section */
+        .decision-section {
+            background: var(--surface-page, #f7f8fc);
+            border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            overflow: hidden;
+            margin-top: var(--sp-6, 1.5rem);
+        }
+        .decision-section__header {
+            padding: 12px 16px;
+            background: var(--surface-card, #fff);
+            border-bottom: 1px solid var(--border-default, #e5e7ef);
+            font-size: 0.85rem; font-weight: 700; color: var(--text-primary, #1a1f3a);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .decision-section__body { padding: var(--sp-5, 1.25rem); }
+
+        /* Decision radio cards */
+        .decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4, 1rem); margin-bottom: var(--sp-5, 1.25rem); }
+        .decision-option { display: contents; }
+        .decision-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+        .decision-card {
+            display: flex; flex-direction: column; gap: 8px; padding: var(--sp-4, 1rem) var(--sp-5, 1.25rem);
+            background: var(--surface-card, #fff);
+            border: 2px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .decision-card:hover { border-color: #a3a3a3; }
+        .decision-option input[type="radio"]:checked + .decision-card.approve-card {
+            border-color: #10b981; background: rgba(16,185,129,0.05);
+            box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+        }
+        .decision-option input[type="radio"]:checked + .decision-card.reject-card {
+            border-color: #dc2626; background: rgba(220,38,38,0.05);
+            box-shadow: 0 0 0 3px rgba(220,38,38,0.15);
+        }
+        .decision-card__icon { font-size: 1.3rem; }
+        .approve-card .decision-card__icon { color: #10b981; }
+        .reject-card  .decision-card__icon { color: #dc2626; }
+        .decision-card__title { font-size: 0.9rem; font-weight: 700; color: var(--text-primary, #1a1f3a); }
+        .decision-card__desc  { font-size: 0.78rem; color: var(--text-muted, #9298ae); line-height: 1.5; }
+
+        /* Action buttons */
+        .review-actions {
+            display: flex; gap: var(--sp-3, 0.75rem); flex-wrap: wrap;
+            justify-content: flex-end; margin-top: var(--sp-5, 1.25rem);
+        }
+        .btn-approve {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none; border-radius: var(--radius-md, 8px);
+            font-size: 0.9rem; font-weight: 700; color: #fff; cursor: pointer;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .btn-approve:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(16,185,129,0.35); }
+        .btn-approve:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-reject {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px;
+            background: var(--surface-card, #fff); border: 1.5px solid #fca5a5;
+            border-radius: var(--radius-md, 8px);
+            font-size: 0.9rem; font-weight: 700; color: #dc2626; cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-reject:hover:not(:disabled) { background: #fef2f2; }
+        .btn-reject:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-back-qa {
+            display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px;
+            background: var(--surface-card, #fff); border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px); font-size: 0.875rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); text-decoration: none;
+            transition: border-color 0.15s;
+        }
+        .btn-back-qa:hover { border-color: var(--vcc-primary, #667eea); color: var(--vcc-primary, #667eea); }
+
+        /* Password eye toggle */
+        .password-field-wrap { position: relative; }
+        .password-field-wrap .vcc-form-input { padding-right: 42px; }
+        .btn-eye {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer;
+            color: var(--text-muted, #9298ae); font-size: 0.9rem; padding: 4px;
+        }
+        .btn-eye:hover { color: var(--text-primary, #1a1f3a); }
+
+        @media (max-width: 600px) {
+            .decision-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+    <aside th:replace="~{fragments/sidebar :: sidebar('wizard')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebar-overlay}"></div>
+
+    <div class="vcc-main">
+        <header th:replace="~{fragments/topbar :: topbar('wizard-step', 'Wizard PR — QA', false, null)}"></header>
+
+        <main class="vcc-page">
+            <nav class="vcc-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}" class="vcc-breadcrumb__link"><i class="fas fa-th-large"></i> Dashboard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <a th:href="@{/wizard/}" class="vcc-breadcrumb__link">Wizard</a>
+                <i class="fas fa-chevron-right vcc-breadcrumb__sep"></i>
+                <span class="vcc-breadcrumb__current">PR — Przegląd i zatwierdzenie planu QA</span>
+            </nav>
+
+            <div class="wizard-container vcc-animate-fade-in"
+                 th:attr="data-draft-id=${draft.id}">
+
+                <!-- Flash messages -->
+                <div th:if="${error}" class="vcc-flash vcc-flash--error" style="margin-bottom:var(--sp-4,1rem);">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span th:text="${error}"></span>
+                </div>
+                <div th:if="${success}" class="vcc-flash vcc-flash--success" style="margin-bottom:var(--sp-4,1rem);">
+                    <i class="fas fa-check-circle"></i>
+                    <span th:text="${success}"></span>
+                </div>
+
+                <!-- QA banner -->
+                <div class="qa-review-banner">
+                    <div class="qa-review-banner__icon"><i class="fas fa-shield-halved"></i></div>
+                    <div>
+                        <h2 class="qa-review-banner__title">Przegląd planu kwalifikacji PR — Kierownik Jakości</h2>
+                        <p class="qa-review-banner__desc">Zweryfikuj kompletność i poprawność planu kwalifikacji, a następnie podejmij decyzję o zatwierdzeniu lub odrzuceniu. Twoja decyzja zostanie podpisana elektronicznie.</p>
+                    </div>
+                </div>
+
+                <!-- Section 1: Device and plan overview -->
+                <div class="vcc-form-card" style="margin-bottom: var(--sp-5, 1.25rem);">
+                    <div class="vcc-detail-section__header" style="margin-bottom: var(--sp-4, 1rem);">
+                        <h3 class="vcc-detail-section__title">
+                            <i class="fas fa-cube"></i>
+                            Dane urządzenia i planu
+                        </h3>
+                    </div>
+                    <div class="review-grid">
+                        <span class="review-grid__key">ID szkicu</span>
+                        <span class="review-grid__val" th:text="${draft.id}">—</span>
+
+                        <span class="review-grid__key">Urządzenie</span>
+                        <span class="review-grid__val" th:text="${draft.coolingDevice?.name ?: '—'}">—</span>
+
+                        <span class="review-grid__key">Nr inwentarzowy</span>
+                        <span class="review-grid__val" th:text="${draft.coolingDevice?.inventoryNumber ?: '—'}">—</span>
+
+                        <span class="review-grid__key">Laboratorium</span>
+                        <span class="review-grid__val" th:text="${draft.coolingDevice?.laboratory?.name ?: '—'}">—</span>
+
+                        <span class="review-grid__key">Procedura</span>
+                        <span class="review-grid__val" th:text="${draft.procedureType?.getDisplayName() ?: '—'}">PR</span>
+
+                        <span class="review-grid__key">Powód kwalifikacji</span>
+                        <span class="review-grid__val" th:text="${draft.planData?.details?.revalidationReason ?: 'Rewalidacja Okresowa'}">—</span>
+
+                        <span class="review-grid__key">Temperatura nominalna</span>
+                        <span class="review-grid__val" th:text="${draft.planData?.acceptanceCriteria?.planNominalTemp + ' °C'}">—</span>
+
+                        <span class="review-grid__key">Dopuszczalny zakres</span>
+                        <span class="review-grid__val" th:text="${draft.planData?.acceptanceCriteria?.planAcceptanceTempMin + ' do ' + draft.planData?.acceptanceCriteria?.planAcceptanceTempMax + ' °C'}">—</span>
+
+                        <span class="review-grid__key">Stan obciążenia</span>
+                        <span class="review-grid__val" th:text="${draft.planData?.acceptanceCriteria?.planDeviceLoadState ?: '—'}">—</span>
+
+                        <span class="review-grid__key">Plan podpisany</span>
+                        <span class="review-grid__val" th:text="${draft.planData?.technikSignature?.signedAt != null ? #temporals.format(draft.planData.technikSignature.signedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</span>
+
+                        <span class="review-grid__key">Podpisał Technik</span>
+                        <span class="review-grid__val" th:text="${draft.planData?.technikSignature?.fullName ?: '—'}">—</span>
+                    </div>
+                </div>
+
+                <!-- Section 2: Acceptance criteria -->
+                <div class="vcc-form-card" style="margin-bottom: var(--sp-5, 1.25rem);">
+                    <div class="vcc-detail-section__header" style="margin-bottom: var(--sp-4, 1rem);">
+                        <h3 class="vcc-detail-section__title">
+                            <i class="fas fa-list-check"></i>
+                            Kryteria akceptacji
+                        </h3>
+                    </div>
+
+                    <div th:if="${draft.customAcceptanceCriteria != null and !#lists.isEmpty(draft.customAcceptanceCriteria)}"
+                         class="vcc-table-wrap">
+                        <table class="criteria-review-table">
+                            <thead>
+                                <tr>
+                                    <th>Pole</th>
+                                    <th>Operator</th>
+                                    <th>Wartość graniczna</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="c : ${draft.customAcceptanceCriteria}">
+                                    <td th:text="${c.fieldName?.displayName ?: c.fieldName}">—</td>
+                                    <td th:text="${c.operator}">—</td>
+                                    <td th:text="${c.limitValue}">—</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div th:if="${draft.customAcceptanceCriteria == null or #lists.isEmpty(draft.customAcceptanceCriteria)}"
+                         class="vcc-form-info">
+                        <i class="fas fa-info-circle"></i>
+                        Zastosowane będą domyślne kryteria urządzenia
+                        (<span th:text="${draft.coolingDevice?.nominalTempMin ?: '—'}">2</span>–<span
+                              th:text="${draft.coolingDevice?.nominalTempMax ?: '—'}">8</span> °C).
+                    </div>
+                </div>
+
+                <!-- Section 3: CAPA procedures -->
+                <div class="vcc-form-card" style="margin-bottom: var(--sp-5, 1.25rem);">
+                    <div class="vcc-detail-section__header" style="margin-bottom: var(--sp-4, 1rem);">
+                        <h3 class="vcc-detail-section__title">
+                            <i class="fas fa-triangle-exclamation"></i>
+                            Procedury CAPA
+                        </h3>
+                    </div>
+
+                    <div class="capa-review-block capa-review-block--critical">
+                        <div class="capa-review-block__title">Odchylenie KRYTYCZNE (Critical)</div>
+                        <div class="capa-review-block__text" th:text="${draft.planData?.deviationProcedures?.criticalText}">—</div>
+                    </div>
+                    <div class="capa-review-block capa-review-block--major">
+                        <div class="capa-review-block__title">Odchylenie POWAŻNE (Major)</div>
+                        <div class="capa-review-block__text" th:text="${draft.planData?.deviationProcedures?.majorText}">—</div>
+                    </div>
+                    <div class="capa-review-block capa-review-block--minor">
+                        <div class="capa-review-block__title">Odchylenie DROBNE (Minor)</div>
+                        <div class="capa-review-block__text" th:text="${draft.planData?.deviationProcedures?.minorText}">—</div>
+                    </div>
+                </div>
+
+                <!-- Section 4: QA decision + signature -->
+                <div class="decision-section">
+                    <div class="decision-section__header">
+                        <i class="fas fa-scale-balanced" style="color:#f59e0b;"></i>
+                        Decyzja Kierownika Jakości
+                    </div>
+                    <div class="decision-section__body">
+                        <form method="post" id="decisionForm">
+                            <th:block th:replace="~{fragments/csrf-token :: csrf-input}"></th:block>
+
+                            <!-- Decision cards -->
+                            <div class="decision-grid">
+                                <label class="decision-option">
+                                    <input type="radio" name="decisionChoice" value="APPROVE" id="choiceApprove">
+                                    <div class="decision-card approve-card">
+                                        <div class="decision-card__icon"><i class="fas fa-circle-check"></i></div>
+                                        <div class="decision-card__title">Zatwierdź plan</div>
+                                        <div class="decision-card__desc">Plan jest kompletny i zgodny z GMP. Odblokuj fazę pomiarową.</div>
+                                    </div>
+                                </label>
+                                <label class="decision-option">
+                                    <input type="radio" name="decisionChoice" value="REJECT" id="choiceReject">
+                                    <div class="decision-card reject-card">
+                                        <div class="decision-card__icon"><i class="fas fa-circle-xmark"></i></div>
+                                        <div class="decision-card__title">Odrzuć plan</div>
+                                        <div class="decision-card__desc">Plan wymaga poprawek. Technik musi zrewidować dane.</div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- QA comments (rejection reason) -->
+                            <div style="margin-bottom: var(--sp-4, 1rem);">
+                                <label for="rejectionReason" class="vcc-form-label">
+                                    Uwagi QA / Powód odrzucenia
+                                    <span id="qaCommentsRequired" class="vcc-required" style="display:none;">*</span>
+                                </label>
+                                <textarea class="vcc-form-textarea" id="rejectionReason" name="rejectionReason" rows="3" maxlength="1000"
+                                          placeholder="Wpisz uwagi lub powód odrzucenia..."></textarea>
+                            </div>
+
+                            <!-- Password for approve -->
+                            <div class="vcc-form-row" id="passRow" style="display:none;">
+                                <div>
+                                    <label for="qaPassword" class="vcc-form-label">Potwierdź hasłem systemowym <span class="vcc-required">*</span></label>
+                                    <div class="password-field-wrap">
+                                        <input type="password" class="vcc-form-input" id="qaPassword" name="password" autocomplete="current-password" placeholder="Wprowadź hasło">
+                                        <button type="button" class="btn-eye" id="qaEyeBtn" aria-label="Pokaż/ukryj hasło">
+                                            <i class="fas fa-eye" id="qaEyeIcon"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="review-actions">
+                                <a th:href="@{/wizard/}" class="btn-back-qa">
+                                    <i class="fas fa-arrow-left"></i> Wróć do listy
+                                </a>
+                                <button type="button" class="btn-reject" id="rejectBtn" disabled>
+                                    <i class="fas fa-times"></i> Odrzuć plan
+                                </button>
+                                <button type="button" class="btn-approve" id="approveBtn" disabled>
+                                    <i class="fas fa-check"></i> Zatwierdź i podpisz
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        <footer th:replace="~{fragments/footer :: footer}"></footer>
+    </div>
+
+    <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+    <script th:block th:replace="~{fragments/sidebar :: sidebar-js}"></script>
+    <script th:nonce="${cspNonce}">
+        document.addEventListener('DOMContentLoaded', function() {
+            const choiceApprove = document.getElementById('choiceApprove');
+            const choiceReject  = document.getElementById('choiceReject');
+            const approveBtn    = document.getElementById('approveBtn');
+            const rejectBtn     = document.getElementById('rejectBtn');
+            const qaCommentsReq = document.getElementById('qaCommentsRequired');
+            const passRow       = document.getElementById('passRow');
+            const form          = document.getElementById('decisionForm');
+            const draftId       = document.querySelector('[data-draft-id]').getAttribute('data-draft-id');
+
+            function updateUI() {
+                if (choiceApprove.checked) {
+                    approveBtn.disabled = false;
+                    rejectBtn.disabled  = true;
+                    passRow.style.display = 'block';
+                    if (qaCommentsReq) qaCommentsReq.style.display = 'none';
+                    form.action = '/wizard/' + draftId + '/plan-approve';
+                } else if (choiceReject.checked) {
+                    rejectBtn.disabled  = false;
+                    approveBtn.disabled = true;
+                    passRow.style.display = 'none';
+                    if (qaCommentsReq) qaCommentsReq.style.display = '';
+                    form.action = '/wizard/' + draftId + '/plan-reject';
+                }
+            }
+
+            if (choiceApprove) choiceApprove.addEventListener('change', updateUI);
+            if (choiceReject)  choiceReject.addEventListener('change',  updateUI);
+
+            if (approveBtn) {
+                approveBtn.addEventListener('click', function() {
+                    if (!document.getElementById('qaPassword').value) {
+                        alert('Proszę wprowadzić hasło systemowe.');
+                        document.getElementById('qaPassword').focus();
+                        return;
+                    }
+                    approveBtn.disabled = true;
+                    approveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zatwierdzanie...';
+                    form.submit();
+                });
+            }
+
+            if (rejectBtn) {
+                rejectBtn.addEventListener('click', function() {
+                    const reason = document.getElementById('rejectionReason').value.trim();
+                    if (!reason) {
+                        alert('Proszę wpisać powód odrzucenia planu.');
+                        document.getElementById('rejectionReason').focus();
+                        return;
+                    }
+                    if (!confirm('Czy na pewno chcesz odrzucić plan? Zostanie on zwrócony Technikowi do poprawy.')) return;
+                    rejectBtn.disabled = true;
+                    rejectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Odrzucanie...';
+                    form.submit();
+                });
+            }
+
+            // Eye toggle
+            const eyeBtn = document.getElementById('qaEyeBtn');
+            const passEl = document.getElementById('qaPassword');
+            const eyeIcon = document.getElementById('qaEyeIcon');
+            if (eyeBtn && passEl) {
+                eyeBtn.addEventListener('click', function() {
+                    const isPass = passEl.type === 'password';
+                    passEl.type = isPass ? 'text' : 'password';
+                    eyeIcon.classList.toggle('fa-eye', !isPass);
+                    eyeIcon.classList.toggle('fa-eye-slash', isPass);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -100,6 +100,17 @@ public interface ValidationPlanDataService {
     ValidationDraft approvePlanAsQa(Long draftId, String qaUsername, String rawPassword);
 
     /**
+     * Approve plan via manual signature scan (external QA path).
+     * Transitions draft to IN_PROGRESS at step 9.
+     *
+     * @param draftId ID of the ValidationDraft
+     * @param technicianUsername Technician username who uploads the scan
+     * @param scan Scanned PDF document
+     * @return Updated ValidationDraft with IN_PROGRESS status
+     */
+    ValidationDraft approvePlanExternal(Long draftId, String technicianUsername, org.springframework.web.multipart.MultipartFile scan);
+
+    /**
      * Reject plan as QA with reason.
      * Returns draft to step 8 for revision.
      *

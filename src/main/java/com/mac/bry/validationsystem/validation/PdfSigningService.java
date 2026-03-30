@@ -54,26 +54,38 @@ public class PdfSigningService {
     @Value("${signing.key.alias:}")
     private String keyAlias;
 
-    /**
-     * Podpisuje PDF globalnym certyfikatem organizacji (fallback).
-     */
     public byte[] signPdf(byte[] unsignedPdf, String reason, String location) throws Exception {
-        KeyStore ks = loadKeyStore();
-        String alias = resolveAlias(ks);
-        log.info("PDF podpisany certyfikatem globalnym, alias: {}", alias);
-        return doSign(unsignedPdf, reason, location, ks, alias, keystorePassword);
+        return signPdf(unsignedPdf, reason, location, -1); // -1 means last page
     }
 
     /**
-     * Podpisuje PDF certyfikatem per-firma (dane keystore przekazane bezpośrednio).
+     * Podpisuje PDF globalnym certyfikatem na konkretnej stronie.
+     */
+    public byte[] signPdf(byte[] unsignedPdf, String reason, String location, int pageNumber) throws Exception {
+        KeyStore ks = loadKeyStore();
+        String alias = resolveAlias(ks);
+        log.info("PDF podpisany certyfikatem globalnym (page {}), alias: {}", pageNumber, alias);
+        return doSign(unsignedPdf, reason, location, ks, alias, keystorePassword, pageNumber);
+    }
+
+    /**
+     * Podpisuje PDF certyfikatem per-firma.
      */
     public byte[] signPdf(byte[] unsignedPdf, String reason, String location,
             byte[] keystoreBytes, String ksPassword) throws Exception {
+        return signPdf(unsignedPdf, reason, location, keystoreBytes, ksPassword, -1);
+    }
+
+    /**
+     * Podpisuje PDF certyfikatem per-firma na konkretnej stronie.
+     */
+    public byte[] signPdf(byte[] unsignedPdf, String reason, String location,
+            byte[] keystoreBytes, String ksPassword, int pageNumber) throws Exception {
         KeyStore ks = KeyStore.getInstance("PKCS12");
         ks.load(new ByteArrayInputStream(keystoreBytes), ksPassword.toCharArray());
         String alias = resolveAlias(ks);
-        log.info("PDF podpisany certyfikatem firmowym, alias: {}", alias);
-        return doSign(unsignedPdf, reason, location, ks, alias, ksPassword);
+        log.info("PDF podpisany certyfikatem firmowym (page {}), alias: {}", pageNumber, alias);
+        return doSign(unsignedPdf, reason, location, ks, alias, ksPassword, pageNumber);
     }
 
     /**
@@ -117,7 +129,7 @@ public class PdfSigningService {
     }
 
     private byte[] doSign(byte[] unsignedPdf, String reason, String location,
-            KeyStore ks, String alias, String ksPassword) throws Exception {
+            KeyStore ks, String alias, String ksPassword, int pageNumber) throws Exception {
         PrivateKey pk = (PrivateKey) ks.getKey(alias, ksPassword.toCharArray());
         Certificate[] chain = ks.getCertificateChain(alias);
 
@@ -132,11 +144,14 @@ public class PdfSigningService {
         PdfReader reader = new PdfReader(new ByteArrayInputStream(unsignedPdf));
         PdfSigner signer = new PdfSigner(reader, out, new StampingProperties());
 
+        int actualPage = pageNumber > 0 ? pageNumber : signer.getDocument().getNumberOfPages();
+        log.debug("Placing digital signature on page {}", actualPage);
+
         signer.getSignatureAppearance()
                 .setReason(reason)
                 .setLocation(location)
-                .setPageNumber(1)
-                .setPageRect(new Rectangle(36, 36, 220, 70));
+                .setPageNumber(actualPage)
+                .setPageRect(new Rectangle(360, 20, 200, 50)); // Bottom right
         signer.setCertificationLevel(PdfSigner.CERTIFIED_NO_CHANGES_ALLOWED);
 
         // GMP COMPLIANCE: Dodaj TSA timestamp dla FDA 21 CFR Part 11

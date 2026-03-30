@@ -25,6 +25,33 @@ public interface ValidationDraftRepository extends JpaRepository<ValidationDraft
     List<ValidationDraft> findByCreatedByAndStatus(String createdBy, WizardStatus status);
 
     /**
+     * Find drafts by creator and a list of possible statuses.
+     * @param createdBy Username
+     * @param statuses Collection of wizard statuses
+     * @return List of matching drafts
+     */
+    List<ValidationDraft> findByCreatedByAndStatusIn(String createdBy, java.util.Collection<WizardStatus> statuses);
+
+    /**
+     * Find all drafts with a specific status globally (e.g. AWAITING_QA_APPROVAL).
+     * @param status Status to search for
+     * @return List of matching drafts
+     */
+    List<ValidationDraft> findByStatus(WizardStatus status);
+
+    /**
+     * Find drafts by status and belonging to specific companies.
+     * @param status Status to search for
+     * @param companyIds Collection of allowed company IDs
+     * @return List of matching drafts
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT d FROM ValidationDraft d WHERE d.status = :status AND d.coolingDevice.department.company.id IN :companyIds")
+    List<ValidationDraft> findByStatusAndCompanyIds(
+        @org.springframework.data.repository.query.Param("status") WizardStatus status,
+        @org.springframework.data.repository.query.Param("companyIds") java.util.Collection<Long> companyIds
+    );
+
+    /**
      * Find all active drafts created by a specific user (ignoring status)
      * @param createdBy Username
      * @return List of drafts for this user

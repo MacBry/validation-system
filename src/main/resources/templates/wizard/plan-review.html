@@ -301,8 +301,8 @@
                          class="vcc-form-info">
                         <i class="fas fa-info-circle"></i>
                         Zastosowane będą domyślne kryteria urządzenia
-                        (<span th:text="${draft.coolingDevice?.nominalTempMin ?: '—'}">2</span>–<span
-                              th:text="${draft.coolingDevice?.nominalTempMax ?: '—'}">8</span> °C).
+                        (<span th:text="${draft.coolingDevice?.minOperatingTemp ?: '—'}">2</span>–<span
+                              th:text="${draft.coolingDevice?.maxOperatingTemp ?: '—'}">8</span> °C).
                     </div>
                 </div>
 

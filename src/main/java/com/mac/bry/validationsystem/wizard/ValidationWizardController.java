@@ -89,6 +89,7 @@ public class ValidationWizardController {
     private final AuditService auditService;
     private final ValidationPlanDataService planDataService;
     private final MappingStatusService mappingStatusService;
+    private final com.mac.bry.validationsystem.wizard.pdf.ValidationPlanPdfService planPdfService;
 
     // ========================================================
     // Private helpers
@@ -121,6 +122,15 @@ public class ValidationWizardController {
         model.addAttribute("planApproved", planApproved);
     }
 
+    /**
+     * Extracts roles from the current authentication.
+     */
+    private java.util.Collection<String> getRoles(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+            .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+            .collect(java.util.stream.Collectors.toList());
+    }
+
     // ========================================================
     // Standard wizard navigation
     // ========================================================
@@ -131,9 +141,11 @@ public class ValidationWizardController {
     @GetMapping("/")
     public String listDrafts(Model model, Authentication authentication) {
         String username = authentication.getName();
-        log.info("Listing wizard drafts for user: {}", username);
+        java.util.Collection<String> roles = getRoles(authentication);
 
-        List<ValidationDraft> drafts = draftService.findActiveDraftsForUser(username);
+        log.info("Listing wizard drafts for user: {} with roles: {}", username, roles);
+
+        List<ValidationDraft> drafts = draftService.findActiveDraftsForUser(username, roles);
         model.addAttribute("drafts", drafts);
 
         return "wizard/list";
@@ -173,7 +185,7 @@ public class ValidationWizardController {
         String username = authentication.getName();
         log.info("Showing step {} of draft {} for user: {}", step, id, username);
 
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found or access denied: " + id));
 
         // PERIODIC_REVALIDATION has 13 steps; all other flows have 9
@@ -340,7 +352,7 @@ public class ValidationWizardController {
         String username = authentication.getName();
         log.info("Saving step {} of draft {} for user: {}", step, id, username);
 
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found or access denied: " + id));
 
         // Save step-specific data (bound from form in subclasses or AJAX)
@@ -367,7 +379,7 @@ public class ValidationWizardController {
         String username = authentication.getName();
         log.info("Navigating back to step {} of draft {} for user: {}", step, id, username);
 
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found or access denied: " + id));
 
         // Check if navigation is allowed
@@ -398,7 +410,7 @@ public class ValidationWizardController {
         String username = authentication.getName();
         log.info("Previewing PDF for draft {} of user: {}", id, username);
 
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found or access denied: " + id));
 
         // TODO: Generate PDF preview (inline in iframe)
@@ -425,7 +437,7 @@ public class ValidationWizardController {
         log.info("Finalizing wizard draft {} for user: {}", id, username);
 
         try {
-            ValidationDraft draft = draftService.getDraft(id, username)
+            ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
                 .orElseThrow(() -> new IllegalArgumentException("Draft not found or access denied: " + id));
 
             // Finalize: create Validation, sign, update draft
@@ -462,7 +474,7 @@ public class ValidationWizardController {
         String username = authentication.getName();
         log.info("Abandoning wizard draft {} for user: {}", id, username);
 
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found or access denied: " + id));
 
         draftService.abandonDraft(id);
@@ -486,7 +498,7 @@ public class ValidationWizardController {
         Authentication authentication) {
 
         String username = authentication.getName();
-        return draftService.getDraft(id, username)
+        return draftService.getDraft(id, username, getRoles(authentication))
             .map(draft -> {
                 draftService.saveStep1(id, procedureType);
                 return ResponseEntity.ok(Map.<String, Object>of("success", true, "id", id, "procedureType", procedureType));
@@ -505,7 +517,7 @@ public class ValidationWizardController {
         Authentication authentication) {
 
         String username = authentication.getName();
-        return draftService.getDraft(id, username)
+        return draftService.getDraft(id, username, getRoles(authentication))
             .map(draft -> {
                 draftService.saveStep2(id, coolingDeviceId);
                 return ResponseEntity.ok(Map.<String, Object>of("success", true, "id", id, "coolingDeviceId", coolingDeviceId));
@@ -524,7 +536,7 @@ public class ValidationWizardController {
         Authentication authentication) {
 
         String username = authentication.getName();
-        return draftService.getDraft(id, username)
+        return draftService.getDraft(id, username, getRoles(authentication))
             .map(draft -> {
                 draftService.saveStep3(id, criteria);
                 return ResponseEntity.ok(Map.<String, Object>of("success", true, "id", id, "criteriaCount", criteria.size()));
@@ -544,7 +556,7 @@ public class ValidationWizardController {
         Authentication authentication) {
 
         String username = authentication.getName();
-        return draftService.getDraft(id, username)
+        return draftService.getDraft(id, username, getRoles(authentication))
             .map(draft -> {
                 draftService.saveStep4(id, loadState, position);
                 return ResponseEntity.ok(Map.<String, Object>of("success", true, "id", id, "loadState", loadState, "position", position));
@@ -605,7 +617,7 @@ public class ValidationWizardController {
         Authentication authentication) {
 
         String username = authentication.getName();
-        return draftService.getDraft(id, username)
+        return draftService.getDraft(id, username, getRoles(authentication))
             .map(draft -> {
                 draftService.saveStep6(id, seriesIds);
                 return ResponseEntity.ok(Map.<String, Object>of("success", true, "id", id, "seriesCount", seriesIds.size()));
@@ -626,7 +638,7 @@ public class ValidationWizardController {
         Authentication authentication) throws Exception {
 
         String username = authentication.getName();
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found: " + id));
 
         if (draft.getCoolingDevice() == null) {
@@ -681,7 +693,7 @@ public class ValidationWizardController {
         }
 
         String username = authentication.getName();
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found: " + id));
 
         if (!isPeriodicRevalidation(draft)) {
@@ -712,7 +724,7 @@ public class ValidationWizardController {
         Authentication authentication) {
 
         String username = authentication.getName();
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found: " + id));
 
         if (!isPeriodicRevalidation(draft)) {
@@ -748,7 +760,7 @@ public class ValidationWizardController {
         }
 
         String username = authentication.getName();
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found: " + id));
 
         if (!isPeriodicRevalidation(draft)) {
@@ -783,7 +795,7 @@ public class ValidationWizardController {
         }
 
         String username = authentication.getName();
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found: " + id));
 
         if (!isPeriodicRevalidation(draft)) {
@@ -816,7 +828,7 @@ public class ValidationWizardController {
         log.info("Technik {} signing validation plan for draft {}", username, id);
 
         try {
-            ValidationDraft draft = draftService.getDraft(id, username)
+            ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
                 .orElseThrow(() -> new IllegalArgumentException("Draft not found or access denied: " + id));
 
             if (!isPeriodicRevalidation(draft)) {
@@ -860,7 +872,7 @@ public class ValidationWizardController {
         String username = authentication.getName();
         log.info("Showing awaiting-approval page for draft {} to user: {}", id, username);
 
-        ValidationDraft draft = draftService.getDraft(id, username)
+        ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
             .orElseThrow(() -> new IllegalArgumentException("Draft not found or access denied: " + id));
 
         model.addAttribute("draft", draft);
@@ -920,10 +932,10 @@ public class ValidationWizardController {
         try {
             planDataService.approvePlanAsQa(id, qaUsername, password);
 
-            log.info("Plan approved by QA {} for draft {}. Draft proceeds to measurement phase.", qaUsername, id);
+            log.info("Plan approved by QA {} for draft {}. QA redirected to wizard list.", qaUsername, id);
             attrs.addFlashAttribute("success",
                 "Plan walidacji został zatwierdzony. Rewalidacja przechodzi do fazy pomiarowej.");
-            return "redirect:/wizard/" + id + "/step/9";
+            return "redirect:/wizard/";
 
         } catch (IllegalStateException | IllegalArgumentException e) {
             log.error("QA approval failed for draft {} by {}: {}", id, qaUsername, e.getMessage());
@@ -933,6 +945,72 @@ public class ValidationWizardController {
             log.error("Unexpected error during QA approval of draft {} by {}", id, qaUsername, e);
             attrs.addFlashAttribute("error", "Nieoczekiwany błąd podczas zatwierdzania planu.");
             return "redirect:/wizard/" + id + "/plan-review";
+        }
+    }
+
+    /**
+     * GET: Download the printable validation plan PDF.
+     *
+     * <p>Generates (or retrieves from cache) the signed PDF of the validation plan.
+     * Used for printing and "wet" signatures by external QA.</p>
+     */
+    @GetMapping("/{id}/plan-download")
+    public ResponseEntity<byte[]> planDownload(
+        @PathVariable Long id,
+        Authentication authentication) {
+
+        String username = authentication.getName();
+        log.info("User {} downloading plan PDF for draft {}", username, id);
+
+        try {
+            // Permission check: creator or QA
+            ValidationDraft draft = draftService.getDraft(id, username, getRoles(authentication))
+                .orElseThrow(() -> new IllegalArgumentException("Draft not found or access denied: " + id));
+
+            byte[] pdfBytes = planPdfService.getPlanPdfWithCache(id);
+
+            String filename = "Plan_Walidacji_PR_" + id + ".pdf";
+
+            return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+                .body(pdfBytes);
+
+        } catch (Exception e) {
+            log.error("Failed to generate plan PDF for download (draft {}): {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * POST: Technician uploads a manual signature scan (External QA path).
+     *
+     * <p>Processes the uploaded PDF scan of a wet-signed validation plan.
+     * Marks the plan as approved via external path and transitions the draft
+     * to step 9 (measurement phase).</p>
+     */
+    @PostMapping("/{id}/plan-approve-external")
+    public String planApproveExternal(
+        @PathVariable Long id,
+        @RequestParam("scan") org.springframework.web.multipart.MultipartFile scan,
+        Authentication authentication,
+        RedirectAttributes attrs) {
+
+        String technicianUsername = authentication.getName();
+        log.info("Technician {} uploading external scan for draft {}", technicianUsername, id);
+
+        try {
+            planDataService.approvePlanExternal(id, technicianUsername, scan);
+
+            log.info("Plan approved via manual scan for draft {}. Draft proceeds to measurement phase.", id);
+            attrs.addFlashAttribute("success",
+                "Skan podpisu QA został przesłany. Rewalidacja przechodzi do fazy pomiarowej.");
+            return "redirect:/wizard/" + id + "/step/9";
+
+        } catch (Exception e) {
+            log.error("External QA approval failed for draft {}: {}", id, e.getMessage(), e);
+            attrs.addFlashAttribute("error", "Błąd przesłania skanu: " + e.getMessage());
+            return "redirect:/wizard/" + id + "/awaiting-approval";
         }
     }
 

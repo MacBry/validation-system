@@ -215,6 +215,9 @@ public class ValidationPlanDataServiceImpl implements ValidationPlanDataService 
         return draft;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${app.qa.scans-path:./uploads/qa_scans}")
+    private String scansPath;
+
     @Override
     @Transactional
     public ValidationDraft approvePlanAsQa(Long draftId, String qaUsername, String rawPassword) {
@@ -264,6 +267,69 @@ public class ValidationPlanDataServiceImpl implements ValidationPlanDataService 
         log.info("Plan approved by QA {} and draft transitioned to IN_PROGRESS at step 9", qaUsername);
 
         return draft;
+    }
+
+    @Override
+    @Transactional
+    public ValidationDraft approvePlanExternal(Long draftId, String technicianUsername, org.springframework.web.multipart.MultipartFile scan) {
+        log.info("Approving plan via external scan - draft ID: {}, tech: {}", draftId, technicianUsername);
+
+        ValidationDraft draft = draftRepository.findById(draftId)
+                .orElseThrow(() -> new IllegalArgumentException("Draft not found: " + draftId));
+
+        ValidationPlanData plan = draft.getPlanData();
+        if (plan == null) {
+            throw new IllegalArgumentException("Plan data not found for draft: " + draftId);
+        }
+
+        if (scan == null || scan.isEmpty()) {
+            throw new IllegalArgumentException("Scan file is required for external approval");
+        }
+
+        try {
+            // Create directory if not exists
+            java.nio.file.Path uploadDir = java.nio.file.Paths.get(scansPath);
+            if (!java.nio.file.Files.exists(uploadDir)) {
+                java.nio.file.Files.createDirectories(uploadDir);
+            }
+
+            // Generate filename: QA_SCAN_{draftId}_{timestamp}.pdf
+            String originalFilename = scan.getOriginalFilename();
+            String extension = originalFilename != null && originalFilename.contains(".")
+                    ? originalFilename.substring(originalFilename.lastIndexOf(".")) : ".pdf";
+            String filename = "QA_SCAN_" + draftId + "_" + System.currentTimeMillis() + extension;
+            java.nio.file.Path targetPath = uploadDir.resolve(filename);
+
+            // Copy file
+            java.nio.file.Files.copy(scan.getInputStream(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            if (plan.getQaApproval() == null) {
+                plan.setQaApproval(new com.mac.bry.validationsystem.wizard.plandata.QaApprovalPath());
+            }
+
+            // Update plan data
+            plan.getQaApproval().setApprovalMethod(QaApprovalMethod.SCANNED_DOCUMENT);
+            plan.getQaApproval().setScannedDocumentPath(targetPath.toString());
+            plan.getQaApproval().setScannedUploadedAt(LocalDateTime.now());
+            plan.getQaApproval().setScannedUploadedBy(technicianUsername);
+
+            planDataRepository.save(plan);
+
+            // Transition draft back to IN_PROGRESS, unblock step 9
+            draft.setStatus(WizardStatus.IN_PROGRESS);
+            draft.setCurrentStep(9);
+            draft.setStepLockFrom(null);
+            draftRepository.save(draft);
+
+            log.info("Plan approved via external scan {} by {} and draft transitioned to IN_PROGRESS at step 9",
+                    filename, technicianUsername);
+
+            return draft;
+
+        } catch (java.io.IOException e) {
+            log.error("Failed to save QA scan for draft {}: {}", draftId, e.getMessage());
+            throw new RuntimeException("Nie udało się zapisać skanu podpisu: " + e.getMessage());
+        }
     }
 
     @Override

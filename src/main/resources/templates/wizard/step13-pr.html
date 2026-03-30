@@ -296,11 +296,11 @@
                                 <span class="preview-box__val" th:text="${draft.procedureType?.getDisplayName() ?: '—'}">PR</span>
 
                                 <span class="preview-box__key">Powód kwalifikacji</span>
-                                <span class="preview-box__val" th:text="${draft.qualificationReason?.name() ?: '—'}">—</span>
+                                <span class="preview-box__val" th:text="${draft.planData?.details?.revalidationReason ?: '—'}">—</span>
 
                                 <span class="preview-box__key">Temp. nominalna</span>
                                 <span class="preview-box__val"
-                                      th:text="${draft.nominalTemperature != null ? draft.nominalTemperature + ' °C' : '—'}">—</span>
+                                      th:text="${draft.planData?.acceptanceCriteria?.planNominalTemp != null ? draft.planData.acceptanceCriteria.planNominalTemp + ' °C' : '—'}">—</span>
 
                                 <span class="preview-box__key">Zgodność ogólna</span>
                                 <span class="preview-box__val"
@@ -314,7 +314,7 @@
 
                                 <span class="preview-box__key">Zatwierdzony przez QA</span>
                                 <span class="preview-box__val"
-                                      th:text="${draft.qaApprovedBy ?: '—'}">—</span>
+                                      th:text="${draft.planData?.qaApproval?.fullName ?: '—'}">—</span>
                             </div>
                         </div>
                     </div>

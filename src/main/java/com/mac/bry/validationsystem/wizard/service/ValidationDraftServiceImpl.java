@@ -8,6 +8,9 @@ import com.mac.bry.validationsystem.measurement.RecorderPosition;
 import com.mac.bry.validationsystem.validation.DeviceLoadState;
 import com.mac.bry.validationsystem.wizard.ValidationDraft;
 import com.mac.bry.validationsystem.wizard.ValidationDraftRepository;
+import com.mac.bry.validationsystem.security.repository.UserRepository;
+import com.mac.bry.validationsystem.security.User;
+import com.mac.bry.validationsystem.security.UserPermissionsCache;
 import com.mac.bry.validationsystem.wizard.ValidationProcedureType;
 import com.mac.bry.validationsystem.wizard.WizardStatus;
 import com.mac.bry.validationsystem.wizard.criteria.CustomAcceptanceCriterion;
@@ -41,6 +44,7 @@ public class ValidationDraftServiceImpl implements ValidationDraftService {
     private final CustomAcceptanceCriterionRepository criterionRepository;
     private final CoolingDeviceRepository coolingDeviceRepository;
     private final MeasurementSeriesRepository measurementSeriesRepository;
+    private final UserRepository userRepository;
 
     @Override
     public ValidationDraft createDraft(String username) {
@@ -63,8 +67,42 @@ public class ValidationDraftServiceImpl implements ValidationDraftService {
     }
 
     @Override
-    public Optional<ValidationDraft> getDraft(Long draftId, String username) {
-        return draftRepository.findByIdAndCreatedBy(draftId, username);
+    public Optional<ValidationDraft> getDraft(Long draftId, String username, java.util.Collection<String> roles) {
+        log.debug("Getting draft {} for user {} with roles: {}", draftId, username, roles);
+        
+        Optional<ValidationDraft> draftOpt = draftRepository.findById(draftId);
+        if (draftOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        
+        ValidationDraft draft = draftOpt.get();
+        
+        // 1. Właściciel zawsze ma dostęp
+        if (draft.getCreatedBy().equals(username)) {
+            return draftOpt;
+        }
+        
+        // 2. QA ma dostęp do planów w swojej firmie (szczególnie tych oczekujących na zatwierdzenie lub po nim)
+        if (roles.contains("ROLE_QA") || roles.contains("QA")) {
+            Optional<User> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isPresent()) {
+                UserPermissionsCache cache = userOpt.get().getPermissionsCache();
+                if (cache != null && cache.getAllowedCompanyIds() != null) {
+                    Long companyId = draft.getCoolingDevice().getDepartment().getCompany().getId();
+                    if (cache.getAllowedCompanyIds().contains(companyId)) {
+                        log.info("Access granted to draft {} for QA user {}", draftId, username);
+                        return draftOpt;
+                    }
+                } else if (cache == null) {
+                    // Admin/Global QA bez cache - dostęp do wszystkiego
+                    log.info("Access granted to draft {} for QA/Admin user {} (no cache)", draftId, username);
+                    return draftOpt;
+                }
+            }
+        }
+        
+        log.warn("Access denied to draft {} for user {}", draftId, username);
+        return Optional.empty();
     }
 
     @Override
@@ -73,8 +111,50 @@ public class ValidationDraftServiceImpl implements ValidationDraftService {
     }
 
     @Override
-    public List<ValidationDraft> findActiveDraftsForUser(String username) {
-        return draftRepository.findByCreatedByAndStatus(username, WizardStatus.IN_PROGRESS);
+    public List<ValidationDraft> findActiveDraftsForUser(String username, java.util.Collection<String> roles) {
+        log.info("Finding active drafts for user: {} with roles: {}", username, roles);
+
+        // 1. Drafty utworzone przez użytkownika (W toku LUB Oczekujące na QA)
+        List<WizardStatus> userDraftStatuses = List.of(WizardStatus.IN_PROGRESS, WizardStatus.AWAITING_QA_APPROVAL);
+        List<ValidationDraft> drafts = new ArrayList<>(draftRepository.findByCreatedByAndStatusIn(username, userDraftStatuses));
+
+        // 2. Jeśli QA, dodaj drafty innych osób oczekujące na zatwierdzenie (filtrowane po uprawnieniach do firm)
+        if (roles.contains("ROLE_QA") || roles.contains("QA")) {
+            log.debug("User is QA, searching for drafts awaiting approval...");
+            
+            Optional<User> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                UserPermissionsCache cache = user.getPermissionsCache();
+                
+                if (cache != null && cache.getAllowedCompanyIds() != null && !cache.getAllowedCompanyIds().isEmpty()) {
+                    List<ValidationDraft> qaDrafts = draftRepository.findByStatusAndCompanyIds(
+                        WizardStatus.AWAITING_QA_APPROVAL, 
+                        cache.getAllowedCompanyIds()
+                    );
+                    
+                    // Dodaj tylko te których jeszcze nie ma na liście (stworzone przez kogoś innego)
+                    for (ValidationDraft qaDraft : qaDrafts) {
+                        if (!qaDraft.getCreatedBy().equals(username)) {
+                            drafts.add(qaDraft);
+                        }
+                    }
+                    log.info("Added {} drafts awaiting QA approval for user {}", qaDrafts.size(), username);
+                } else {
+                    // Jeśli brak cache (np. admin bez przypisanej firmy), pokazujemy wszystkie oczekujące? 
+                    // Dla bezpieczeństwa lepiej tylko te z IN_PROGRESS, ale Administrator widzi wszystko.
+                    log.warn("QA user {} has no company access cache, fetching all awaiting drafts", username);
+                    List<ValidationDraft> allAwaiting = draftRepository.findByStatus(WizardStatus.AWAITING_QA_APPROVAL);
+                    for (ValidationDraft qaDraft : allAwaiting) {
+                        if (!qaDraft.getCreatedBy().equals(username)) {
+                            drafts.add(qaDraft);
+                        }
+                    }
+                }
+            }
+        }
+
+        return drafts;
     }
 
     @Override

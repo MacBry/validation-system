@@ -122,6 +122,10 @@
             background: rgba(102,126,234,0.10);
             color: var(--vcc-primary, #667eea);
         }
+        .wizard-status--awaiting {
+            background: rgba(245, 158, 11, 0.10);
+            color: #d97706;
+        }
         .wizard-status--completed {
             background: rgba(22,163,74,0.10);
             color: #166534;
@@ -187,7 +191,11 @@
                             </div>
                             <span th:text="${draft.procedureType.getDisplayName()}">OQ Kwalifikacja</span>
                         </div>
-                        <span class="wizard-status wizard-status--draft">
+                        <span th:if="${draft.status.name() == 'AWAITING_QA_APPROVAL'}" class="wizard-status wizard-status--awaiting">
+                            <i class="fas fa-circle" style="font-size:0.5rem;"></i>
+                            <span th:text="${draft.status.getDisplayName()}">Oczekiwanie na QA</span>
+                        </span>
+                        <span th:unless="${draft.status.name() == 'AWAITING_QA_APPROVAL'}" class="wizard-status wizard-status--draft">
                             <i class="fas fa-circle" style="font-size:0.5rem;"></i>
                             <span th:text="${draft.status.getDisplayName()}">W toku</span>
                         </span>
@@ -230,10 +238,29 @@
 
                     <!-- Action buttons -->
                     <div class="wizard-draft-card__actions">
-                        <a th:href="@{/wizard/{id}/step/{step}(id=${draft.id}, step=${draft.currentStep})}"
+                        <!-- Case 1: Draft in progress = Play button -->
+                        <a th:if="${draft.status.name() == 'IN_PROGRESS'}"
+                           th:href="@{/wizard/{id}/step/{step}(id=${draft.id}, step=${draft.currentStep})}"
                            class="vcc-btn--table vcc-btn--table-primary">
                             <i class="fas fa-play"></i>
                             Kontynuuj (Krok <span th:text="${draft.currentStep}"></span>)
+                        </a>
+
+                        <!-- Case 2: Awaiting QA Approval AND user is QA = Review button -->
+                        <a th:if="${draft.status.name() == 'AWAITING_QA_APPROVAL'}"
+                           sec:authorize="hasRole('QA')"
+                           th:href="@{/wizard/{id}/plan-review(id=${draft.id})}"
+                           class="vcc-btn--table vcc-btn--table-success">
+                            <i class="fas fa-check-double"></i>
+                            Przejrzyj i zatwierdź
+                        </a>
+
+                        <!-- Case 3: Awaiting QA Approval AND user is technician (creator) = Status button -->
+                        <a th:if="${draft.status.name() == 'AWAITING_QA_APPROVAL' and draft.createdBy == #authentication.name}"
+                           th:href="@{/wizard/{id}/awaiting-approval(id=${draft.id})}"
+                           class="vcc-btn--table vcc-btn--table-outline">
+                            <i class="fas fa-clock"></i>
+                            Status zatwierdzenia
                         </a>
                         <form th:action="@{/wizard/{id}/abandon(id=${draft.id})}" method="post"
                               style="display:inline;"

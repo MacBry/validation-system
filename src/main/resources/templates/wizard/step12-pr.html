@@ -196,16 +196,32 @@
                                 <span class="global-stat-card__unit">°C</span>
                             </div>
                         </div>
-                        <div class="global-stat-card"
-                             th:classappend="${globalMin != null and draft.coolingDevice?.nominalTempMin != null and globalMin < draft.coolingDevice.nominalTempMin} ? 'global-stat-card--danger' : 'global-stat-card--success'">
+                        <div th:if="${globalMin != null and draft.coolingDevice?.minOperatingTemp != null and globalMin < draft.coolingDevice.minOperatingTemp}"
+                             class="global-stat-card global-stat-card--danger">
                             <div class="global-stat-card__label">Min globalny [°C]</div>
                             <div class="global-stat-card__value"
                                  th:text="${globalMin != null ? #numbers.formatDecimal(globalMin, 1, 2) : '—'}">—
                                 <span class="global-stat-card__unit">°C</span>
                             </div>
                         </div>
-                        <div class="global-stat-card"
-                             th:classappend="${globalMax != null and draft.coolingDevice?.nominalTempMax != null and globalMax > draft.coolingDevice.nominalTempMax} ? 'global-stat-card--danger' : 'global-stat-card--success'">
+                        <div th:unless="${globalMin != null and draft.coolingDevice?.minOperatingTemp != null and globalMin < draft.coolingDevice.minOperatingTemp}"
+                             class="global-stat-card global-stat-card--success">
+                            <div class="global-stat-card__label">Min globalny [°C]</div>
+                            <div class="global-stat-card__value"
+                                 th:text="${globalMin != null ? #numbers.formatDecimal(globalMin, 1, 2) : '—'}">—
+                                <span class="global-stat-card__unit">°C</span>
+                            </div>
+                        </div>
+                        <div th:if="${globalMax != null and draft.coolingDevice?.maxOperatingTemp != null and globalMax > draft.coolingDevice.maxOperatingTemp}"
+                             class="global-stat-card global-stat-card--danger">
+                            <div class="global-stat-card__label">Max globalny [°C]</div>
+                            <div class="global-stat-card__value"
+                                 th:text="${globalMax != null ? #numbers.formatDecimal(globalMax, 1, 2) : '—'}">—
+                                <span class="global-stat-card__unit">°C</span>
+                            </div>
+                        </div>
+                        <div th:unless="${globalMax != null and draft.coolingDevice?.maxOperatingTemp != null and globalMax > draft.coolingDevice.maxOperatingTemp}"
+                             class="global-stat-card global-stat-card--success">
                             <div class="global-stat-card__label">Max globalny [°C]</div>
                             <div class="global-stat-card__value"
                                  th:text="${globalMax != null ? #numbers.formatDecimal(globalMax, 1, 2) : '—'}">—
@@ -311,8 +327,8 @@
                              class="info-notice" style="margin-top:0;">
                             <i class="fas fa-info-circle"></i>
                             <span>Zastosowano domyślne kryteria urządzenia. Ocena zgodna z zakresem nominalnym:
-                                <strong th:text="${draft.coolingDevice?.nominalTempMin ?: '—'}">2</strong>–<strong
-                                        th:text="${draft.coolingDevice?.nominalTempMax ?: '—'}">8</strong> °C.
+                                <strong th:text="${draft.coolingDevice?.minOperatingTemp ?: '—'}">2</strong>–<strong
+                                        th:text="${draft.coolingDevice?.maxOperatingTemp ?: '—'}">8</strong> °C.
                             </span>
                         </div>
                     </div>

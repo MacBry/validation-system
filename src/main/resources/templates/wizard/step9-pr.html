@@ -155,11 +155,11 @@
                         <div class="approval-meta-item">
                             <div class="approval-meta-item__label">Data zatwierdzenia QA</div>
                             <div class="approval-meta-item__value"
-                                 th:text="${draft.qaApprovedAt != null ? #temporals.format(draft.qaApprovedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</div>
+                                 th:text="${draft.planData?.qaApproval?.electronicSignedAt != null ? #temporals.format(draft.planData.qaApproval.electronicSignedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</div>
                         </div>
                         <div class="approval-meta-item">
                             <div class="approval-meta-item__label">Zatwierdził</div>
-                            <div class="approval-meta-item__value" th:text="${draft.qaApprovedBy ?: '—'}">—</div>
+                            <div class="approval-meta-item__value" th:text="${draft.planData?.qaApproval?.electronicFullName ?: '—'}">—</div>
                         </div>
                         <div class="approval-meta-item">
                             <div class="approval-meta-item__label">Urządzenie</div>
@@ -174,13 +174,13 @@
                         </div>
                     </div>
 
-                    <!-- QA comments (if any) -->
+                    <!-- QA comments (from last rejection if any) -->
                     <div class="qa-comments-box"
-                         th:if="${draft.qaComments != null and !#strings.isEmpty(draft.qaComments)}">
+                         th:if="${draft.planData?.rejectionTrail?.rejectionReason != null and !#strings.isEmpty(draft.planData.rejectionTrail.rejectionReason)}">
                         <div class="qa-comments-box__label">
-                            <i class="fas fa-comment-dots"></i> Uwagi Kierownika Jakości
+                            <i class="fas fa-comment-dots"></i> Uwagi Kierownika Jakości (ostatnie odrzucenie)
                         </div>
-                        <div class="qa-comments-box__text" th:text="${draft.qaComments}">—</div>
+                        <div class="qa-comments-box__text" th:text="${draft.planData.rejectionTrail.rejectionReason}">—</div>
                     </div>
 
                     <!-- Phase unlock notice -->

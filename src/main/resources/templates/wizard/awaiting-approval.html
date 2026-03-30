@@ -201,12 +201,12 @@
                             <div class="plan-info-item">
                                 <div class="plan-info-item__label">Powód kwalifikacji</div>
                                 <div class="plan-info-item__value"
-                                     th:text="${draft.qualificationReason?.name() ?: '—'}">—</div>
+                                     th:text="${planData?.details?.revalidationReason ?: '—'}">—</div>
                             </div>
                             <div class="plan-info-item">
                                 <div class="plan-info-item__label">Data podpisania</div>
                                 <div class="plan-info-item__value"
-                                     th:text="${draft.planSignedAt != null ? #temporals.format(draft.planSignedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</div>
+                                     th:text="${planData?.technikSignature?.signedAt != null ? #temporals.format(planData.technikSignature.signedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</div>
                             </div>
                             <div class="plan-info-item">
                                 <div class="plan-info-item__label">Status</div>
@@ -234,7 +234,7 @@
                                     <div class="timeline-item__title">Faza planowania ukończona</div>
                                     <div class="timeline-item__desc">Plan kwalifikacji PR (kroki 1–8) został uzupełniony i podpisany przez technika kwalifikującego.</div>
                                     <div class="timeline-item__time"
-                                         th:text="${draft.planSignedAt != null ? #temporals.format(draft.planSignedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</div>
+                                         th:text="${planData?.technikSignature?.signedAt != null ? #temporals.format(planData.technikSignature.signedAt, 'dd.MM.yyyy HH:mm') : '—'}">—</div>
                                 </div>
                             </div>
                             <div class="timeline-item">
@@ -259,6 +259,53 @@
                         </div>
                     </div>
 
+                    <!-- Path B: Manual (External) Approval Upload -->
+                    <div class="vcc-detail-section" style="margin-top: var(--sp-6, 1.5rem); background: #f0f7ff; border: 1.5px dashed #667eea; border-radius: var(--radius-md, 8px);">
+                        <div class="vcc-detail-section__header" style="border-bottom: 1px solid rgba(102,126,234,0.20);">
+                            <h3 class="vcc-detail-section__title" style="color: #1e40af;">
+                                <i class="fas fa-file-arrow-up"></i>
+                                Ścieżka alternatywna: Zatwierdzenie ręczne (Skan)
+                            </h3>
+                        </div>
+                        <div style="padding: 16px;">
+                            <p style="font-size: 0.83rem; color: #475569; margin-bottom: 16px;">
+                                Jeśli plan został wydrukowany i podpisany "mokrym" podpisem przez QA spoza systemu, możesz przesłać skan tego dokumentu, aby odblokować fazę pomiarową.
+                            </p>
+                            
+                            <!-- Download Plan for Printing -->
+                            <div style="margin-bottom: 20px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 40px; height: 40px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ef4444;">
+                                        <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 0.85rem; color: #1e293b;">Arkusz planu walidacji</div>
+                                        <div style="font-size: 0.75rem; color: #64748b;">Pobierz gotowy dokument do wydruku i podpisu</div>
+                                    </div>
+                                </div>
+                                <a th:href="@{/wizard/{id}/plan-download(id=${draft.id})}" class="btn-outline-primary" style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-download"></i> Pobierz plan PDF
+                                </a>
+                            </div>
+
+                            <form th:action="@{/wizard/{id}/plan-approve-external(id=${draft.id})}" method="post" enctype="multipart/form-data">
+                                <th:block th:replace="~{fragments/csrf-token :: csrf-input}"></th:block>
+                                <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+                                    <div style="flex-grow: 1; min-width: 200px;">
+                                        <label for="scan" class="vcc-form-label" style="font-size: 0.78rem;">Skan podpisanego planu (PDF) <span class="vcc-required">*</span></label>
+                                        <input type="file" id="scan" name="scan" class="vcc-form-input" accept=".pdf" required>
+                                    </div>
+                                    <button type="submit" class="btn-outline-primary" style="height: 42px; border-style: solid;">
+                                        <i class="fas fa-upload"></i> Prześlij skan i przejdź do pomiarów
+                                    </button>
+                                </div>
+                                <p class="vcc-form-hint" style="margin-top: 8px;">
+                                    Zgodnie z procedurą, skan musi być czytelny i zawierać podpisy wszystkich wymaganych osób.
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+
                     <!-- Actions -->
                     <div class="awaiting-actions">
                         <a th:href="@{/wizard/}" class="btn-muted">
@@ -270,8 +317,8 @@
                             <i class="fas fa-cube"></i> Szczegóły urządzenia
                         </a>
                         <!-- QA manager sees a link to the review page -->
-                        <a th:href="@{/wizard/{id}/pr/plan-review(id=${draft.id})}"
-                           sec:authorize="hasAnyRole('SUPER_ADMIN', 'ADMIN')"
+                        <a th:href="@{/wizard/{id}/plan-review(id=${draft.id})}"
+                           sec:authorize="hasRole('QA')"
                            class="wizard-btn-sign"
                            style="display:inline-flex; align-items:center; gap:7px; padding:9px 20px;
                                   background:linear-gradient(135deg,#f59e0b,#d97706); border:none;

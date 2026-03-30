@@ -35,12 +35,13 @@ public interface ValidationDraftService {
     ValidationDraft createDraft(String username);
 
     /**
-     * Get draft by ID and verify ownership
+     * Get draft by ID and verify ownership or role-based access (QA)
      * @param draftId Draft ID
      * @param username Current user
+     * @param roles User roles
      * @return Optional draft
      */
-    Optional<ValidationDraft> getDraft(Long draftId, String username);
+    Optional<ValidationDraft> getDraft(Long draftId, String username, java.util.Collection<String> roles);
 
     /**
      * Get draft without ownership check (internal use)
@@ -50,11 +51,16 @@ public interface ValidationDraftService {
     Optional<ValidationDraft> getDraftById(Long draftId);
 
     /**
-     * Find all active drafts for a user
+     * Find all active drafts for a user.
+     * - Returns drafts created by the user (IN_PROGRESS or AWAITING_QA_APPROVAL).
+     * - If user has ROLE_QA, also returns all drafts with AWAITING_QA_APPROVAL status
+     *   within their authorized companies/departments.
+     *
      * @param username User
-     * @return List of IN_PROGRESS drafts
+     * @param roles Roles of the current user (e.g. ROLE_QA, ROLE_USER)
+     * @return List of relevant drafts
      */
-    List<ValidationDraft> findActiveDraftsForUser(String username);
+    List<ValidationDraft> findActiveDraftsForUser(String username, java.util.Collection<String> roles);
 
     /**
      * Find all drafts for a user (including completed/abandoned)

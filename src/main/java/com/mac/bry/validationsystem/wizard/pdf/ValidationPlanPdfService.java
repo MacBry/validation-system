@@ -426,7 +426,7 @@ public class ValidationPlanPdfService {
 
     private void addSectionF(Document doc, TechnikSignature technikSig,
                               QaApprovalPath qaApproval, PdfFont bold, PdfFont normal) {
-        addSectionHeader(doc, "F. Podpisy Elektroniczne", bold);
+        addSectionHeader(doc, "F. Podpisy / Signatures", bold);
 
         // Technician signature
         doc.add(new Paragraph("Podpis Technologa (Faza 1 — Plan):")
@@ -463,7 +463,14 @@ public class ValidationPlanPdfService {
                     ? qaApproval.getElectronicSignedAt().format(DT_FMT) : "-",
                 bold, normal);
         } else {
-            addMetaRow(qaTable, "Status:", "Oczekuje na zatwierdzenie QA", bold, normal);
+            addMetaRow(qaTable, "Status:", "Oczekuje na zatwierdzenie QA / Awaiting QA Approval", bold, normal);
+            
+            // Add wet signature field for external QA
+            qaTable.addCell(new com.itextpdf.layout.element.Cell(1, 2)
+                .add(new com.itextpdf.layout.element.Paragraph("\n\n...........................................................................\n(Data i podpis QA / Date and signature)")
+                    .setFont(normal).setFontSize(8).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER))
+                .setBorder(new com.itextpdf.layout.borders.SolidBorder(com.itextpdf.kernel.colors.ColorConstants.LIGHT_GRAY, BORDER))
+                .setPadding(10));
         }
         doc.add(qaTable);
     }

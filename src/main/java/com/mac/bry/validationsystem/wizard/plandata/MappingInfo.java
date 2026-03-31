@@ -1,5 +1,6 @@
 package com.mac.bry.validationsystem.wizard.plandata;
 
+import com.mac.bry.validationsystem.measurement.RecorderPosition;
 import com.mac.bry.validationsystem.wizard.MappingStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -61,14 +62,17 @@ public class MappingInfo {
     @Column(name = "sensor_count_manual")
     private Integer sensorCountManual;
 
-    @Column(name = "controller_sensor_location_manual", length = 200)
-    private String controllerSensorLocationManual;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "controller_sensor_location_manual", length = 50)
+    private RecorderPosition controllerSensorLocationManual;
 
-    @Column(name = "hot_spot_location_manual", length = 200)
-    private String hotSpotLocationManual;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "hot_spot_location_manual", length = 50)
+    private RecorderPosition hotSpotLocationManual;
 
-    @Column(name = "cold_spot_location_manual", length = 200)
-    private String coldSpotLocationManual;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cold_spot_location_manual", length = 50)
+    private RecorderPosition coldSpotLocationManual;
 
     /**
      * Checks if this mapping status requires acknowledgement and has not yet been acknowledged

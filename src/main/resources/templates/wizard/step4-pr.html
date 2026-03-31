@@ -273,15 +273,15 @@
                             </div>
                             <div class="manual-field manual-field--full">
                                 <label class="manual-label">Lokalizacja czujnika kontrolującego</label>
-                                <input type="text" id="manualControllerLocation" class="manual-input" placeholder="np. Półka środkowa, tył" th:value="${draft.planData?.mappingInfo?.controllerSensorLocationManual}">
+                                <div th:replace="~{fragments/position-selector :: selector('manualControllerLocation', ${draft.planData?.mappingInfo?.controllerSensorLocationManual})}"></div>
                             </div>
                             <div class="manual-field">
                                 <label class="manual-label">Lokalizacja Hot-Spot (najcieplejszy)</label>
-                                <input type="text" id="manualHotSpot" class="manual-input" placeholder="np. Prawa góra, przód" th:value="${draft.planData?.mappingInfo?.hotSpotLocationManual}">
+                                <div th:replace="~{fragments/position-selector :: selector('manualHotSpot', ${draft.planData?.mappingInfo?.hotSpotLocationManual})}"></div>
                             </div>
                             <div class="manual-field">
                                 <label class="manual-label">Lokalizacja Cold-Spot (najzimniejszy)</label>
-                                <input type="text" id="manualColdSpot" class="manual-input" placeholder="np. Lewy dół, tył" th:value="${draft.planData?.mappingInfo?.coldSpotLocationManual}">
+                                <div th:replace="~{fragments/position-selector :: selector('manualColdSpot', ${draft.planData?.mappingInfo?.coldSpotLocationManual})}"></div>
                             </div>
                         </div>
                     </div>

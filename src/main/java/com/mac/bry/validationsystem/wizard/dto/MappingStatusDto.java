@@ -1,5 +1,6 @@
 package com.mac.bry.validationsystem.wizard.dto;
 
+import com.mac.bry.validationsystem.measurement.RecorderPosition;
 import com.mac.bry.validationsystem.wizard.MappingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -90,9 +91,9 @@ public class MappingStatusDto {
     private String mappingProtocolNumberManual;
     private LocalDate mappingValidUntilManual;
     private Integer sensorCountManual;
-    private String controllerSensorLocationManual;
-    private String hotSpotLocationManual;
-    private String coldSpotLocationManual;
+    private RecorderPosition controllerSensorLocationManual;
+    private RecorderPosition hotSpotLocationManual;
+    private RecorderPosition coldSpotLocationManual;
 
     /**
      * Nested DTO for sensor position result.

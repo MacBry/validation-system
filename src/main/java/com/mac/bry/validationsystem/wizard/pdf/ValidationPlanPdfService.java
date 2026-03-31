@@ -406,11 +406,11 @@ public class ValidationPlanPdfService {
             addMetaRow(t, "Liczba czujników (mapowanie zewnętrzne):",
                 mInfo.getSensorCountManual() != null ? String.valueOf(mInfo.getSensorCountManual()) : "-", bold, normal);
             addMetaRow(t, "Lokalizacja czujnika kontrolnego:",
-                notNull(mInfo.getControllerSensorLocationManual()), bold, normal);
+                mInfo.getControllerSensorLocationManual() != null ? mInfo.getControllerSensorLocationManual().name() : "-", bold, normal);
             addMetaRow(t, "Lokalizacja Hot-Spot:",
-                notNull(mInfo.getHotSpotLocationManual()), bold, normal);
+                mInfo.getHotSpotLocationManual() != null ? mInfo.getHotSpotLocationManual().name() : "-", bold, normal);
             addMetaRow(t, "Lokalizacja Cold-Spot:",
-                notNull(mInfo.getColdSpotLocationManual()), bold, normal);
+                mInfo.getColdSpotLocationManual() != null ? mInfo.getColdSpotLocationManual().name() : "-", bold, normal);
         }
 
         doc.add(t);

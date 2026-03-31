@@ -1,0 +1,129 @@
+<!-- 
+    Reusable Position Selector Fragment 
+    Usage: <div th:replace="~{fragments/position-selector :: selector('myFieldId', ${initialValue})}"></div>
+-->
+<th:block th:fragment="selector(fieldId, initialValue)">
+    <div class="vcc-pos-selector" th:id="'selector-container-' + ${fieldId}">
+        <!-- Hidden input for form submission -->
+        <input type="hidden" th:id="${fieldId}" th:name="${fieldId}" th:value="${initialValue}">
+
+        <div class="vcc-pos-selector__inner" style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            <!-- Level Switcher -->
+            <div class="vcc-pos-levels">
+                <button type="button" class="vcc-pos-level-btn" data-level="TOP">
+                    <i class="fas fa-chevron-up"></i> Góra
+                </button>
+                <button type="button" class="vcc-pos-level-btn active" data-level="MIDDLE">
+                    <i class="fas fa-square"></i> Środek
+                </button>
+                <button type="button" class="vcc-pos-level-btn" data-level="BOTTOM">
+                    <i class="fas fa-chevron-down"></i> Dół
+                </button>
+            </div>
+
+            <!-- Position Grid -->
+            <div class="vcc-pos-grid-wrapper">
+                <!-- X Labels (Columns) -->
+                <div class="vcc-pos-label-x">
+                    <span>LEWY</span>
+                    <span>ŚRODEK</span>
+                    <span>PRAWY</span>
+                </div>
+                <!-- Y Labels (Depth) -->
+                <div class="vcc-pos-label-y">
+                    <span>Tył</span>
+                    <span>Śr.</span>
+                    <span>Przód</span>
+                </div>
+                <!-- 3x3 Grid -->
+                <div class="vcc-pos-grid" th:id="'grid-' + ${fieldId}">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+            
+            <div th:id="'display-' + ${fieldId}" style="font-size: 0.8rem; font-weight: 600; color: var(--vcc-primary);">
+                Wybrano: <span class="pos-label">-</span>
+            </div>
+        </div>
+
+        <script th:inline="javascript">
+            (function() {
+                const fieldId = /*[[${fieldId}]]*/ '';
+                const container = document.getElementById('selector-container-' + fieldId);
+                const hiddenInput = document.getElementById(fieldId);
+                const grid = document.getElementById('grid-' + fieldId);
+                const display = document.getElementById('display-' + fieldId).querySelector('.pos-label');
+                const levelBtns = container.querySelectorAll('.vcc-pos-level-btn');
+
+                const posMapping = {
+                    'TOP': [
+                        'TOP_REAR_LEFT', 'TOP_REAR_CENTER', 'TOP_REAR_RIGHT',
+                        'TOP_CENTER_LEFT', 'TOP_CENTER_CENTER', 'TOP_CENTER_RIGHT',
+                        'TOP_FRONT_LEFT', 'TOP_FRONT_CENTER', 'TOP_FRONT_RIGHT'
+                    ],
+                    'MIDDLE': [
+                        'MIDDLE_REAR_LEFT', 'MIDDLE_REAR_CENTER', 'MIDDLE_REAR_RIGHT',
+                        'MIDDLE_CENTER_LEFT', 'MIDDLE_CENTER_CENTER', 'MIDDLE_CENTER_RIGHT',
+                        'MIDDLE_FRONT_LEFT', 'MIDDLE_FRONT_CENTER', 'MIDDLE_FRONT_RIGHT'
+                    ],
+                    'BOTTOM': [
+                        'BOTTOM_REAR_LEFT', 'BOTTOM_REAR_CENTER', 'BOTTOM_REAR_RIGHT',
+                        'BOTTOM_CENTER_LEFT', 'BOTTOM_CENTER_CENTER', 'BOTTOM_CENTER_RIGHT',
+                        'BOTTOM_FRONT_LEFT', 'BOTTOM_FRONT_CENTER', 'BOTTOM_FRONT_RIGHT'
+                    ]
+                };
+                const labelPrefix = { 'TOP': 'G', 'MIDDLE': 'S', 'BOTTOM': 'D' };
+                
+                let currentLevel = 'MIDDLE';
+
+                // Try to infer current level from initialValue
+                if (hiddenInput.value) {
+                    if (hiddenInput.value.startsWith('TOP')) currentLevel = 'TOP';
+                    else if (hiddenInput.value.startsWith('BOTTOM')) currentLevel = 'BOTTOM';
+                }
+
+                function render() {
+                    grid.innerHTML = '';
+                    const positions = posMapping[currentLevel];
+                    const prefix = labelPrefix[currentLevel];
+
+                    levelBtns.forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.level === currentLevel);
+                    });
+
+                    positions.forEach((posKey, index) => {
+                        const cell = document.createElement('div');
+                        cell.className = 'vcc-pos-cell';
+                        if (posKey === hiddenInput.value) cell.classList.add('active');
+                        
+                        cell.textContent = prefix + (index + 1);
+                        cell.dataset.pos = posKey;
+
+                        cell.addEventListener('click', () => {
+                            hiddenInput.value = posKey;
+                            display.textContent = posKey.replace(/_/g, ' ');
+                            render();
+                            // Trigger change event for parent forms
+                            hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        });
+
+                        grid.appendChild(cell);
+                    });
+                    
+                    if (hiddenInput.value) {
+                        display.textContent = hiddenInput.value.replace(/_/g, ' ');
+                    }
+                }
+
+                levelBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        currentLevel = btn.dataset.level;
+                        render();
+                    });
+                });
+
+                render();
+            })();
+        </script>
+    </div>
+</th:block>

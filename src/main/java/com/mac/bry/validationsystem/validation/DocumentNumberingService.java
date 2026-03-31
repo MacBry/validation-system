@@ -33,7 +33,7 @@ public class DocumentNumberingService {
         seq.setLastNumber(seq.getLastNumber() + 1);
         sequenceRepository.save(seq);
 
-        String number = String.format("%s/%s/%d/%03d", typePrefix, labAbbrev, year, seq.getLastNumber());
+        String number = String.format("%s/%s/%d/%04d", typePrefix, labAbbrev, year, seq.getLastNumber());
         log.info("Wygenerowano numer dokumentu: {}", number);
         return number;
     }

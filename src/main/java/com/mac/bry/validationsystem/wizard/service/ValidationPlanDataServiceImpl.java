@@ -2,6 +2,7 @@ package com.mac.bry.validationsystem.wizard.service;
 
 import com.mac.bry.validationsystem.security.User;
 import com.mac.bry.validationsystem.security.repository.UserRepository;
+import com.mac.bry.validationsystem.security.service.AuditService;
 import com.mac.bry.validationsystem.wizard.ValidationDraft;
 import com.mac.bry.validationsystem.wizard.ValidationDraftRepository;
 import com.mac.bry.validationsystem.wizard.ValidationPlanData;
@@ -37,6 +38,7 @@ public class ValidationPlanDataServiceImpl implements ValidationPlanDataService 
     private final ValidationDraftRepository draftRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     @Override
     @Transactional
@@ -221,6 +223,9 @@ public class ValidationPlanDataServiceImpl implements ValidationPlanDataService 
 
         log.info("Plan signed by technician {} and draft transitioned to AWAITING_QA_APPROVAL", username);
 
+        auditService.logOperation("ValidationPlanData", plan.getId(), "PLAN_SIGN_TECHNICIAN", null,
+            java.util.Map.of("draftId", draftId, "username", username));
+
         return draft;
     }
 
@@ -274,6 +279,9 @@ public class ValidationPlanDataServiceImpl implements ValidationPlanDataService 
         draftRepository.save(draft);
 
         log.info("Plan approved by QA {} and draft transitioned to IN_PROGRESS at step 9", qaUsername);
+
+        auditService.logOperation("ValidationPlanData", plan.getId(), "PLAN_APPROVE_QA", null,
+            java.util.Map.of("draftId", draftId, "qaUsername", qaUsername, "method", "ELECTRONIC"));
 
         return draft;
     }
@@ -333,6 +341,9 @@ public class ValidationPlanDataServiceImpl implements ValidationPlanDataService 
             log.info("Plan approved via external scan {} by {} and draft transitioned to IN_PROGRESS at step 9",
                     filename, technicianUsername);
 
+            auditService.logOperation("ValidationPlanData", plan.getId(), "PLAN_APPROVE_QA", null,
+                java.util.Map.of("draftId", draftId, "uploadedBy", technicianUsername, "method", "EXTERNAL_SCAN", "fileName", filename));
+
             return draft;
 
         } catch (java.io.IOException e) {
@@ -378,6 +389,9 @@ public class ValidationPlanDataServiceImpl implements ValidationPlanDataService 
         draftRepository.save(draft);
 
         log.info("Plan rejected by QA {}. Reason: {}. Draft returned to step 8", qaUsername, rejectionReason);
+
+        auditService.logOperation("ValidationPlanData", plan.getId(), "PLAN_REJECT_QA", null,
+            java.util.Map.of("draftId", draftId, "qaUsername", qaUsername, "reason", rejectionReason));
 
         return draft;
     }

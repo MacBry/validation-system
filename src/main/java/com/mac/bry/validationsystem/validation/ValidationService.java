@@ -28,6 +28,7 @@ public class ValidationService {
     private final ValidationDocumentService documentService;
     private final ValidationPlanNumberRepository validationPlanNumberRepository;
     private final SecurityService securityService;
+    private final DocumentNumberingService documentNumberingService;
 
     /**
      * Tworzy nową walidację z wybranych serii pomiarowych
@@ -76,10 +77,11 @@ public class ValidationService {
                     series.getRecorderPosition() != null ? series.getRecorderPosition().getDisplayName() : "brak");
         }
 
-        // WAŻNE: Pobierz lub utwórz numer RPW dla urządzenia (NIE inkrementuj!)
-        // Może być wiele walidacji (raportów) z tym samym numerem RPW
+        // WAŻNE: Wygeneruj unikalny numer RPW dla raportu (inkrementacja przy każdym raporcie)
         if (validation.getCoolingDevice() != null) {
-            String rpwNumber = getOrCreateValidationPlanNumber(validation.getCoolingDevice());
+            String labAbbrev = resolveLabAbbrev(validation.getCoolingDevice());
+            int year = java.time.Year.now().getValue();
+            String rpwNumber = documentNumberingService.generateNextNumber("RPW/PR", labAbbrev, year);
             validation.setValidationPlanNumber(rpwNumber);
             log.info("✅ Przypisano numer RPW: {}", rpwNumber);
         } else {
@@ -137,35 +139,32 @@ public class ValidationService {
             log.info("Generowanie dokumentu Word dla walidacji ID: {}", savedValidation.getId());
             byte[] documentBytes = documentService.generateValidationDocument(savedValidation);
             log.info("Dokument Word wygenerowany pomyślnie ({} bajtów)", documentBytes.length);
-            // Dokument jest generowany ale nie zapisywany - będzie pobierany na żądanie
         } catch (Exception e) {
             log.error("Błąd podczas generowania dokumentu Word: {}", e.getMessage(), e);
-            // Nie przerywamy transakcji - walidacja jest zapisana, dokument można
-            // wygenerować później
         }
 
         return savedValidation;
     }
 
+    private String resolveLabAbbrev(CoolingDevice device) {
+        if (device != null && device.getLaboratory() != null && device.getLaboratory().getAbbreviation() != null) {
+            return device.getLaboratory().getAbbreviation();
+        }
+        return "LAB";
+    }
+
     /**
-     * Pobiera lub tworzy numer RPW dla urządzenia (NIE inkrementuje!)
-     * Format: {numer}/{rok}
-     * Przykład: "1/2026"
-     * 
-     * WAŻNE: Numer RPW jest stały dla urządzenia w danym roku.
-     * Może być wiele walidacji (raportów) z tym samym numerem RPW.
+     * @deprecated Use DocumentNumberingService instead for unique RPW numbers.
      */
+    @Deprecated
     private String getOrCreateValidationPlanNumber(CoolingDevice device) {
         int currentYear = java.time.Year.now().getValue();
 
-        // Sprawdź czy istnieje już rekord dla tego urządzenia w tym roku
         ValidationPlanNumber planNumber = validationPlanNumberRepository
                 .findByCoolingDeviceAndYear(device, currentYear)
                 .orElse(null);
 
         if (planNumber == null) {
-            // Pierwsza walidacja tego urządzenia w tym roku - utwórz nowy rekord
-            // Numer = ilość różnych urządzeń + 1
             int nextNumber = validationPlanNumberRepository
                     .findByCoolingDeviceOrderByYearDesc(device)
                     .stream()
@@ -180,15 +179,8 @@ public class ValidationService {
                     .build();
 
             planNumber = validationPlanNumberRepository.save(planNumber);
-            log.info("Utworzono nowy numer RPW dla urządzenia {} w roku {}: {}",
-                    device.getInventoryNumber(), currentYear, nextNumber);
-        } else {
-            // Rekord już istnieje - użyj tego samego numeru (NIE inkrementuj!)
-            log.info("Użyto istniejącego numeru RPW dla urządzenia {} w roku {}: {}",
-                    device.getInventoryNumber(), currentYear, planNumber.getPlanNumber());
         }
 
-        // Format: {numer}/{rok}
         return String.format("%d/%d", planNumber.getPlanNumber(), currentYear);
     }
 

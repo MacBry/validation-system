@@ -105,7 +105,6 @@ public class ValidationDraft {
      * The cooling device selected in step 2 (nullable until step 2)
      */
     @JsonIgnore
-    @NotAudited
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cooling_device_id", nullable = true)
     private CoolingDevice coolingDevice;
@@ -174,7 +173,6 @@ public class ValidationDraft {
      * Contains plan details, mapping status, acceptance criteria, signatures, and QA approval.
      */
     @JsonIgnore
-    @NotAudited
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "plan_data_id", unique = true, nullable = true)
     private ValidationPlanData planData;

@@ -301,7 +301,7 @@ public class WizardFinalizationService {
         // ── Step 5: Allocate document number ─────────────────────────────────
         String labAbbrev = resolveLabAbbrev(draft);
         int year = Year.now().getValue();
-        String documentNumber = documentNumberingService.generateNextNumber("WP", labAbbrev, year);
+        String documentNumber = documentNumberingService.generateNextNumber("RPW/PR", labAbbrev, year);
         log.info("Allocated document number: {} for draft: {}", documentNumber, draftId);
 
         // ── Step 6: Record technician signature ───────────────────────────────

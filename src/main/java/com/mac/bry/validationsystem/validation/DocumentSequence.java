@@ -25,7 +25,7 @@ public class DocumentSequence {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "type_prefix", nullable = false, length = 10)
+    @Column(name = "type_prefix", nullable = false, length = 20)
     private String typePrefix;
 
     @Column(name = "lab_abbrev", nullable = false, length = 20)

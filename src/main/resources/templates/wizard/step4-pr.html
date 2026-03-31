@@ -106,6 +106,36 @@
         .ack-checkbox-wrap { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
         .ack-checkbox-wrap input { margin-top: 3px; }
         .ack-checkbox-wrap span { font-size: 0.88rem; color: #4b5563; line-height: 1.4; }
+
+        /* Manual Mapping Form */
+        .manual-mapping-form {
+            background: #fff;
+            border: 1px solid var(--border-default, #e5e7ef);
+            border-radius: var(--radius-md, 8px);
+            padding: var(--sp-5, 1.25rem);
+            margin-top: var(--sp-4, 1rem);
+            display: none; /* Shown via JS */
+        }
+        .manual-mapping-form__title {
+            font-size: 0.9rem; font-weight: 700; color: var(--text-primary, #1a1f3a);
+            margin-bottom: var(--sp-4, 1rem); display: flex; align-items: center; gap: 8px;
+        }
+        .manual-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--sp-4, 1rem);
+        }
+        .manual-field { margin-bottom: var(--sp-3, 0.75rem); }
+        .manual-field--full { grid-column: 1 / -1; }
+        .manual-label {
+            display: block; font-size: 0.75rem; font-weight: 600;
+            color: var(--text-secondary, #6b7280); margin-bottom: 6px;
+        }
+        .manual-input {
+            width: 100%; padding: 8px 12px; border: 1.5px solid var(--border-default, #e5e7ef);
+            border-radius: 6px; font-size: 0.9rem; transition: border-color 0.15s;
+        }
+        .manual-input:focus { border-color: var(--vcc-primary, #667eea); outline: none; }
     </style>
 </head>
 
@@ -214,7 +244,44 @@
                             <div th:if="${mappingStatus == null or mappingStatus.sensorPositions == null or #lists.isEmpty(mappingStatus.sensorPositions)}"
                                  class="sensor-positions-empty">
                                 <i class="fas fa-exclamation-circle" style="flex-shrink:0;"></i>
-                                <span>Brak danych o pozycjach czujników. Urządzenie nie posiada zakończonego mapowania.</span>
+                                <span>Brak danych o pozycjach czujników. Urządzenie nie posiada zakończonego mapowania w systemie.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Mapping Entry Form (Annex 15 compliance) -->
+                    <div id="manualMappingForm" class="manual-mapping-form">
+                        <div class="manual-mapping-form__title">
+                            <i class="fas fa-edit"></i> Wprowadź dane z ostatniego mapowania (spoza systemu)
+                        </div>
+                        <div class="manual-grid">
+                            <div class="manual-field">
+                                <label class="manual-label">Data mapowania</label>
+                                <input type="date" id="manualLastMappingDate" class="manual-input" th:value="${draft.planData?.mappingInfo?.lastMappingDateManual}">
+                            </div>
+                            <div class="manual-field">
+                                <label class="manual-label">Nr protokołu / Numer mapowania</label>
+                                <input type="text" id="manualProtocolNumber" class="manual-input" placeholder="np. MAP/2024/001" th:value="${draft.planData?.mappingInfo?.mappingProtocolNumberManual}">
+                            </div>
+                            <div class="manual-field">
+                                <label class="manual-label">Data ważności mapowania</label>
+                                <input type="date" id="manualValidUntil" class="manual-input" th:value="${draft.planData?.mappingInfo?.mappingValidUntilManual}">
+                            </div>
+                            <div class="manual-field">
+                                <label class="manual-label">Liczba użytych czujników</label>
+                                <input type="number" id="manualSensorCount" class="manual-input" placeholder="np. 9" th:value="${draft.planData?.mappingInfo?.sensorCountManual}">
+                            </div>
+                            <div class="manual-field manual-field--full">
+                                <label class="manual-label">Lokalizacja czujnika kontrolującego</label>
+                                <input type="text" id="manualControllerLocation" class="manual-input" placeholder="np. Półka środkowa, tył" th:value="${draft.planData?.mappingInfo?.controllerSensorLocationManual}">
+                            </div>
+                            <div class="manual-field">
+                                <label class="manual-label">Lokalizacja Hot-Spot (najcieplejszy)</label>
+                                <input type="text" id="manualHotSpot" class="manual-input" placeholder="np. Prawa góra, przód" th:value="${draft.planData?.mappingInfo?.hotSpotLocationManual}">
+                            </div>
+                            <div class="manual-field">
+                                <label class="manual-label">Lokalizacja Cold-Spot (najzimniejszy)</label>
+                                <input type="text" id="manualColdSpot" class="manual-input" placeholder="np. Lewy dół, tył" th:value="${draft.planData?.mappingInfo?.coldSpotLocationManual}">
                             </div>
                         </div>
                     </div>
@@ -253,8 +320,17 @@
         
         const nextBtn = document.getElementById('nextBtn');
         const ackCheckbox = document.getElementById('ackCheckbox');
+        const manualForm = document.getElementById('manualMappingForm');
 
-        function updateNextButton() {
+        function updateUIState() {
+            // Show manual form if mapping is not current
+            if (mappingStatusRaw !== 'CURRENT') {
+                manualForm.style.display = 'block';
+            } else {
+                manualForm.style.display = 'none';
+            }
+
+            // Update next button
             if (mappingStatusRaw === 'CURRENT') {
                 nextBtn.disabled = false;
             } else if (ackCheckbox) {
@@ -265,9 +341,9 @@
         }
 
         if (ackCheckbox) {
-            ackCheckbox.addEventListener('change', updateNextButton);
+            ackCheckbox.addEventListener('change', updateUIState);
         }
-        updateNextButton();
+        updateUIState();
 
         nextBtn.addEventListener('click', function() {
             const acknowledged = ackCheckbox ? ackCheckbox.checked : false;
@@ -280,7 +356,16 @@
             const body = {
                 mappingCheckDate: mappingCheckDateRaw || null,
                 mappingStatus: mappingStatusRaw || null,
-                mappingOverdueAcknowledged: acknowledged
+                mappingOverdueAcknowledged: acknowledged,
+                
+                // Manual fields
+                lastMappingDateManual: document.getElementById('manualLastMappingDate').value || null,
+                mappingProtocolNumberManual: document.getElementById('manualProtocolNumber').value || null,
+                mappingValidUntilManual: document.getElementById('manualValidUntil').value || null,
+                sensorCountManual: document.getElementById('manualSensorCount').value || null,
+                controllerSensorLocationManual: document.getElementById('manualControllerLocation').value || null,
+                hotSpotLocationManual: document.getElementById('manualHotSpot').value || null,
+                coldSpotLocationManual: document.getElementById('manualColdSpot').value || null
             };
 
             nextBtn.disabled = true;

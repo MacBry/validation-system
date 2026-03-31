@@ -326,6 +326,19 @@ public class ValidationPlanPdfService {
                 ? "TAK — technik potwierdził" : "N/D",
             bold, normal);
 
+        // Manual mapping data (Annex 15 compliance for external mappings)
+        if (mappingInfo.getMappingStatus() != com.mac.bry.validationsystem.wizard.MappingStatus.CURRENT
+            && mappingInfo.getLastMappingDateManual() != null) {
+            
+            addMetaRow(t, "Data mapowania (ręcznie):", 
+                mappingInfo.getLastMappingDateManual().format(DATE_FMT), bold, normal);
+            addMetaRow(t, "Nr protokołu (ręcznie):", 
+                notNull(mappingInfo.getMappingProtocolNumberManual()), bold, normal);
+            addMetaRow(t, "Ważność mapowania (ręcznie):", 
+                mappingInfo.getMappingValidUntilManual() != null 
+                    ? mappingInfo.getMappingValidUntilManual().format(DATE_FMT) : "-", bold, normal);
+        }
+
         doc.add(t);
     }
 
@@ -384,6 +397,21 @@ public class ValidationPlanPdfService {
             draft.getSelectedSeriesIds() != null
                 ? String.valueOf(draft.getSelectedSeriesIds().size()) : "0",
             bold, normal);
+
+        // Manual sensor positions summary (if no system mapping)
+        MappingInfo mInfo = draft.getPlanData() != null ? draft.getPlanData().getMappingInfo() : null;
+        if (mInfo != null && mInfo.getMappingStatus() != com.mac.bry.validationsystem.wizard.MappingStatus.CURRENT
+            && (mInfo.getSensorCountManual() != null || mInfo.getControllerSensorLocationManual() != null)) {
+
+            addMetaRow(t, "Liczba czujników (mapowanie zewnętrzne):",
+                mInfo.getSensorCountManual() != null ? String.valueOf(mInfo.getSensorCountManual()) : "-", bold, normal);
+            addMetaRow(t, "Lokalizacja czujnika kontrolnego:",
+                notNull(mInfo.getControllerSensorLocationManual()), bold, normal);
+            addMetaRow(t, "Lokalizacja Hot-Spot:",
+                notNull(mInfo.getHotSpotLocationManual()), bold, normal);
+            addMetaRow(t, "Lokalizacja Cold-Spot:",
+                notNull(mInfo.getColdSpotLocationManual()), bold, normal);
+        }
 
         doc.add(t);
     }

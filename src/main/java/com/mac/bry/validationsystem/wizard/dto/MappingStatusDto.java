@@ -85,6 +85,15 @@ public class MappingStatusDto {
      */
     private java.util.List<SensorPositionDto> sensorPositions;
 
+    // --- Manual entry fields for external mapping ---
+    private LocalDate lastMappingDateManual;
+    private String mappingProtocolNumberManual;
+    private LocalDate mappingValidUntilManual;
+    private Integer sensorCountManual;
+    private String controllerSensorLocationManual;
+    private String hotSpotLocationManual;
+    private String coldSpotLocationManual;
+
     /**
      * Nested DTO for sensor position result.
      */

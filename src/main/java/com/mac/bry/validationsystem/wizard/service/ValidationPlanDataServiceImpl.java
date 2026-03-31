@@ -118,6 +118,15 @@ public class ValidationPlanDataServiceImpl implements ValidationPlanDataService 
         plan.getMappingInfo().setMappingOverdueAcknowledged(
             Boolean.TRUE.equals(mappingStatus.getMappingOverdueAcknowledged()));
 
+        // Manual entry fields
+        plan.getMappingInfo().setLastMappingDateManual(mappingStatus.getLastMappingDateManual());
+        plan.getMappingInfo().setMappingProtocolNumberManual(mappingStatus.getMappingProtocolNumberManual());
+        plan.getMappingInfo().setMappingValidUntilManual(mappingStatus.getMappingValidUntilManual());
+        plan.getMappingInfo().setSensorCountManual(mappingStatus.getSensorCountManual());
+        plan.getMappingInfo().setControllerSensorLocationManual(mappingStatus.getControllerSensorLocationManual());
+        plan.getMappingInfo().setHotSpotLocationManual(mappingStatus.getHotSpotLocationManual());
+        plan.getMappingInfo().setColdSpotLocationManual(mappingStatus.getColdSpotLocationManual());
+
         planDataRepository.save(plan);
         log.debug("Mapping status saved for draft {}: {}", draftId, mappingStatus.getMappingStatus());
 

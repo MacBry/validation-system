@@ -47,6 +47,29 @@ public class MappingInfo {
     @Column(name = "mapping_overdue_acknowledged")
     private Boolean mappingOverdueAcknowledged;
 
+    // --- Manual entry fields for external mapping (Annex 15 compliance) ---
+
+    @Column(name = "last_mapping_date_manual")
+    private LocalDate lastMappingDateManual;
+
+    @Column(name = "mapping_protocol_number_manual", length = 100)
+    private String mappingProtocolNumberManual;
+
+    @Column(name = "mapping_valid_until_manual")
+    private LocalDate mappingValidUntilManual;
+
+    @Column(name = "sensor_count_manual")
+    private Integer sensorCountManual;
+
+    @Column(name = "controller_sensor_location_manual", length = 200)
+    private String controllerSensorLocationManual;
+
+    @Column(name = "hot_spot_location_manual", length = 200)
+    private String hotSpotLocationManual;
+
+    @Column(name = "cold_spot_location_manual", length = 200)
+    private String coldSpotLocationManual;
+
     /**
      * Checks if this mapping status requires acknowledgement and has not yet been acknowledged
      */

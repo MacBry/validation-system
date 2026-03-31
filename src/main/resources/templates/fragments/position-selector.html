@@ -1,58 +1,146 @@
-<!-- 
-    Reusable Position Selector Fragment 
-    Usage: <div th:replace="~{fragments/position-selector :: selector('myFieldId', ${initialValue})}"></div>
--->
 <th:block th:fragment="selector(fieldId, initialValue)">
-    <div class="vcc-pos-selector" th:id="'selector-container-' + ${fieldId}">
+    <style th:nonce="${cspNonce}">
+        .vcc-pos-selector-container {
+            width: 100%;
+            background: #fff;
+            border: 1px solid var(--border-default, #e5e7eb);
+            border-radius: var(--radius-md, 10px);
+            padding: 24px;
+            box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.05));
+        }
+        .vcc-pos-selector-body {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 32px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .vcc-pos-levels-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 140px;
+        }
+        .vcc-pos-grid-area {
+            position: relative;
+            padding-top: 25px;
+            padding-left: 45px;
+        }
+        .vcc-pos-grid-inner {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 8px;
+        }
+        .vcc-pos-cell-manual {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            border: 1.5px solid #e5e7eb;
+            border-radius: var(--radius-sm, 6px);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .vcc-pos-cell-manual:hover {
+            border-color: var(--vcc-primary, #667eea);
+            background: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .vcc-pos-cell-manual.active {
+            background: #fff;
+            border-color: var(--vcc-primary, #667eea);
+            color: var(--vcc-primary, #667eea);
+            border-width: 2px;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        }
+        /* Labels */
+        .vcc-pos-x-labels {
+            position: absolute;
+            top: 0;
+            left: 45px;
+            width: 196px; /* (60*3) + (8*2) */
+            display: flex;
+            justify-content: space-around;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .vcc-pos-y-labels {
+            position: absolute;
+            top: 25px;
+            left: 0;
+            height: 196px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: flex-end;
+            padding-right: 12px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #9ca3af;
+        }
+    </style>
+
+    <div class="vcc-pos-selector-container" th:id="'selector-container-' + ${fieldId}">
         <!-- Hidden input for form submission -->
         <input type="hidden" th:id="${fieldId}" th:name="${fieldId}" th:value="${initialValue}">
 
-        <div class="vcc-pos-selector__inner" style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-            <!-- Level Switcher -->
-            <div class="vcc-pos-levels">
+        <div class="vcc-pos-selector-body">
+            <!-- Left: Level Switcher -->
+            <div class="vcc-pos-levels-col">
                 <button type="button" class="vcc-pos-level-btn" data-level="TOP">
-                    <i class="fas fa-chevron-up"></i> Góra
+                    <i class="fas fa-chevron-up"></i> GÓRA
                 </button>
                 <button type="button" class="vcc-pos-level-btn active" data-level="MIDDLE">
-                    <i class="fas fa-square"></i> Środek
+                    <i class="fas fa-square"></i> ŚRODEK
                 </button>
                 <button type="button" class="vcc-pos-level-btn" data-level="BOTTOM">
-                    <i class="fas fa-chevron-down"></i> Dół
+                    <i class="fas fa-chevron-down"></i> DÓŁ
                 </button>
             </div>
 
-            <!-- Position Grid -->
-            <div class="vcc-pos-grid-wrapper">
-                <!-- X Labels (Columns) -->
-                <div class="vcc-pos-label-x">
-                    <span>LEWY</span>
-                    <span>ŚRODEK</span>
-                    <span>PRAWY</span>
+            <!-- Right: Grid Area -->
+            <div class="vcc-pos-grid-area">
+                <div class="vcc-pos-x-labels">
+                    <span>LEWY</span><span>ŚRODEK</span><span>PRAWY</span>
                 </div>
-                <!-- Y Labels (Depth) -->
-                <div class="vcc-pos-label-y">
-                    <span>Tył</span>
-                    <span>Śr.</span>
-                    <span>Przód</span>
+                <div class="vcc-pos-y-labels">
+                    <span>Tył</span><span>Śr.</span><span>Przód</span>
                 </div>
-                <!-- 3x3 Grid -->
-                <div class="vcc-pos-grid" th:id="'grid-' + ${fieldId}">
-                    <!-- Filled by JS -->
+                <!-- 3x3 Grid (Rendered in HTML for guaranteed visibility) -->
+                <div class="vcc-pos-grid-inner" th:id="'grid-' + ${fieldId}">
+                    <div th:each="i : ${#numbers.sequence(1, 9)}" 
+                         class="vcc-pos-cell-manual" 
+                         th:text="'S' + ${i}"
+                         th:attr="data-index=${i}">
+                    </div>
                 </div>
             </div>
             
-            <div th:id="'display-' + ${fieldId}" style="font-size: 0.8rem; font-weight: 600; color: var(--vcc-primary);">
-                Wybrano: <span class="pos-label">-</span>
+            <!-- Selection Display -->
+            <div style="width: 100%; border-top: 1px solid #f3f4f6; padding-top: 16px; text-align: center;">
+                <div style="font-size: 0.7rem; color: #9ca3af; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Aktualnie wybrano:</div>
+                <div class="pos-label" style="font-size: 0.95rem; font-weight: 800; color: var(--vcc-primary, #667eea); text-transform: uppercase; letter-spacing: 0.02em;">-</div>
             </div>
         </div>
 
-        <script th:inline="javascript">
+        <script th:inline="javascript" th:nonce="${cspNonce}">
             (function() {
                 const fieldId = /*[[${fieldId}]]*/ '';
                 const container = document.getElementById('selector-container-' + fieldId);
-                const hiddenInput = document.getElementById(fieldId);
-                const grid = document.getElementById('grid-' + fieldId);
-                const display = document.getElementById('display-' + fieldId).querySelector('.pos-label');
+                const hiddenInput = container.querySelector('input[type="hidden"]');
+                const grid = container.querySelector('.vcc-pos-grid-inner');
+                const cells = grid.querySelectorAll('.vcc-pos-cell-manual');
+                const display = container.querySelector('.pos-label');
                 const levelBtns = container.querySelectorAll('.vcc-pos-level-btn');
 
                 const posMapping = {
@@ -83,7 +171,6 @@
                 }
 
                 function render() {
-                    grid.innerHTML = '';
                     const positions = posMapping[currentLevel];
                     const prefix = labelPrefix[currentLevel];
 
@@ -91,23 +178,57 @@
                         btn.classList.toggle('active', btn.dataset.level === currentLevel);
                     });
 
-                    positions.forEach((posKey, index) => {
-                        const cell = document.createElement('div');
-                        cell.className = 'vcc-pos-cell';
-                        if (posKey === hiddenInput.value) cell.classList.add('active');
-                        
+                    cells.forEach((cell, index) => {
+                        const posKey = positions[index];
                         cell.textContent = prefix + (index + 1);
                         cell.dataset.pos = posKey;
+                        
+                        cell.classList.toggle('active', posKey === hiddenInput.value);
 
-                        cell.addEventListener('click', () => {
+                        // Remove old listeners to avoid duplicates (though we only init once, it's safer)
+                        const newCell = cell.cloneNode(true);
+                        cell.parentNode.replaceChild(newCell, cell);
+                        
+                        newCell.addEventListener('click', () => {
                             hiddenInput.value = posKey;
                             display.textContent = posKey.replace(/_/g, ' ');
-                            render();
-                            // Trigger change event for parent forms
                             hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            render(); // Re-render to update active classes
                         });
+                    });
+                    
+                    if (hiddenInput.value) {
+                        display.textContent = hiddenInput.value.replace(/_/g, ' ');
+                    }
+                }
+                
+                // Redefine cells after cloning in render if needed, but wait: 
+                // Better approach to avoid cloneNode loop:
+                function setupEvents() {
+                    cells.forEach((cell, index) => {
+                        cell.addEventListener('click', () => {
+                            const positions = posMapping[currentLevel];
+                            const posKey = positions[index];
+                            hiddenInput.value = posKey;
+                            display.textContent = posKey.replace(/_/g, ' ');
+                            hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            render();
+                        });
+                    });
+                }
+                
+                function render() {
+                    const positions = posMapping[currentLevel];
+                    const prefix = labelPrefix[currentLevel];
 
-                        grid.appendChild(cell);
+                    levelBtns.forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.level === currentLevel);
+                    });
+
+                    cells.forEach((cell, index) => {
+                        const posKey = positions[index];
+                        cell.textContent = prefix + (index + 1);
+                        cell.classList.toggle('active', posKey === hiddenInput.value);
                     });
                     
                     if (hiddenInput.value) {
@@ -122,6 +243,7 @@
                     });
                 });
 
+                setupEvents();
                 render();
             })();
         </script>

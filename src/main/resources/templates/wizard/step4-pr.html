@@ -123,10 +123,11 @@
         .manual-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: var(--sp-4, 1rem);
+            gap: var(--sp-6, 1.5rem);
         }
-        .manual-field { margin-bottom: var(--sp-3, 0.75rem); }
+        .manual-field { margin-bottom: var(--sp-4, 1rem); }
         .manual-field--full { grid-column: 1 / -1; }
+        .manual-field--full .vcc-pos-selector { max-width: 100%; }
         .manual-label {
             display: block; font-size: 0.75rem; font-weight: 600;
             color: var(--text-secondary, #6b7280); margin-bottom: 6px;

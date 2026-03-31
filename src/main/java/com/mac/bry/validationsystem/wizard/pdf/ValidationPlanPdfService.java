@@ -18,6 +18,7 @@ import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.mac.bry.validationsystem.device.CoolingDevice;
+import com.mac.bry.validationsystem.measurement.RecorderPosition;
 import com.mac.bry.validationsystem.validation.PdfSigningService;
 import com.mac.bry.validationsystem.wizard.ValidationDraft;
 import com.mac.bry.validationsystem.wizard.ValidationDraftRepository;
@@ -310,11 +311,10 @@ public class ValidationPlanPdfService {
             .setMarginBottom(12);
 
         String statusDisplay = mappingInfo.getMappingStatus().name();
-        DeviceRgb statusColor = switch (mappingInfo.getMappingStatus()) {
-            case CURRENT  -> CLR_OK;
-            case OVERDUE  -> CLR_WARN;
-            default       -> CLR_DANGER;
-        };
+        if (mappingInfo.getMappingStatus() != com.mac.bry.validationsystem.wizard.MappingStatus.CURRENT
+            && mappingInfo.getLastMappingDateManual() != null) {
+            statusDisplay = "MAPOWANIE ZEWNĘTRZNE (Manualne)";
+        }
 
         addMetaRow(t, "Data sprawdzenia:",
             mappingInfo.getMappingCheckDate() != null
@@ -385,18 +385,8 @@ public class ValidationPlanPdfService {
             .setWidth(UnitValue.createPercentValue(100))
             .setMarginBottom(12);
 
-        addMetaRow(t, "Pozycja rejestratora referencyjnego:",
-            draft.getRecorderPosition() != null
-                ? draft.getRecorderPosition().name() : "Nie wybrano",
-            bold, normal);
-        addMetaRow(t, "Stan obciążenia urządzenia (step 4):",
-            draft.getDeviceLoadState() != null
-                ? draft.getDeviceLoadState().name() : "Nie wybrano",
-            bold, normal);
-        addMetaRow(t, "Liczba wybranych serii pomiarowych:",
-            draft.getSelectedSeriesIds() != null
-                ? String.valueOf(draft.getSelectedSeriesIds().size()) : "0",
-            bold, normal);
+        // We remove reference sensor position, load state and series count as requested
+        // because these belong to validation phases, not the plan / mapping summary.
 
         // Manual sensor positions summary (if no system mapping)
         MappingInfo mInfo = draft.getPlanData() != null ? draft.getPlanData().getMappingInfo() : null;
@@ -406,11 +396,11 @@ public class ValidationPlanPdfService {
             addMetaRow(t, "Liczba czujników (mapowanie zewnętrzne):",
                 mInfo.getSensorCountManual() != null ? String.valueOf(mInfo.getSensorCountManual()) : "-", bold, normal);
             addMetaRow(t, "Lokalizacja czujnika kontrolnego:",
-                mInfo.getControllerSensorLocationManual() != null ? mInfo.getControllerSensorLocationManual().name() : "-", bold, normal);
+                formatPosition(mInfo.getControllerSensorLocationManual()), bold, normal);
             addMetaRow(t, "Lokalizacja Hot-Spot:",
-                mInfo.getHotSpotLocationManual() != null ? mInfo.getHotSpotLocationManual().name() : "-", bold, normal);
+                formatPosition(mInfo.getHotSpotLocationManual()), bold, normal);
             addMetaRow(t, "Lokalizacja Cold-Spot:",
-                mInfo.getColdSpotLocationManual() != null ? mInfo.getColdSpotLocationManual().name() : "-", bold, normal);
+                formatPosition(mInfo.getColdSpotLocationManual()), bold, normal);
         }
 
         doc.add(t);
@@ -536,5 +526,24 @@ public class ValidationPlanPdfService {
 
     private String formatDouble(Double value) {
         return value != null ? String.valueOf(value) : "-";
+    }
+
+    private String formatPosition(RecorderPosition pos) {
+        if (pos == null) return "-";
+        
+        String name = pos.name();
+        // Convert enum like TOP_REAR_LEFT to "GÓRA - TYŁ - LEWO"
+        String result = name
+            .replace("TOP", "GÓRA")
+            .replace("MIDDLE", "ŚRODEK")
+            .replace("BOTTOM", "DÓŁ")
+            .replace("REAR", "TYŁ")
+            .replace("CENTER", "ŚRODEK")
+            .replace("FRONT", "PRZÓD")
+            .replace("LEFT", "LEWO")
+            .replace("RIGHT", "PRAWO")
+            .replace("_", " - ");
+            
+        return result;
     }
 }

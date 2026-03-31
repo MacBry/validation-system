@@ -63,15 +63,15 @@ public class MappingInfo {
     private Integer sensorCountManual;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "controller_sensor_location_manual", length = 50)
+    @Column(name = "controller_sensor_location_manual", columnDefinition = "VARCHAR(50)")
     private RecorderPosition controllerSensorLocationManual;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "hot_spot_location_manual", length = 50)
+    @Column(name = "hot_spot_location_manual", columnDefinition = "VARCHAR(50)")
     private RecorderPosition hotSpotLocationManual;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "cold_spot_location_manual", length = 50)
+    @Column(name = "cold_spot_location_manual", columnDefinition = "VARCHAR(50)")
     private RecorderPosition coldSpotLocationManual;
 
     /**
